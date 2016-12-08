@@ -1,0 +1,71 @@
+{
+  "name": "jtox-kit",
+  "version": "2.0.0",
+  "description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
+  "keywords": [
+    "chem-informatics",
+    "ambit",
+    "solr",
+    "toxicity",
+    "pharmaceutical",
+    "chemistry"
+  ],
+  "homepage": "https://io.github.com/ideaconsult/jToxKit/wiki",
+  "license": "MIT",
+  "author": [
+    {
+      "name": "Ivan (Jonan) Georgiev",
+      "homepage": "http://jonan.info/"
+    },
+    {
+      "name": "Nina Jeliazkova",
+    },
+    {
+      "name": "Tsvetan Manolov",
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ideaconsult/jToxKit"
+  },
+  "main": "jtox-kit.js",
+  "browser": "jtox-kit-full.js",
+  "jspm": {
+    "main": "jtox-kit.js",
+    "shim": {
+      "solr-jsx": {
+        "exports": "jToxKit"
+      }
+    },
+    "files": [
+      "core/*.js",
+      "widgets/*.js",
+      "kits/*.js"
+    ],
+    "buildConfig": {
+      "uglify": true
+    }
+  },
+  "spm": {
+    "main": "jtox-jsx.js"
+  },
+  "devDependencies": {
+    "uglify-js": "latest",
+    "jasmine-node": "latest",
+    "jasmine-core": "latest",
+    "underscore": "latest",
+    "smash": "latest"
+  },
+  "scripts": {
+    "preinstall": "npm install https://github.com/thejonan/asSys.js.git && npm install https://github.com/ideaconsult/SolrJsX.git",
+    "preupdate": "npm update https://github.com/thejonan/asSys.js.git && npm update https://github.com/ideaconsult/SolrJsX.git",
+    
+    "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > www/start.js && smash www/start.js > www/jtox-kit.js && rm -rf www/start.js",
+    "test": "jasmine-node test && uglifyjs -nc -mt < www/jtox-kit.js > www/jtox-kit.min.js && npm run-script widgets",
+    "posttest": "mkdir -p test/lib/jasmine-core && cp -f node_modules/jasmine-core/lib/jasmine-core/*.js test/lib/jasmine-core && cp -f node_modules/jasmine-core/lib/jasmine-core/*.css test/lib/jasmine-core && mkdir -p test/lib/underscore && cp -f node_modules/underscore/*.js test/lib/underscore && mkdir -p test/lib/asSys && cp -f node_modules/as-sys/*.js test/lib/asSys",
+    
+    "widgets": "smash widgets/*.js > solr-jsx.widgets.js && uglifyjs -nc -mt < solr-jsx.widgets.js > solr-jsx.widgets.min.js",
+    "prepublish": "npm test && chmod a-w solr-jsx.*.js && zip solr-jsx.zip LICENSE solr-jsx.*.js",
+    "postpublish": "VERSION=`node -e 'console.log(require(\"./package.json\").version)'`; git push && git tag -am \"Release $VERSION.\" ${VERSION} && git push --tags"
+  }
+}
