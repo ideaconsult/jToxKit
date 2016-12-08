@@ -45,5 +45,4 @@ Assessment:
 - Data browsers will report pools of entities that can be handled to the widgets. The browser will generally know about: entity pool, paging, filtering & searching.
 - The UI widgets can be given a rename map, so that each entity from the data browser can be passed through it to get a (shallow copy) of the object with proper names for rendering. I.e. utilizing the templates.
 - Building tool should be able to produce no-UI package. (parameter).
-- 
-- 
+ 
