@@ -1,17 +1,18 @@
-var jT = require("../"),
-    a$ = require("as-sys"),
-    Solr = require("solr-jsx"),
-		_ = require("underscore"),
-		customMatchers = {
-			toDeepEqual: function (util, customEqualityTesters) {
-				return {
-					compare: function(actual, expected) {
-							return { pass: _.isEqual(actual, expected) };
-					}
-				}
+asSys = require("as-sys");
+Solr = require("solr-jsx");
+_ = require("underscore");
+jT = require("../");
+customMatchers = {
+	toDeepEqual: function (util, customEqualityTesters) {
+		return {
+			compare: function(actual, expected) {
+					return { pass: _.isEqual(actual, expected) };
 			}
-		};
+		}
+	}
+};
 
+a$ = asSys;
 
 describe("jToxKit Core", function () {
 	// prepare the test for dual runs - browser & npm

@@ -8,8 +8,6 @@
 (function () {
   // Define this as a main object to put everything in
   jToxKit = { version: "2.0.0" };
-  
-  asSys = a$ = require("as-sys");
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
