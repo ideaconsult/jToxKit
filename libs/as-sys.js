@@ -59,6 +59,11 @@
     };
     for (var i = 0, a; i < skills.length; ++i) {
       a = skills[i];
+      if (a == null) throw {
+        name: "Missing skill",
+        message: "The skill-set liseted [" + a + "] is missing.",
+        skill: s
+      };
       if (typeof a === "function" && a.prototype !== undefined) {
         if (skillmap.indexOf(a) > -1) continue;
         if (a.prototype.__depends != null) {
@@ -89,7 +94,7 @@
     }
     asSys.each(expected, function(v, m) {
       if (A.prototype[m] == null) throw {
-        name: "Unmatched skill expectation",
+        name: "Unmatched expectation",
         message: "The expected method [" + m + "] was not found among provided skills.",
         method: m
       };
