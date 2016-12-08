@@ -9,6 +9,20 @@
 <head>
 <link rel="shortcut icon" type="image/png" href="libs/jasmine_favicon.png">
 <link rel="stylesheet" type="text/css" href="libs/jasmine.css">
+<script type="text/javascript">
+  var global = window;
+  function require(a) { 
+    if (a == "underscore" || a == "_")
+      return _;
+    else if (a == "asSys" || a == "as-sys")
+      return asSys;
+    else if (a == "Solr" || a == "solr-jsx")
+      return Solr;
+    else
+      return jToxKit;
+  }
+</script>
+
 
 <script type="text/javascript" src="libs/jasmine.js"></script>
 <script type="text/javascript" src="libs/jasmine-html.js"></script>
@@ -18,20 +32,7 @@
 <script type="text/javascript" src="../libs/solr-jsx.min.js"></script>
 
 <script type="text/javascript" src="../www/jtox-kit.js"></script>
-<script type="text/javascript">
-  var global = window;
-  function require(a) { 
-    if (a == "underscore" || a == "_")
-      return _;
-    else if (a == "asSys" || a == "a$")
-      return asSys;
-    else if (a == "Solr" || a == "SolrJsX")
-      return Solr;
-    else
-      return jToxKit;
-  }
-</script>
-<script type="text/javascript" src="CoreTests.js"></script>
+<script type="text/javascript" src="CoreSpec.js"></script>
 </head>
 <html>
 </html>
