@@ -68,6 +68,8 @@
     },
     
     parseResponse: function (response, scope) {
+      a$.pass(this, jT.Consumption, "parseResponse");
+      
       var data = this.translateData(response, scope),
           man = this.manager;
       a$.each(this.consumers, function (c) {
