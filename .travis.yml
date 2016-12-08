@@ -3,3 +3,9 @@ node_js:
   - node
   - 5
 
+notifications:
+  email:
+    recipients:
+      - travis_ci@jonan.info
+    on_success: change
+    on_failure: always
