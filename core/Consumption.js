@@ -12,7 +12,7 @@
   * time consuming. 
   * With this skill-set encapsulation we provide the mechanism for widget(s) to listen to `data ready` notification. 
   * The actual data transformation, of course, is going to be done by another skill set, which will provide the only
-  * expected method - `translateData`.
+  * expected method - `translateResponse`.
   *
   * Consumers are registered pretty much the same way each listener is.
   * There two methods that are expected to be present - `init` and `afterTranslation`.
@@ -35,7 +35,7 @@
   }
   
   jT.Consumption.prototype = {
-    __expects: [ "translateData" ],
+    __expects: [ "translateResponse" ],
     
     /**
      * Methods, that are going to be invoked by the manager.
@@ -54,7 +54,7 @@
     parseResponse: function (response, scope) {
       a$.pass(this, jT.Consumption, "parseResponse");
       
-      var data = this.translateData(response, scope),
+      var data = this.translateResponse(response, scope),
           man = this.manager;
       a$.each(this.consumers, function (c) {
         a$.act(c, c.afterTranslation, data, scope, man);
