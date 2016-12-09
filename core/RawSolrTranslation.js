@@ -22,9 +22,6 @@
   }
   
   jT.RawSolrTranslation.prototype = {    
-    /**
-     * Methods, that are going to be invoked by the manager.
-     */ 
     init: function (manager) {
       // Let the other initializers, like the Management, for example
       a$.pass(this, jT.RawSolrTranslation, "init");
@@ -51,7 +48,8 @@
       // now put the stats.
       return {
         'entries': docs,
-        'stats': a$.extend({}, response.facet_counts, response.stats, response.responseHeader),
+        'stats': a$.extend({}, response.stats, response.responseHeader),
+        'facets': response.facet_counts,
         'paging': { 
           'start': response.response.start,
           'count': response.response.docs.length,

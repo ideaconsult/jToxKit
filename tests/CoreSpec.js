@@ -92,6 +92,7 @@ describe("jToxKit Core", function () {
       expect(data.entries).toBeDefined();
       expect(data.paging).toBeDefined();
       expect(data.stats).toBeDefined();
+      expect(data.facets).toBeDefined();
     });
     
     it("Has properly built stats", function () {
