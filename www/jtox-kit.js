@@ -45,7 +45,6 @@
   jT.Consumption = function (settings) {
     a$.extend(true, this, settings);
     this.consumers = {};
-    this.manager = null;
   }
   
   jT.Consumption.prototype = {
@@ -54,14 +53,14 @@
     /**
      * Methods, that are going to be invoked by the manager.
      */ 
-    init: function (manager) {
+    init: function () {
+      var self = this;
       // Let the other initializers, like the Management, for example
       a$.pass(this, jT.Consumption, "init");
       
-      this.manager = manager;
       a$.each(this.consumers, function (c) {
         // Inform the consumer who's the manager. Most probably this is us.
-        a$.act(c, c.init, manager);
+        a$.act(c, c.init, self);
       });  
     },
     
@@ -69,9 +68,9 @@
       a$.pass(this, jT.Consumption, "parseResponse");
       
       var data = this.translateResponse(response, scope),
-          man = this.manager;
+          self = this;
       a$.each(this.consumers, function (c) {
-        a$.act(c, c.afterTranslation, data, scope, man);
+        a$.act(c, c.afterTranslation, data, scope, self);
       });
     },
     
