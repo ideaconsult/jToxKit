@@ -49,14 +49,16 @@
   "spm": {
     "main": "www/jtox-kit.js"
   },
+  "dependencies": {
+  	"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
+    "solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git"
+    },
   "devDependencies": {
     "uglify-js": "latest",
     "jasmine-node": "latest",
     "jasmine-core": "latest",
     "underscore": "latest",
-    "smash": "latest",
-    "as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-    "solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git"
+    "smash": "latest"
   },
   "scripts": {    
     "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js",
