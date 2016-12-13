@@ -8,7 +8,7 @@
 
 (function () {
   // Define this as a main object to put everything in
-  Solr = { version: "0.9.0" };
+  Solr = { version: "0.10.0" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -19,6 +19,8 @@
   * Author: Ivan Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
+  
+(function (Solr, a$){
   
 Solr.Management = function (obj) {
   a$.extend(true, this, obj);
@@ -83,10 +85,12 @@ Solr.Management.prototype = {
     settings.error = self.onError;
     settings.success = function (data) {
       self.parseQuery(self.response = data);
-      a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, self); });
-      
+
+      // Now inform all the listeners
+      a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, data, servlet); });
+
       // Call this for Querying skills, if it is defined.
-      a$.act(self, self.parseResponse, self.response);
+      a$.act(self, self.parseResponse, data, servlet);
       
       // Time to call the passed on success handler.
       a$.act(self, self.onSuccess);
@@ -114,6 +118,7 @@ Solr.Management.prototype = {
     */
   init: function () {
     var self = this;
+    a$.pass(self, Solr.Management, "init");
     a$.each(this.listeners, function (l) {
       // Inform the listener that it has been added.
       a$.act(l, l.init, self);
@@ -151,11 +156,14 @@ Solr.Management.prototype = {
     * the listener is removed.
     */
   removeManyListeners: function (selector) {
+    if (typeof callback !== 'function')
+      throw { name: "Enumeration error", message: "Attempt to select-remove listeners with non-function 'selector': " + selector };
+      
     var self = this;
-    a$.each(self.listeners(function (l, id) {
+    a$.each(self.listeners, function (l, id) {
       if (selector(l, self))
         delete self.listeners[id];
-    }));
+    });
     
     return self;
   },
@@ -164,7 +172,7 @@ Solr.Management.prototype = {
     */
   enumerateListeners: function(callback, context) {
     if (typeof callback !== 'function')
-      return;
+      throw { name: "Enumeration error", message: "Attempt to enumerate listeners with non-function 'selector': " + callback };
       
     a$.each(this.listeners, function (l, id) {
       callback.call(l, l, id, context);
@@ -177,6 +185,8 @@ Solr.Management.prototype = {
     return this.listeners[id];
   }
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * Parameter management skills.
   *
@@ -184,6 +194,8 @@ Solr.Management.prototype = {
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
   
+
+(function (Solr, a$){
 /** This is directly copied from AjaxSolr.
   */  
 Solr.escapeValue = function (value) {
@@ -367,6 +379,8 @@ Solr.Configuring.prototype = {
     });
   }
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * SolrAjax compatibility skills.
   *
@@ -374,7 +388,7 @@ Solr.Configuring.prototype = {
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
   
-
+(function (Solr, a$){
 Solr.Compatibility = function (obj) {
   a$.extend(true, this, obj);
   this.store.root = this;
@@ -392,12 +406,16 @@ Solr.Compatibility.prototype = {
   
   // TODO: Add AjaxSolr.AbstractManager methods that differ from ours.
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * URL querying skills - stacking up all parameters for URL-baesd query.
   *
   * Author: Ivan Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
+  
+(function (Solr, a$){
   
 Solr.QueryingURL = function (obj) {
   a$.extend(true, this, obj);
@@ -445,6 +463,8 @@ Solr.QueryingURL.prototype = {
   },
   
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * Json querying skills - putting all appropriate parameters
   * for JSON based query.
@@ -454,6 +474,8 @@ Solr.QueryingURL.prototype = {
   */
   
 
+(function (Solr, a$){
+  
 // TODO: This has never been verified, actually!
 var renameParameter = function (name) {
   switch (name) {
@@ -503,12 +525,16 @@ Solr.QueryingJson.prototype = {
   },
   
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * Persistentcy for configured parameters skills.
   *
   * Author: Ivan Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
+  
+(function (Solr, a$){
   
 Solr.Persistency = function (obj) {
   a$.extend(true, this, obj);
@@ -544,12 +570,16 @@ Solr.Persistency.prototype = {
     
   }
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * Paging skills
   *
   * Author: Ivan Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
+  
+(function (Solr, a$){
   
 Solr.Paging = function (obj) {
   a$.extend(true, this, obj);
@@ -645,12 +675,16 @@ Solr.Paging.prototype = {
     }
   }
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * Free text search skills.
   *
   * Author: Ivan Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
+  
+(function (Solr, a$){
   
 Solr.Texting = function (obj) {
   a$.extend(true, this, obj);
@@ -738,6 +772,8 @@ Solr.Texting.prototype = {
   }
   
 };
+
+})(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
   * Faceting skills - maintenance of appropriate parameters.
   *
@@ -745,7 +781,9 @@ Solr.Texting.prototype = {
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
   
-
+  
+(function (Solr, a$){
+  
 /* http://wiki.apache.org/solr/SimpleFacetParameters */
 var FacetParameters = {
   'prefix': null,
@@ -1108,6 +1146,8 @@ Solr.Faceting.prototype = {
     return (exclude ? '-' : '') + this.field + ':' + facetValue(value);
   }
 };
+
+})(Solr, asSys);
 
   /** ... and finish with some module / export definition for according platforms
     */
