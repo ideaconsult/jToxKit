@@ -150,21 +150,6 @@
     },
     
     translateResponse: function (response, scope) {
-      // deal with docs, integrating the expanded part.
-      var docs = response.response.docs;
-      for (var i = 0, dl = docs.length; i < dl; ++i) {
-        var d = docs[i],
-            exp = response.expanded[d.s_uuid];
-        for (var j = 0, edl = exp.docs.length; j < edl; ++j) {
-          var edoc = exp.docs[j];
-          a$.each(edoc, function (eprop, eid) {
-            if (Array.isArray(d[eid]))
-              Array.prototype.push.apply(d[eid], Array.isArray(eprop) ? eprop : [ eprop ]);
-            else if (d[eid] == null)
-              d[eid] = [ null ].concat(eprop);
-          });
-        };
-      };
       
       // now put the stats.
       return {
