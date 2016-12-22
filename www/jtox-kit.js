@@ -150,10 +150,9 @@
     },
     
     translateResponse: function (response, scope) {
-      
       // now put the stats.
       return {
-        'entries': docs,
+        'entries': response.response.docs,
         'stats': a$.extend({}, response.stats, response.responseHeader),
         'facets': response.facet_counts,
         'paging': { 
