@@ -33,7 +33,8 @@
       return {
         'entries': response.response.docs,
         'stats': a$.extend({}, response.stats, response.responseHeader),
-        'facets': response.facet_counts,
+        'facets': response.facets,
+        'pivots': response.facet_counts.facet_pivot,
         'paging': { 
           'start': response.response.start,
           'count': response.response.docs.length,
