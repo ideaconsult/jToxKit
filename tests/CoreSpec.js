@@ -1,93 +1,47 @@
 asSys = require("as-sys");
 Solr = require("solr-jsx");
-_ = require("underscore");
 jT = require("../");
-customMatchers = {
-	toDeepEqual: function (util, customEqualityTesters) {
-		return {
-			compare: function(actual, expected) {
-					return { pass: _.isEqual(actual, expected) };
-			}
-		}
-	}
-};
 
 a$ = asSys;
 
 (function (TestData) {
   
 describe("jToxKit Core", function () {
-	// prepare the test for dual runs - browser & npm
-	beforeEach(function () {
-		var jself = typeof this.addMatchers === 'function' ? this : jasmine;
-		jself.addMatchers(customMatchers);
-	});
 	
 	// The actual tests start here.
-	describe("Consumption", function () {
+	describe("Translation", function () {
 	  var EmptyTranslator = function (obj) { a$.extend(this, obj); };
     EmptyTranslator.prototype.translateResponse = function (response, scope) { 
       this.scope = scope; 
       return this.data = response; 
     };
     
-  	var Consumable = a$(Solr.Management, jT.Consumption, EmptyTranslator);
-  	    topic = new Consumable({ prop: "test" });
-  	    
-    var EmptyConsumer = function (obj) { 
-      a$.extend(this, obj); 
-      this.notified = false; 
-    };
+  	var topic = new (a$(Solr.Management, Solr.QueryingURL, Solr.Configuring, jT.Translation, EmptyTranslator))({ prop: "test" }),
+  	    EmptyConsumer = function (obj) { 
+          a$.extend(this, obj); 
+          this.notified = false; 
+        };
+        
     EmptyConsumer.prototype.afterTranslation = function(data, scope) { 
       this.notified = true;
       expect(data).toBeDefined(); 
       expect(scope).toBe("scope");
     };
-    var consumer = new EmptyConsumer();
+    var consumer = new EmptyConsumer( { id: "a" });
   	    
   	it("Can be instantiated with SolrJsX Manager", function () {
     	expect(topic).toBeDefined();
     	expect(topic.prop).toBe("test");
   	});
   	
-  	it("Can add consumers", function () {
-    	topic.addConsumers(consumer, "a");
-    	expect(a$.weight(topic.consumers)).toBe(1);
-  	});
-
     it("Consumers get notified", function () {
-      topic.addConsumers(consumer, "a");
+      topic.addListeners(consumer);
       topic.parseResponse({ prop: "test" }, "scope");
       expect(consumer.notified).toBeTruthy();
     });
-    
-    it("Consumer can be removed", function () {
-      topic.addConsumers(consumer, "a");
-      topic.removeConsumer("a");
-      expect(a$.weight(topic.consumers)).toBe(0);
-    })
-
-    it("Many consumers can be removed", function () {
-      topic.addConsumers(consumer, "a");
-      topic.addConsumers(new EmptyConsumer(), "b");
-      topic.removeManyConsumers(function (c, i) { return i == "a"; });
-      expect(a$.weight(topic.consumers)).toBe(1);
-      expect(topic.getConsumer("b")).toBeDefined();
-    })
-    
-    it("Can enumerate consumers", function () {
-      topic.addConsumers(consumer, "a");
-      topic.addConsumers(new EmptyConsumer(), "b");
-      var ctx = { count: 0 };
-      topic.enumerateConsumers(function (c, i, context) { ++context.count; }, ctx);
-      expect(ctx.count).toBe(2);
-    });    
 	}); // End of consumption test bundle
-
-  describe("Raw Solr Translation", function (){
-    var topic = new (a$(jT.RawSolrTranslation))(),
-        data = topic.translateResponse(TestData.RawSolr);
-    
+	
+	var basicTranslationSpecs = function (data) {
     it("Can translate data", function () {
       expect(data.entries).toBeDefined();
       expect(data.paging).toBeDefined();
@@ -96,17 +50,38 @@ describe("jToxKit Core", function () {
     });
     
     it("Has properly built stats", function () {
-      expect(data.paging).toDeepEqual({ "start": 0, "count": 3, "total": 3, "pageSize": 20});
+      expect(data.paging).toEqual({ "start": 0, "count": 3, "total": 3, "pageSize": 20});
       expect(data.entries.length).toBe(data.paging.count);
     });
+  	
+	};
+
+  describe("Raw Solr Translation", function (){
+    var topic = new (a$(jT.RawSolrTranslation))(),
+        data = topic.translateResponse(TestData.RawSolr);
     
+    basicTranslationSpecs(data);
     it("Merges expanded information", function (){
-      expect(data.entries[0].reference.length).toBe(2);
-      expect(data.entries[2].reference_year.length).toBe(3);
-      expect(data.entries[2].guidance[2]).toBe("cell viability");
+      expect(data.entries[0]._extended_).toBeDefined();
+      expect(data.entries[0]._extended_.study.length).toBe(2);
+      expect(data.entries[2]._extended_.study.length).toBe(3);
+      expect(data.entries[2]._extended_.study[2].guidance).toBe("cell viability");
     });
-    
   });	
+  
+  describe("Nested Solr Translation", function (){
+    var topic = new (a$(jT.NestedSolrTranslation))(),
+        data = topic.translateResponse(Solr.QueryingJson.prototype.parseQuery(TestData.NestedSolr));
+    
+    basicTranslationSpecs(data);
+    it("Builds child docs", function (){
+      expect(data.entries[0]._extended_).toBeDefined();
+      expect(data.entries[0]._extended_.study.length).toBe(2);
+      expect(data.entries[1]._extended_.study.length).toBe(1);
+      expect(data.entries[2]._extended_.study[1].loValue_d).toBe(30);
+    });
+  });	
+  
 });
 })({
   // Data files. TODO: Bonus if anybody can find a (feasible) way to put this into 
@@ -399,5 +374,186 @@ describe("jToxKit Core", function () {
               }]
           }
       }
+  },
+  NestedSolr: {
+    "responseHeader": {
+      "zkConnected": true,
+      "status": 0,
+      "QTime": 4,
+      "params": {
+        "q.alt": "*:*",
+        "json.nl": "map",
+        "json": "{\n  \"query\": \"{!parent which=type_s:substance}gold\",\n  \"facet\": {\n  \t\"topcategory\": {\n\t  \t\"type\": \"terms\",\n\t  \t\"field\": \"topcategory_s\",\n  \t\t\"domain\": { \n  \t\t\t\"blockChildren\" : \"type_s:substance\"\n  \t\t},\n  \t\t\"facet\": {\n\t\t  \t\"min\": \"min(loValue_d)\",\n\t\t  \t\"max\": \"max(loValue_d)\"\n  \t\t}\n  \t}\n  },\n  \"params\" : {\n    \"stats\" : true,\n    \"fl\" : [\n    \t\"id\", \n    \t\"name_hs\",\n    \t\"topcategory_s\",\n    \t\"[child parentFilter=type_s:substance childFilter=type_s:study limit=100]\",\n    \t\"[child parentFilter=type_s:substance childFilter=type_s:composition limit=100]\"\n    ],\n    \"facet.limit\" : -1,\n    \"fq\" : \"*:*\",\n    \"stats.field\" : [\n      \"{!min=true max=true blockChildren=type_s:study}loValue_d\"\n    ],\n    \"rows\" : 20\n  }\n}",
+        "wt": "json"
+      }
+    },
+    "response": {
+      "numFound": 3,
+      "start": 0,
+      "docs": [
+        {
+          "id": "NWKI-765933f1-5fb1-35e6-858b-ce809c42f26e",
+          "name_hs": "Chithrani Au5",
+          "_childDocuments_": [
+            {
+              "id": "NWKI-405da02d-956e-45b1-9ead-7055accccf73/156",
+              "name_s": "Chithrani Au5",
+              "publicname_s": "Au Au S100",
+              "owner_name_s": "NanoWiki",
+              "substanceType_s": "NPO_401",
+              "s_uuid_s": "NWKI-765933f1-5fb1-35e6-858b-ce809c42f26e",
+              "type_s": "study",
+              "document_uuid_s": "NWKI-405da02d-956e-45b1-9ead-7055accccf73",
+              "topcategory_s": "TOX",
+              "endpointcategory_s": "UNKNOWN_TOXICITY_SECTION",
+              "guidance_s": "ICP-2DAES",
+              "endpoint_s": "PARTICLES PER CELL",
+              "effectendpoint_s": "PARTICLES_PER_CELL",
+              "reference_owner_s": "NANOWIKI",
+              "reference_s": "http://iopscience.iop.org/1749-4699/6/1/014010/article/",
+              "loValue_d": 1800,
+              "err_d": 500,
+              "unit_s": ""
+            },
+            {
+              "id": "NWKI-5443a192-dc7b-457a-88ee-58945dbbd1f7/155",
+              "name_s": "Chithrani Au5",
+              "publicname_s": "Au Au S100",
+              "owner_name_s": "NanoWiki",
+              "substanceType_s": "NPO_401",
+              "s_uuid_s": "NWKI-765933f1-5fb1-35e6-858b-ce809c42f26e",
+              "type_s": "study",
+              "document_uuid_s": "NWKI-5443a192-dc7b-457a-88ee-58945dbbd1f7",
+              "topcategory_s": "P-CHEM",
+              "endpointcategory_s": "PC_GRANULOMETRY_SECTION",
+              "endpoint_s": "PARTICLE SIZE",
+              "effectendpoint_s": "PARTICLE SIZE",
+              "reference_owner_s": "NANOWIKI",
+              "reference_s": "http://iopscience.iop.org/1749-4699/6/1/014010/article/",
+              "loValue_d": 100,
+              "unit_s": "nm"
+            },
+            {
+              "id": "NWKI-765933f1-5fb1-35e6-858b-ce809c42f26e/c/1",
+              "type_s": "composition",
+              "component": [
+                "CONSTITUENT"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "NWKI-0b663f5f-1386-3cc5-ba6b-9ff2bb39d4ff",
+          "name_hs": "E-GEOD-20677-M1",
+          "_childDocuments_": [
+            {
+              "id": "NWKI-e8630b4c-3ff7-4a1e-9db5-0d810eea29c9/246",
+              "name_s": "E-GEOD-20677-M1",
+              "publicname_s": "Au AU-NP oligonucleotide",
+              "owner_name_s": "NanoWiki",
+              "substanceType_s": "NPO_401",
+              "s_uuid_s": "NWKI-0b663f5f-1386-3cc5-ba6b-9ff2bb39d4ff",
+              "type_s": "study",
+              "document_uuid_s": "NWKI-e8630b4c-3ff7-4a1e-9db5-0d810eea29c9",
+              "topcategory_s": "P-CHEM",
+              "endpointcategory_s": "PC_GRANULOMETRY_SECTION",
+              "guidance_s": "TEM",
+              "endpoint_s": "PRIMARY PARTICLE SIZE",
+              "effectendpoint_s": "PARTICLE SIZE",
+              "reference_owner_s": "NANOWIKI",
+              "reference_s": "http://iopscience.iop.org/1749-4699/6/1/014010/article/",
+              "loValue_d": 13,
+              "err_d": 11,
+              "unit_s": "nm"
+            },
+            {
+              "id": "NWKI-0b663f5f-1386-3cc5-ba6b-9ff2bb39d4ff/c/1",
+              "type_s": "composition",
+              "component": [
+                "CORE"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "NWKI-9b508140-9a21-3fb2-b2a3-c7a11f6cc347",
+          "name_hs": "Chithrani Au2",
+          "_childDocuments_": [
+            {
+              "id": "NWKI-b3e871ba-c1c1-42a9-bb2a-c6a72e26c267/324",
+              "name_s": "Chithrani Au2",
+              "publicname_s": "Au Au S30",
+              "owner_name_s": "NanoWiki",
+              "substanceType_s": "NPO_401",
+              "s_uuid_s": "NWKI-9b508140-9a21-3fb2-b2a3-c7a11f6cc347",
+              "type_s": "study",
+              "document_uuid_s": "NWKI-b3e871ba-c1c1-42a9-bb2a-c6a72e26c267",
+              "topcategory_s": "TOX",
+              "endpointcategory_s": "UNKNOWN_TOXICITY_SECTION",
+              "guidance_s": "ICP-2DAES",
+              "endpoint_s": "PARTICLES PER CELL",
+              "effectendpoint_s": "PARTICLES_PER_CELL",
+              "reference_owner_s": "NANOWIKI",
+              "reference_s": "http://iopscience.iop.org/1749-4699/6/1/014010/article/",
+              "loValue_d": 4500,
+              "err_d": 500,
+              "unit_s": ""
+            },
+            {
+              "id": "NWKI-e3a8b36e-36fe-4119-8c7a-30226f82a7ab/323",
+              "name_s": "Chithrani Au2",
+              "publicname_s": "Au Au S30",
+              "owner_name_s": "NanoWiki",
+              "substanceType_s": "NPO_401",
+              "s_uuid_s": "NWKI-9b508140-9a21-3fb2-b2a3-c7a11f6cc347",
+              "type_s": "study",
+              "document_uuid_s": "NWKI-e3a8b36e-36fe-4119-8c7a-30226f82a7ab",
+              "topcategory_s": "P-CHEM",
+              "endpointcategory_s": "PC_GRANULOMETRY_SECTION",
+              "endpoint_s": "PARTICLE SIZE",
+              "effectendpoint_s": "PARTICLE SIZE",
+              "reference_owner_s": "NANOWIKI",
+              "reference_s": "http://iopscience.iop.org/1749-4699/6/1/014010/article/",
+              "loValue_d": 30,
+              "unit_s": "nm"
+            },
+            {
+              "id": "NWKI-9b508140-9a21-3fb2-b2a3-c7a11f6cc347/c/1",
+              "type_s": "composition",
+              "component": [
+                "CONSTITUENT"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "facets": {
+      "count": 3,
+      "topcategory": {
+        "buckets": [
+          {
+            "val": "P-CHEM",
+            "count": 905,
+            "min": -33.5,
+            "max": 27499999200
+          },
+          {
+            "val": "TOX",
+            "count": 702,
+            "min": -1,
+            "max": 1115686530
+          }
+        ]
+      }
+    },
+    "stats": {
+      "stats_fields": {
+        "loValue_d": {
+          "min": null,
+          "max": null
+        }
+      }
+    }
   }
 });

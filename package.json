@@ -1,6 +1,6 @@
 {
   "name": "jtox-kit",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
   "keywords": [
     "chem-informatics",
@@ -57,13 +57,11 @@
     "uglify-js": "latest",
     "jasmine-node": "latest",
     "jasmine-core": "latest",
-    "underscore": "latest",
     "smash": "latest"
   },
   "scripts": {    
-    "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js",
+    "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js && rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/as-sys/*.js libs && rsync node_modules/solr-jsx/*.js libs",
     "test": "jasmine-node tests && uglifyjs -nc -mt < www/jtox-kit.js > www/jtox-kit.min.js",
-    "posttest": "rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/as-sys/*.js libs && rsync node_modules/solr-jsx/*.js libs",
     
     "prepublish": "npm test && pushd www && chmod a-w jtox-kit.*.js && zip jtox-kit.zip ../LICENSE ../README.md jtox-kit.*.js && popd",
     "postpublish": "VERSION=`node -e 'console.log(require(\"./package.json\").version)'`; git push && git tag -am \"Release $VERSION.\" ${VERSION} && git push --tags"

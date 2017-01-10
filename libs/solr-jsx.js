@@ -8,7 +8,7 @@
 
 (function () {
   // Define this as a main object to put everything in
-  Solr = { version: "0.10.0" };
+  Solr = { version: "0.10.4" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -34,6 +34,7 @@ Solr.Management = function (obj) {
 };
 
 Solr.Management.prototype = {
+  __expects: [ "prepareQuery", "parseQuery" ],
   /** Parameters that can and are expected to be overriden during initialization
     */
   connector: null,      // The object for making the actual requests - jQuery object works pretty fine.
@@ -84,13 +85,13 @@ Solr.Management.prototype = {
     // Prepare the handlers for both error and success.
     settings.error = self.onError;
     settings.success = function (data) {
-      self.parseQuery(self.response = data);
+      self.response = self.parseQuery(data);
 
       // Now inform all the listeners
-      a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, data, servlet); });
+      a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, self.response, servlet); });
 
       // Call this for Querying skills, if it is defined.
-      a$.act(self, self.parseResponse, data, servlet);
+      a$.act(self, self.parseResponse, self.response, servlet);
       
       // Time to call the passed on success handler.
       a$.act(self, self.onSuccess);
@@ -103,11 +104,10 @@ Solr.Management.prototype = {
         self.doRequest(self.pendingRequest);
     };
     
-
     // Inform all our skills for the preparation.
     a$.broadcast(self, 'onPrepare', settings);
-
-    // Give someone the opportunity to make some final tweaks.
+    
+    // Call the custom provided preparation routines.
     a$.act(self, self.onPrepare, settings);
     
     // And make the damn call.
@@ -144,10 +144,13 @@ Solr.Management.prototype = {
     return this;
   },
   
-  /** Remove one listener
+  /** Remove one listener. Can pass only the id.
     */
   removeListener: function (listener) {
-    delete this.listeners[listener.id];
+    if (typeof listener === "objcet")
+      listener = listener.id;
+      
+    delete this.listeners[listener];
     return this;
   },
   
@@ -156,12 +159,12 @@ Solr.Management.prototype = {
     * the listener is removed.
     */
   removeManyListeners: function (selector) {
-    if (typeof callback !== 'function')
+    if (typeof selector !== 'function')
       throw { name: "Enumeration error", message: "Attempt to select-remove listeners with non-function 'selector': " + selector };
       
     var self = this;
     a$.each(self.listeners, function (l, id) {
-      if (selector(l, self))
+      if (selector(l, id, self))
         delete self.listeners[id];
     });
     
@@ -188,13 +191,14 @@ Solr.Management.prototype = {
 
 })(Solr, asSys);
 /** SolrJsX library - a neXt Solr queries JavaScript library.
-  * Parameter management skills.
+  *
+  * Parameter management skills. Primary based on this description:
+  * http://yonik.com/solr-json-request-api/#Smart_merging_of_multiple_JSON_parameters
   *
   * Author: Ivan Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
   
-
 (function (Solr, a$){
 /** This is directly copied from AjaxSolr.
   */  
@@ -202,6 +206,9 @@ Solr.escapeValue = function (value) {
   // If the field value has a space, colon, quotation mark or forward slash
   // in it, wrap it in quotes, unless it is a range query or it is already
   // wrapped in quotes.
+  if (typeof value !== 'string')
+    value = value.toString();
+    
   if (value.match(/[ :\/"]/) && !value.match(/[\[\{]\S+ TO \S+[\]\}]/) && !value.match(/^["\(].*["\)]$/)) {
     return '"' + value.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
   }
@@ -238,25 +245,28 @@ Solr.parseParameter = function (str) {
 };
 
 Solr.Configuring = function (obj) {
-  a$.extend(true, this, obj);
-  
   // Now make some reformating of initial parameters.
-  var self = this;
+  var self = this,
+      parameters = null;
       
-  this.parameterStore = {};
-  a$.each(this.parameters, function (p, name) {
+  if (obj != null) {
+    parameters = obj.parameters;
+    delete obj.parameters;  
+  }
+
+  a$.extend(true, this, obj);
+      
+  this.resetParameters();
+  a$.each(parameters, function (p, name) {
     if (typeof p === 'string')
       self.addParameter(Solr.parseParameter(name + '=' + p));
     else
       self.addParameter(name, p);
   });
-  // We no longer need this - free them.
-  delete obj.parameters;
-  delete this.parameters;
 };
 
 var paramIsMultiple = function (name) { 
-  return name.match(/^(?:bf|bq|facet\.date|facet\.date\.other|facet\.date\.include|facet\.field|facet\.pivot|facet\.range|facet\.range\.other|facet\.range\.include|facet\.query|fq|group\.field|group\.func|group\.query|pf|qf|stats\.field)$/);
+  return name.match(/^(?:bf|bq|facet\.date|facet\.date\.other|facet\.date\.include|facet\.field|facet\.pivot|facet\.range|facet\.range\.other|facet\.range\.include|facet\.query|fq|json\.query|json\.filter|group\.field|group\.func|group\.query|pf|qf|stats\.field)$/);
 };
 
 Solr.Configuring.prototype = {
@@ -268,7 +278,9 @@ Solr.Configuring.prototype = {
     
     if (typeof param !== 'object') {
       name = param;
-      param = { 'name': param, 'value': value, 'domain': domain };
+      param = { 'name': param, 'value': value };
+      if (domain !== undefined)
+        param.domain = domain;
     }
     else
       name = param.name;
@@ -370,13 +382,23 @@ Solr.Configuring.prototype = {
   
   /** Iterate over all parameters - including array-based, etc.
     */
-  enumerateParameters: function (callback) {
+  enumerateParameters: function (deep, callback) {
+    if (typeof deep !== 'boolean') {
+      callback = deep;
+      deep = true;
+    }
     a$.each(this.parameterStore, function (p) {
-      if (Array.isArray(p))
+      if (deep && Array.isArray(p))
         a$.each(p, callback);
       else
         callback(p);
     });
+  },
+  
+  /** Clears all the parameter store
+    */
+  resetParameters: function () {
+    this.parameterStore = {};
   }
 };
 
@@ -417,6 +439,13 @@ Solr.Compatibility.prototype = {
   
 (function (Solr, a$){
   
+Solr.stringifyDomain = function (param) {
+  var prefix = [];
+
+  a$.each(param.domain, function (l, k) {  prefix.push((k !== 'type' ? k + '=' : '') + l); });
+  return prefix.length > 0 ? "{!" + prefix.join(" ") + "}" : "";
+};
+
 Solr.QueryingURL = function (obj) {
   a$.extend(true, this, obj);
 };
@@ -434,11 +463,9 @@ var paramValue = function (value) {
 }
 
 Solr.QueryingURL.prototype = {
+  __expects: [ "enumerateParameters" ],
   prepareParameter: function (param) {
-    var prefix = [];
-        
-    a$.each(param.domain, function (l, k) {  prefix.push((k !== 'type' ? k + '=' : '') + l); });
-    prefix = prefix.length > 0 ? "{!" + prefix.join(" ") + "}" : "";
+    var prefix = Solr.stringifyDomain(param);
     
     // For dismax request handlers, if the q parameter has local params, the
     // q parameter must be set to a non-empty value.
@@ -459,8 +486,8 @@ Solr.QueryingURL.prototype = {
   },
   
   parseQuery: function (response) {
-
-  },
+    return response;
+  }
   
 };
 
@@ -476,53 +503,77 @@ Solr.QueryingURL.prototype = {
 
 (function (Solr, a$){
   
-// TODO: This has never been verified, actually!
-var renameParameter = function (name) {
-  switch (name) {
-    case 'fq': return 'filter';
-    case 'q': return 'query';
-    case 'fl': return 'fields';
-    case 'rows': return 'limit';
-    case 'start': return 'offset';
-    case 'f': return 'facet';
-    case 'ex': return 'excludeTags';
-    default:
-      var m = name.match(/^json\./);
-      return !m ? null : name.substr(m[0].length);
-  }
+var paramIsUrlOnly = function(name) {
+  return name.match(/^(json\.nl|json\.wrf|q|wt)/);
+};
+
+var paramJsonName = function (name) {
+  var m = name.match(/^json\.?(.*)/);
+  return m && m[1];
 };
 
 Solr.QueryingJson = function (obj) {
+  this.useBody = true;
   a$.extend(true, this, obj);
 };
 
 Solr.QueryingJson.prototype = {
-  __depends: [ Solr.QueryingURL ],
-  
+  __expects: [ "enumerateParameters" ],  
   prepareQuery: function () {
-    var self = this,
-        urlQuery = [],
-        dataQuery = {};
-    
-    self.enumerateParameters(function (param) {
-      var m = renameParameter(param.name);
-      if (!m || typeof param.value !== 'object') {
-        m = a$.act(this, Solr.QueryingURL.prototype.prepareParam, param);
-        if (m != null)
-          urlQuery.push(m);
-      }
-      // A JSON-valid parameter
+    var url = [ ],
+        json = { 'params': {} },
+        paramValue = function (param) {
+          if (paramIsUrlOnly(param.name)) {
+            url.push(Solr.QueryingURL.prototype.prepareParameter(param));
+            return;
+          }
+          
+          // Now, make the rest of the test.
+          var val = null;
+          
+          if (typeof param.value === 'string')
+            val = Solr.stringifyDomain(param) + param.value;
+          else if (param.domain !== undefined)
+            val = a$.extend({}, param.value, { 'domain': param.domain });
+          else
+            val = param.value;
+            
+          return val;
+        };
+ 
+    // make shallow enumerator so that arrays are saved as such.
+    this.enumerateParameters(false, function (param) {
+      // Take care for some very special parameters...
+      var val = !Array.isArray(param) ? paramValue(param) : param.map(paramValue),
+          name = !Array.isArray(param) ? param.name : param[0].name,
+          jname = paramJsonName(name);
+
+      if (val == undefined)
+        return;
+      else if (jname !== null)
+        a$.path(json, jname, val);
       else
-        a$.path(dataQuery, m, a$.extend({}, param.value, { domain: param.domain }));
+        json.params[name] = val;
     });
-    
-    console.log("Query URL: " + urlQuery.join("&") + " Data: " + JSON.stringify(dataQuery));
-    return { url: '?' + urlQuery.join("&"), data: dataQuery };
+
+    json = JSON.stringify(json);
+    if (!this.useBody) {
+      url.push(encodeURIComponent(json));
+      return { url: '?' + url.join("&") };
+    }
+    else
+      return { url: '?' + url.join("&"), data: json, contentType: "application/json", type: "POST", method:"POST" };
   },
   
   parseQuery: function (response) {
-
-  },
+    if (response.responseHeader.params.json != null) {
+      var json = JSON.parse(response.responseHeader.params.json);
+      a$.extend(response.responseHeader.params, json, json.params);
+      delete response.responseHeader.params.json;
+    }
+    
+    return response;
+  }
   
 };
 
@@ -786,32 +837,35 @@ Solr.Texting.prototype = {
   
 /* http://wiki.apache.org/solr/SimpleFacetParameters */
 var FacetParameters = {
-  'prefix': null,
-  'sort': null,
-  'limit': null,
-  'offset': null,
-  'mincount': null,
-  'missing': null,
-  'method': null,
-  'enum.cache.minDf': null
-},
-facetValue = function (value) {
+    'prefix': null,
+    'sort': null,
+    'limit': null,
+    'offset': null,
+    'mincount': null,
+    'missing': null,
+    'method': null,
+    'enum.cache.minDf': null
+  },
+  leadBracket = /\s*\(\s*?/,
+  rearBracket = /\s*\)\s*$/;
+
+/**
+  * Forms the string for filtering of the current facet value
+  */
+Solr.facetValue = function (value) {
   if (!Array.isArray(value))
     return Solr.escapeValue(value);
   else if (value.length == 1)
     return Solr.escapeValue(value[0]);
   else
     return "(" + value.map(function (v) { return Solr.escapeValue(v); }).join(" ") + ")";
-},
-leadBracket = /\s*\(\s*?/,
-rearBracket = /\s*\)\s*$/;
+};
 
 /**
  * Parses a facet filter from a parameter.
  *
  * @returns {Object} { field: {String}, value: {Combined}, exclude: {Boolean} }.
- */    
-
+ */ 
 Solr.parseFacet = function (value) {
   var m = value.match(/^(-)?([^\s:]+):(.+)$/);
   
@@ -844,57 +898,76 @@ Solr.Faceting.prototype = {
   aggregate: false,       // If additional values are aggregated in one filter.
   exclusion: false,       // Whether to exclude THIS field from filtering from itself.
   domain: null,           // Some local attributes to be added to each parameter
+  useJson: false,         // Whether to use the Json Facet API.
   facet: { },             // A default, empty definition.
   
   /** Make the initial setup of the manager for this faceting skill (field, exclusion, etc.)
     */
   init: function (manager) {
+    a$.pass(this, Solr.Faceting, "init", manager);
     this.manager = manager;
     
-    var fpars = a$.extend({}, FacetParameters),
-        domain = null,
-        self = this;
+    var exTag = null;
 
     if (this.exclusion) {
       this.domain = a$.extend(this.domain, { tag: this.id + "_tag" });
-      domain = { ex: this.id + "_tag" };
+      exTag = this.id + "_tag";
     }
 
-    this.manager.addParameter('facet', true);
+    if (this.useJson) {
+      var facet = { type: "terms", field: this.field, mincount: 1, limit: -1 };
 
-    if (this.facet.date !== undefined) {
-      this.manager.addParameter('facet.date', this.field, domain);
-      a$.extend(fpars, {
-        'date.start': null,
-        'date.end': null,
-        'date.gap': null,
-        'date.hardend': null,
-        'date.other': null,
-        'date.include': null
-      });
+      this.fqName = "json.filter";
+      if (exTag != null)
+        facet.domain = { excludeTags: exTag };
+  
+      this.manager.addParameter('json.facet.' + this.id, a$.extend(facet, this.facet));
     }
-    else if (this.facet.range !== undefined) {
-      this.manager.addParameter('facet.range', this.field, domain);
-      a$.extend(fpars, {
-        'range.start': null,
-        'range.end': null,
-        'range.gap': null,
-        'range.hardend': null,
-        'range.other': null,
-        'range.include': null
-      });
-    }
-    // Set facet.field, facet.date or facet.range to truthy values to add
-    // related per-field parameters to the parameter store.
     else {
-      this.facet.field = true;
-      this.manager.addParameter('facet.field', this.field, domain);
+    var self = this,
+        fpars = a$.extend({}, FacetParameters),
+        domain = { key: this.id };
+        
+      if (exTag != null)
+        domain.ex = exTag;
+        
+      this.fqName = "fq";
+      this.manager.addParameter('facet', true);
+      
+      if (this.facet.date !== undefined) {
+        this.manager.addParameter('facet.date', this.field, domain);
+        a$.extend(fpars, {
+          'date.start': null,
+          'date.end': null,
+          'date.gap': null,
+          'date.hardend': null,
+          'date.other': null,
+          'date.include': null
+        });
+      }
+      else if (this.facet.range !== undefined) {
+        this.manager.addParameter('facet.range', this.field, domain);
+        a$.extend(fpars, {
+          'range.start': null,
+          'range.end': null,
+          'range.gap': null,
+          'range.hardend': null,
+          'range.other': null,
+          'range.include': null
+        });
+      }
+      // Set facet.field, facet.date or facet.range to truthy values to add
+      // related per-field parameters to the parameter store.
+      else {
+        this.facet.field = true;
+        this.manager.addParameter('facet.field', this.field, domain);
+      }
+      
+      fpars = a$.common(this.facet, fpars);
+      a$.each(fpars, function (p, k) { 
+        self.manager.addParameter('f.' + self.field + '.facet.' + k, p); 
+      });
     }
-    
-    fpars = a$.common(this.facet, fpars);
-    a$.each(fpars, function (p, k) { 
-      self.manager.addParameter('f.' + self.field + '.facet.' + k, p); 
-    });
   },
   
   /**
@@ -908,11 +981,11 @@ Solr.Faceting.prototype = {
       this.clearValues();
 
     var index;
-    if (!this.aggregate || !(index = this.manager.findParameters('fq', this.fieldRegExp)).length)
-      return this.manager.addParameter('fq', this.fq(value, exclude), this.domain);
+    if (!this.aggregate || !(index = this.manager.findParameters(this.fqName, this.fieldRegExp)).length)
+      return this.manager.addParameter(this.fqName, this.fq(value, exclude), this.domain);
       
     // No we can obtain the parameter for aggregation.
-    var param = this.manager.getParameter('fq', index[0]),
+    var param = this.manager.getParameter(this.fqName, index[0]),
         parsed = Solr.parseFacet(param.value),
         added = false;
     
@@ -950,13 +1023,13 @@ Solr.Faceting.prototype = {
       var self = this,
           removed = false;
 
-      this.manager.removeParameters('fq', function (p) {
+      this.manager.removeParameters(this.fqName, function (p) {
         var parse, rr;
 
         if (!p.value.match(self.fieldRegExp))
           return false;
         else if (!self.aggregate) {
-          removed = removed || (rr = p.value.indexOf(facetValue(value)) >= 0);
+          removed = removed || (rr = p.value.indexOf(Solr.facetValue(value)) >= 0);
           return rr;
         }
         
@@ -997,11 +1070,11 @@ Solr.Faceting.prototype = {
    * @returns {Boolean} If the given value can be found
    */      
   hasValue: function (value) {
-    var indices = this.manager.findParameters('fq', this.fieldRegExp),
+    var indices = this.manager.findParameters(this.fqName, this.fieldRegExp),
         value = Solr.escapeValue(value);
         
     for (var p, i = 0, il = indices.length; i < il; ++i) {
-      p = this.manager.getParameter('fq', indices[i]);
+      p = this.manager.getParameter(this.fqName, indices[i]);
       if (p.value.replace(this.fieldRegExp, "").indexOf(value) > -1)
         return true;
     }
@@ -1015,7 +1088,7 @@ Solr.Faceting.prototype = {
    * @returns {Boolean} Whether a filter query was removed.
    */
   clearValues: function () {
-    return this.manager.removeParameters('fq', this.fieldRegExp);
+    return this.manager.removeParameters(this.fqName, this.fieldRegExp);
   },
   
   /**
@@ -1025,9 +1098,15 @@ Solr.Faceting.prototype = {
    * @returns {Array} An array of objects with the properties <tt>facet</tt> and
    * <tt>count</tt>, e.g <tt>{ facet: 'facet', count: 1 }</tt>.
    */
-  getFacetCounts: function () {
+  getFacetCounts: function (facet_counts) {
     var property;
-    if (this.facet.field !== undefined)
+    
+    if (facet_counts == null)
+      facet_counts = this.manager.response.facet_counts;
+      
+    if (this.useJson === true)
+      return facet_counts[this.id].buckets;
+    else if (this.facet.field !== undefined)
       property = 'facet_fields';
     else if (this.facet.date !== undefined)
       property = 'facet_dates';
@@ -1037,11 +1116,11 @@ Solr.Faceting.prototype = {
     if (property !== undefined) {
       switch (this.manager.getParameter('json.nl').value) {
         case 'map':
-          return this.getFacetCountsMap(property);
+          return this.getFacetCountsMap(facet_counts, property);
         case 'arrarr':
-          return this.getFacetCountsArrarr(property);
+          return this.getFacetCountsArrarr(facet_counts);
         default:
-          return this.getFacetCountsFlat(property);
+          return this.getFacetCountsFlat(facet_counts);
       }
     }
     throw 'Cannot get facet counts unless one of the following properties is set to "true" on widget "' + this.id + '": "facet.field", "facet.date", or "facet.range".';
@@ -1054,12 +1133,12 @@ Solr.Faceting.prototype = {
    * @returns {Array} An array of objects with the properties <tt>facet</tt> and
    * <tt>count</tt>, e.g <tt>{ facet: 'facet', count: 1 }</tt>.
    */
-  getFacetCountsMap: function (property) {
+  getFacetCountsMap: function (facet_counts, property) {
     var counts = [];
-    for (var facet in this.manager.response.facet_counts[property][this.field]) {
+    for (var facet in facet_counts[property][this.id]) {
       counts.push({
-        facet: facet,
-        count: parseInt(this.manager.response.facet_counts[property][this.field][facet])
+        val: facet,
+        count: parseInt(facet_counts[property][this.id][facet])
       });
     }
     return counts;
@@ -1072,12 +1151,12 @@ Solr.Faceting.prototype = {
    * @returns {Array} An array of objects with the properties <tt>facet</tt> and
    * <tt>count</tt>, e.g <tt>{ facet: 'facet', count: 1 }</tt>.
    */
-  getFacetCountsArrarr: function (property) {
+  getFacetCountsArrarr: function (facet_counts, property) {
     var counts = [];
-    for (var i = 0, l = this.manager.response.facet_counts[property][this.field].length; i < l; i++) {
+    for (var i = 0, l = facet_counts[property][this.id].length; i < l; i++) {
       counts.push({
-        facet: this.manager.response.facet_counts[property][this.field][i][0],
-        count: parseInt(this.manager.response.facet_counts[property][this.field][i][1])
+        val: facet_counts[property][this.id][i][0],
+        count: parseInt(facet_counts[property][this.id][i][1])
       });
     }
     return counts;
@@ -1090,12 +1169,12 @@ Solr.Faceting.prototype = {
    * @returns {Array} An array of objects with the properties <tt>facet</tt> and
    * <tt>count</tt>, e.g <tt>{ facet: 'facet', count: 1 }</tt>.
    */
-  getFacetCountsFlat: function (property) {
+  getFacetCountsFlat: function (facet_counts, property) {
     var counts = [];
-    for (var i = 0, l = this.manager.response.facet_counts[property][this.field].length; i < l; i += 2) {
+    for (var i = 0, l = facet_counts[property][this.id].length; i < l; i += 2) {
       counts.push({
-        facet: this.manager.response.facet_counts[property][this.field][i],
-        count: parseInt(this.manager.response.facet_counts[property][this.field][i+1])
+        val: facet_counts[property][this.id][i],
+        count: parseInt(facet_counts[property][this.id][i + 1])
       });
     }
     return counts;
@@ -1143,7 +1222,7 @@ Solr.Faceting.prototype = {
    * @returns {String} An fq parameter value.
    */
   fq: function (value, exclude) {
-    return (exclude ? '-' : '') + this.field + ':' + facetValue(value);
+    return (exclude ? '-' : '') + this.field + ':' + Solr.facetValue(value);
   }
 };
 

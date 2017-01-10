@@ -25,7 +25,7 @@
       }
       for (var p in src) {
         if (target[p] === src[p]) continue;
-        if (target[p] !== undefined && newonly) continue; else if (!deep || typeof src[p] !== "object" || !src.hasOwnProperty(p) || !copyEnabled(src[p])) target[p] = src[p]; else try {
+        if (target[p] !== undefined && newonly) continue; else if (!deep || typeof src[p] !== "object" || src[p] instanceof RegExp || !src.hasOwnProperty(p) || !copyEnabled(src[p])) target[p] = src[p]; else try {
           if (target[p] == null) target[p] = asSys.mimic(src[p]);
           merge(target[p], src[p]);
         } catch (e) {
@@ -108,7 +108,7 @@
     });
     return A;
   };
-  asSys.version = "0.10.1";
+  asSys.version = "0.10.4";
   asSys.equal = function(deepCompare) {
     var deep = deepCompare, start = 0, match = function(a, b, dig) {
       if (typeof a !== "object" || typeof b !== "object") return a === b; else if (dig !== false) {

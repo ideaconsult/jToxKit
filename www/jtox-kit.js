@@ -7,13 +7,13 @@
 
 (function () {
   // Define this as a main object to put everything in
-  var jToxKit = { version: "2.0.0" };
+  var jToxKit = { version: "2.0.1" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
   
 /** jToxKit - chem-informatics multi toolkit.
-  * Data consumption skills.
+  * Data translation basic skills.
   *
   * Author: Ivan (Jonan) Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
@@ -30,24 +30,23 @@
   *
   * Consumers are registered pretty much the same way each listener is.
   * There two methods that are expected to be present - `init` and `afterTranslation`.
-  * The first one is optional and is invoked once, when the Consumption-enabled entity
+  * The first one is optional and is invoked once, when the Translation-enabled entity
   * is initialized itself.
   * The other method - `afterTranslation` is invoked on every successfull response.
   */
 (function (jT, a$) {  
 
   /**
-   * Data consumption skills, aimed a generic binding link between translators and parties
+   * Data translation skills, aimed a generic binding link between translators and parties
    * interested in pre-formatted data.
    *
    */
   
-  jT.Consumption = function (settings) {
+  jT.Translation = function (settings) {
     a$.extend(true, this, settings);
-    this.consumers = {};
   }
   
-  jT.Consumption.prototype = {
+  jT.Translation.prototype = {
     __expects: [ "translateResponse" ],
     
     /**
@@ -56,66 +55,18 @@
     init: function () {
       var self = this;
       // Let the other initializers, like the Management, for example
-      a$.pass(this, jT.Consumption, "init");
-      
-      a$.each(this.consumers, function (c) {
-        // Inform the consumer who's the manager. Most probably this is us.
-        a$.act(c, c.init, self);
-      });  
+      a$.pass(this, jT.Translation, "init");
     },
     
     parseResponse: function (response, scope) {
-      a$.pass(this, jT.Consumption, "parseResponse");
+      a$.pass(this, jT.Translation, "parseResponse");
       
       var data = this.translateResponse(response, scope),
           self = this;
-      a$.each(this.consumers, function (c) {
+      a$.each(this.listeners, function (c) {
         a$.act(c, c.afterTranslation, data, scope, self);
       });
     },
-    
-    /*** The actual consumption skills methods ***/
-    
-    addConsumers: function (consumer, id) {
-      if (typeof id !== "string")
-        throw { name: "Binding error", message: "Attempt to add consumer with non-string id: " + id };
-        
-      this.consumers[id] = consumer;
-      return this;
-    },
-    
-    removeConsumer: function (id) {
-      delete this.consumers[id];
-      return this;
-    },
-    
-    removeManyConsumers: function (selector) {
-      if (typeof selector !== 'function')
-        throw { name: "Enumeration error", message: "Attempt to enumerate consumers with non-function 'selector': " + selector };
-        
-      var self = this;
-      a$.each(this.consumers, function (c, i) {
-        if (selector(c, i, self))
-          delete self.consumers[i];
-      });
-      return this;
-    },
-    
-    enumerateConsumers: function (selector, context) {
-      if (typeof selector !== 'function')
-        throw { name: "Enumeration error", message: "Attempt to enumerate consumers with non-function 'selector': " + selector };
-      
-      a$.each(this.consumers, function (c, i) {
-        selector.call(c, c, i, context);
-      });
-      
-      return this;
-    },
-    
-    getConsumer: function (id) {
-      return this.consumers[id];
-    }
-
   };
   
 })(jToxKit, asSys);
@@ -130,32 +81,144 @@
   * 
   */
 (function (jT, a$) {  
-
+  var defaultRules = {
+    "study": { fields: /topcategory[_sh]*|endpointcategory[_sh]*|guidance_[_sh]*|reference[_sh]*|reference_owner[_sh]*|reference_year[_sh]*|guidance[_sh]*/ },
+    "composition": { fields: /CORE|COATING|CONSTITUENT|ADDITIVE|IMPURITY|FUNCTIONALISATION|DOPING/ }
+  };
+  
   /**
    * Raw, non-nested Solr data translation.
-   * interested in pre-formatted data.
-   *
    */
   
   jT.RawSolrTranslation = function (settings) {
-    a$.extend(true, this, settings);
-    this.manager = null;
+    this.collapseRules = a$.extend(true, {}, defaultRules, settings && settings.collapseRules);
   }
   
   jT.RawSolrTranslation.prototype = {    
     init: function (manager) {
       // Let the other initializers, like the Management, for example
       a$.pass(this, jT.RawSolrTranslation, "init");
-      this.manager = manager;
     },
     
     translateResponse: function (response, scope) {
-      // now put the stats.
+      var docs = [],
+          self = this,
+          filterProps = function (dout, din) {
+            a$.each(self.collapseRules, function (r, type) {
+              var subdoc = {};
+              
+              a$.each(din, function (v, k) {
+                if (!k.match(r.fields))
+                  return;
+                  
+                delete din[k];
+                
+                // smash these annoying multi-arrays.
+                if (Array.isArray(v) && v.length == 1)
+                  v = v[0];
+                  
+                subdoc[k] = v;
+              });
+              
+              // now add this.
+              if (dout._extended_ === undefined)
+                dout._extended_ = {};
+                
+              if (dout._extended_[type] === undefined)
+                dout._extended_[type] = [ subdoc ];
+              else
+                dout._extended_[type].push(subdoc);
+            });
+
+            // now process the remaining fields too            
+            a$.each(din, function (v, k) {
+              // smash these annoying multi-arrays.
+              if (Array.isArray(v) && v.length == 1)
+                v = v[0];
+
+              dout[k] = v;
+            });
+          };
+      
+      for (var i = 0, dl = response.response.docs.length; i < dl; ++i) {
+        var din = response.response.docs[i],
+            ein = response.expanded[din.s_uuid],
+            dout = {};
+        
+        filterProps(dout, din);
+        for (var j = 0, edl = ein.docs.length; j < edl; ++j)
+          filterProps(dout, ein.docs[j]);
+        
+        docs.push(dout);
+      }
+      
       return {
-        'entries': response.response.docs,
+        'entries': docs,
+        'stats': a$.extend({}, response.stats, response.responseHeader),
+        'facets': a$.extend({}, response.facet_counts.facet_fields || response.facets, response.facet_counts.facet_pivot),
+        'paging': { 
+          'start': response.response.start,
+          'count': response.response.docs.length,
+          'total': response.response.numFound,
+          'pageSize': parseInt(response.responseHeader.params.rows)
+        }
+      };
+    }
+  };
+  
+  // TODO: Potentially add other, higher level methods for constructing a query.
+})(jToxKit, asSys);
+/** jToxKit - chem-informatics multi toolkit.
+  * Nested docs SOLR translation
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+  */
+  
+/***
+  * Solr nested docs translation skill.
+  */
+(function (jT, a$) {  
+
+  /**
+   * The nested documents Solr data translation.
+   */
+  
+  jT.NestedSolrTranslation = function (settings) {
+    this.nestingField = settings && settings.nestingField || "type_s";
+  }
+  
+  jT.NestedSolrTranslation.prototype = {
+    init: function (manager) {
+      // Let the other initializers, like the Management, for example
+      a$.pass(this, jT.NestedSolrTranslation, "init");
+    },
+    
+    translateResponse: function (response, scope) {
+      var docs = response.response.docs;
+      
+      for (var i = 0, dl = docs.length; i < dl; ++i) {
+        var d = docs[i],
+            ext = {};
+            
+        for (var j = 0, cl = d._childDocuments_.length; j < cl; ++j) {
+          var c = d._childDocuments_[j],
+              type = c[this.nestingField];
+            
+          if (ext[type] === undefined)
+            ext[type] = [];
+            
+          ext[type].push(c);
+        }
+        
+        delete d._childDocuments_;
+        d._extended_ = ext;
+      }
+      
+      return {
+        'entries': docs,
         'stats': a$.extend({}, response.stats, response.responseHeader),
         'facets': response.facets,
-        'pivots': response.facet_counts.facet_pivot,
         'paging': { 
           'start': response.response.start,
           'count': response.response.docs.length,
