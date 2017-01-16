@@ -5,13 +5,14 @@
   */
 
 
-(function () {
-  // Define this as a main object to put everything in
-  var jToxKit = { version: "{{VERSION}}" };
+// Define this as a main object to put everything in
+var jToxKit = { version: "{{VERSION}}" };
 
+(function (jT, a$) {
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
   
+import "Tools";
 import "Translation";
 import "RawSolrTranslation";
 import "NestedSolrTranslation";
@@ -25,4 +26,4 @@ import "NestedSolrTranslation";
     if ( typeof define === "function" && define.amd )
       define(jToxKit);
   }
-})();
+})(jToxKit, asSys);

@@ -20,39 +20,35 @@
   * is initialized itself.
   * The other method - `afterTranslation` is invoked on every successfull response.
   */
-(function (jT, a$) {  
+/**
+ * Data translation skills, aimed a generic binding link between translators and parties
+ * interested in pre-formatted data.
+ *
+ */
 
+jT.Translation = function (settings) {
+  a$.extend(true, this, settings);
+}
+
+jT.Translation.prototype = {
+  __expects: [ "translateResponse" ],
+  
   /**
-   * Data translation skills, aimed a generic binding link between translators and parties
-   * interested in pre-formatted data.
-   *
-   */
+   * Methods, that are going to be invoked by the manager.
+   */ 
+  init: function () {
+    // Let the other initializers, like the Management, for example
+    a$.pass(this, jT.Translation, "init");
+  },
   
-  jT.Translation = function (settings) {
-    a$.extend(true, this, settings);
-  }
-  
-  jT.Translation.prototype = {
-    __expects: [ "translateResponse" ],
+  parseResponse: function (response, scope) {
+    a$.pass(this, jT.Translation, "parseResponse");
     
-    /**
-     * Methods, that are going to be invoked by the manager.
-     */ 
-    init: function () {
-      var self = this;
-      // Let the other initializers, like the Management, for example
-      a$.pass(this, jT.Translation, "init");
-    },
-    
-    parseResponse: function (response, scope) {
-      a$.pass(this, jT.Translation, "parseResponse");
-      
-      var data = this.translateResponse(response, scope),
-          self = this;
-      a$.each(this.listeners, function (c) {
-        a$.act(c, c.afterTranslation, data, scope, self);
-      });
-    },
-  };
-  
-})(jToxKit, asSys);
+    var data = this.translateResponse(response, scope),
+        self = this;
+    a$.each(this.listeners, function (c) {
+      a$.act(c, c.afterTranslation, data, scope, self);
+    });
+  },
+};
+

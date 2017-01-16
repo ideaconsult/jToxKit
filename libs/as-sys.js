@@ -108,7 +108,7 @@
     });
     return A;
   };
-  asSys.version = "0.10.4";
+  asSys.version = "0.12.0";
   asSys.equal = function(deepCompare) {
     var deep = deepCompare, start = 0, match = function(a, b, dig) {
       if (typeof a !== "object" || typeof b !== "object") return a === b; else if (dig !== false) {
@@ -182,6 +182,11 @@
       }
     }
   };
+  asSys.findIndex = function(arr, needle) {
+    if (typeof needle !== "function") return arr.indexOf(needle); else if (typeof arr.findIndex === "function") return arr.findIndex(needle);
+    for (var i = 0, al = arr.length; i < al.length; ++i) if (!!needle.call(arr[i], arr[i], i)) return i;
+    return -1;
+  };
   asSys.weight = function(agent) {
     if (typeof agent !== "object") return 1; else if (agent.hasOwnProperty("length") && typeof agent.length == "number") return agent.length; else return Object.keys(agent).length;
   };
@@ -198,6 +203,9 @@
         return agent.constructor.apply(o, Array.prototype.slice(arguments, 1)) || o;
       } catch (e) {}
     }
+  };
+  asSys.escapeRegExp = function(str) {
+    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
   };
   asSys.path = function(agent, path, value) {
     if (path == null) return;
