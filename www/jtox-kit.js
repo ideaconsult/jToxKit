@@ -312,6 +312,9 @@ jT.NestedSolrTranslation.prototype = {
       var d = docs[i],
           ext = {};
           
+      if (!d._childDocuments_)
+        continue;
+        
       for (var j = 0, cl = d._childDocuments_.length; j < cl; ++j) {
         var c = d._childDocuments_[j],
             type = c[this.nestingField];
