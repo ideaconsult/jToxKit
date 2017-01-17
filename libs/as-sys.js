@@ -13,8 +13,8 @@
   var copyEnabled = function(agent) {
     return agent != null && typeof agent === "object" && typeof agent.constructor === "function" && !agent.nodeType;
   };
-  var mergeObjects = function(deep, newonly, i, objects) {
-    if (!deep && !newonly && typeof Object.assign === "function") {
+  var mergeObjects = function(deep, mode, i, objects) {
+    if (!deep && mode === "all" && typeof Object.assign === "function") {
       for (;objects[i] == null; ++i) ;
       return Object.assign.apply(Object, i == 0 ? objects : Array.prototype.slice.call(objects, i));
     }
@@ -25,7 +25,7 @@
       }
       for (var p in src) {
         if (target[p] === src[p]) continue;
-        if (target[p] !== undefined && newonly) continue; else if (!deep || typeof src[p] !== "object" || src[p] instanceof RegExp || !src.hasOwnProperty(p) || !copyEnabled(src[p])) target[p] = src[p]; else try {
+        if (mode !== "all" && !(target[p] === undefined ^ mode === "old")) continue; else if (!deep || typeof src[p] !== "object" || src[p] instanceof RegExp || !src.hasOwnProperty(p) || !copyEnabled(src[p])) target[p] = src[p]; else try {
           if (target[p] == null) target[p] = asSys.mimic(src[p]);
           merge(target[p], src[p]);
         } catch (e) {
@@ -83,7 +83,7 @@
           for (var j = 0, el = a.prototype.__expects.length; j < el; ++j) expected[a.prototype.__expects[j]] = true;
         }
         skillmap.push(a);
-        if (A.prototype === undefined) A.prototype = Object.create(a.prototype); else mergeObjects(true, false, 0, [ A.prototype, a.prototype ]);
+        if (A.prototype === undefined) A.prototype = Object.create(a.prototype); else mergeObjects(true, "all", 0, [ A.prototype, a.prototype ]);
         if (a.prototype.__skills !== undefined) {
           for (var j = 0, ssl = a.prototype.__skills.length, ss; j < ssl; ++j) {
             ss = a.prototype.__skills[j];
@@ -108,7 +108,7 @@
     });
     return A;
   };
-  asSys.version = "0.12.0";
+  asSys.version = "0.13.0";
   asSys.equal = function(deepCompare) {
     var deep = deepCompare, start = 0, match = function(a, b, dig) {
       if (typeof a !== "object" || typeof b !== "object") return a === b; else if (dig !== false) {
@@ -155,12 +155,17 @@
   asSys.extend = function(deep) {
     var d = deep, start = 0;
     if (typeof d !== "boolean") d = false; else start = 1;
-    return mergeObjects(d, false, start, arguments);
+    return mergeObjects(d, "all", start, arguments);
   };
   asSys.mixin = function(deep) {
     var d = deep, start = 0;
     if (typeof d !== "boolean") d = false; else start = 1;
-    return mergeObjects(d, true, start, arguments);
+    return mergeObjects(d, "new", start, arguments);
+  };
+  asSys.update = function(deep) {
+    var d = deep, start = 0;
+    if (typeof d !== "boolean") d = false; else start = 1;
+    return mergeObjects(d, "old", start, arguments);
   };
   asSys.filter = function(agent, selector) {
     if (typeof agent.filter === "function") return agent.filter(selector);
@@ -269,7 +274,7 @@
     for (var k in pool) {
       var e = pool[k];
       if (!selector.call(e, e, k, pool)) continue;
-      if (full) mergeObjects(false, false, 0, [ skills, Object.getPrototypeOf(e) ]);
+      if (full) mergeObjects(false, "all", 0, [ skills, Object.getPrototypeOf(e) ]);
       res.push(e);
     }
     if (full) {

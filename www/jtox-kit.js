@@ -195,23 +195,19 @@ jT.Translation.prototype = {
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
   
-/***
-  * 
-  */
-var defaultRules = {
-  "study": { fields: /topcategory[_sh]*|endpointcategory[_sh]*|guidance_[_sh]*|reference[_sh]*|reference_owner[_sh]*|reference_year[_sh]*|guidance[_sh]*/ },
-  "composition": { fields: /CORE|COATING|CONSTITUENT|ADDITIVE|IMPURITY|FUNCTIONALISATION|DOPING/ }
-};
-
 /**
  * Raw, non-nested Solr data translation.
  */
-
 jT.RawSolrTranslation = function (settings) {
-  this.collapseRules = a$.extend(true, {}, defaultRules, settings && settings.collapseRules);
+  a$.extend(true, this, a$.common(settings, this));
 }
 
-jT.RawSolrTranslation.prototype = {    
+jT.RawSolrTranslation.prototype = {   
+  collapseRules: {
+    "study": { fields: /topcategory[_sh]*|endpointcategory[_sh]*|guidance_[_sh]*|reference[_sh]*|reference_owner[_sh]*|reference_year[_sh]*|guidance[_sh]*/ },
+    "composition": { fields: /CORE|COATING|CONSTITUENT|ADDITIVE|IMPURITY|FUNCTIONALISATION|DOPING/ }
+  },
+  
   init: function (manager) {
     // Let the other initializers, like the Management, for example
     a$.pass(this, jT.RawSolrTranslation, "init");
