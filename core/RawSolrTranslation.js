@@ -14,7 +14,7 @@ jT.RawSolrTranslation = function (settings) {
 
 jT.RawSolrTranslation.prototype = {   
   collapseRules: {
-    "study": { fields: /topcategory[_sh]*|endpointcategory[_sh]*|guidance_[_sh]*|reference[_sh]*|reference_owner[_sh]*|reference_year[_sh]*|guidance[_sh]*/ },
+    "study": { fields: /topcategory[_sh]*|endpointcategory[_sh]*|guidance[_sh]*|reference[_sh]*|reference_owner[_sh]*|reference_year[_sh]*|guidance[_sh]*/ },
     "composition": { fields: /CORE|COATING|CONSTITUENT|ADDITIVE|IMPURITY|FUNCTIONALISATION|DOPING/ }
   },
   

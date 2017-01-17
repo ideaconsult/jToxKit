@@ -44,6 +44,7 @@
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
   
-import "ListWidgeting";
+import "ListWidget";
+import "TagWidget";
 
 })(jToxKit, asSys, jQuery);

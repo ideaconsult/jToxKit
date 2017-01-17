@@ -5,7 +5,7 @@
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
 
-jT.ListWidgeting = function (settings) {
+jT.ListWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
 	this.target = settings.target;
 	this.length = 0;
@@ -13,7 +13,7 @@ jT.ListWidgeting = function (settings) {
 	this.clearItems();
 };
 
-jT.ListWidgeting.prototype = {
+jT.ListWidget.prototype = {
   itemId: "id",
   
   populate: function (docs, callback) {
