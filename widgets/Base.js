@@ -46,5 +46,6 @@
   
 import "ListWidget";
 import "TagWidget";
+import "AutocompleteWidget";
 
 })(jToxKit, asSys, jQuery);

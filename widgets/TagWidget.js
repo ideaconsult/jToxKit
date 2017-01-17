@@ -1,3 +1,10 @@
+/** jToxKit - chem-informatics multi-tool-kit.
+  * A generic widget for box of tag management.
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
+  */
+
 jT.TagWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
 
