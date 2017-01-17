@@ -54,6 +54,7 @@
 jT.ListWidgeting = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
 	this.target = settings.target;
+	this.length = 0;
 	
 	this.clearItems();
 };
@@ -63,6 +64,7 @@ jT.ListWidgeting.prototype = {
   
   populate: function (docs, callback) {
   	this.items = docs;
+  	this.length = docs.length;
   	
   	$(this.target).empty();
   	for (var i = 0, l = docs.length; i < l; i++)
@@ -71,22 +73,27 @@ jT.ListWidgeting.prototype = {
   
   addItem: function (doc) {
   	this.items.push(doc);
+  	++this.length;
   	return this.renderItem(doc);
   },
   
   clearItems: function () {
   	$(this.target).empty();
   	this.items = [];
+  	this.length = 0;
   },
   
   findItem: function (id) {
   	var self = this;
-  	return a$.findIndex(this.items, typeof id !== "string" ? id : function (d) { return doc[self.itemId] === id; });
+  	return a$.findIndex(this.items, typeof id !== "string" ? id : function (doc) { return doc[self.itemId] === id; });
   },
   
   eraseItem: function (id) {
-  	var i = this.findItem(id);
-    return (i >= 0) ? this.items.splice(i, 1)[0] : false;
+  	var i = this.findItem(id),
+  	    r = (i >= 0) ? this.items.splice(i, 1)[0] : false;
+
+    this.length = this.items.length;
+    return r;
   },
   
   enumerateItems: function (callback) {
