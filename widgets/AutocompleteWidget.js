@@ -32,7 +32,7 @@ jT.AutocompleteWidget = function (settings) {
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "setValue" ],
+  __expects: [ "doRequest", "addValue" ],
   servlet: "autophrase",
   useJson: false,
   maxResults: 30,
@@ -47,7 +47,7 @@ jT.AutocompleteWidget.prototype = {
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {
       var thi$ = $(this);
-      if (!self.setValue(thi$.val()) || self.requestSent)
+      if (!self.addValue(thi$.val()) || self.requestSent)
         return;
         
       thi$.blur().autocomplete("disable");

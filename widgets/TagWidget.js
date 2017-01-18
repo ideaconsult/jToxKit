@@ -30,7 +30,7 @@ jT.TagWidget.prototype = {
     this.manager = manager;
   },
   
-  populate: function (objectedItems) {
+  populate: function (objectedItems, preserve) {
     var self = this,
     		item = null, 
     		total = 0,
@@ -43,7 +43,9 @@ jT.TagWidget.prototype = {
     if (objectedItems.length == 0)
       this.target.html('No items found in current selection');
     else {
-      this.target.empty();
+      if (!preserve)
+        this.target.empty();
+        
       for (var i = 0, l = objectedItems.length; i < l; i++) {
         item = objectedItems[i];
         value = item.value || item.val;
