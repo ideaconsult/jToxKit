@@ -10,6 +10,7 @@ jT.AccordionExpansion = function (settings) {
 
   this.target = $(settings.target);
   this.header = null;
+  this.id = settings.id;
   
   // We're resetting the target, so the rest of skills get a true one.
   if (this.automatic)
@@ -19,21 +20,25 @@ jT.AccordionExpansion = function (settings) {
 jT.AccordionExpansion.prototype = {
   automatic: true,
   title: null,
-  hdrClasses: null,
-  mainClasses: null,
+  classes: null,
   expansionTemplate: null,
+  before: null,
   
   renderExpansion: function (info) {
     return jT.ui.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
   },
   
-  makeExpansion: function (before, title) {
+  makeExpansion: function (before, info) {
     // Check if we've already made the expansion
     if (!!this.header)
       return; 
       
-    this.title = title || this.title || this.id;
-    var el$ = this.renderExpansion(this);
+    if (!info)
+      info = this;
+    if (!before)
+      before = this.before;
+      
+    var el$ = this.renderExpansion(info);
 
     this.accordion = this.target;
     
