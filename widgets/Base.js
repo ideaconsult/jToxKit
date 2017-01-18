@@ -13,7 +13,7 @@
       * {{placeholders}} from the provided `info`.
       */
   	fillTemplate: function(selector, info) {
-  		return $(jT.ui.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\"")).removeAttr("id");
+  		return $(jT.ui.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\""));
   	},
   	
     updateCounter: function (str, count, total) {
@@ -47,5 +47,7 @@
 import "ListWidget";
 import "TagWidget";
 import "AutocompleteWidget";
+import "SimpleItemWidget";
+import "AccordionExpansion";
 
 })(jToxKit, asSys, jQuery);

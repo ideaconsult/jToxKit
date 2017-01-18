@@ -46,6 +46,22 @@ jT.ui = a$.extend(jT.ui, {
 		return out;
   },
   
+  formatNumber: function (num, prec) {
+    return parseFloat(parseInt(Math.round(num / prec))) * 0.001;
+  /*
+    var v = Math.round(num / prec) * prec;
+    return parseFloat(v.toString().replace(new RegExp("\\.(\\d{" + (-Math.log10(prec)) + "})\\d*"), ".$1"));
+  */
+  },
+  
+	formatUnits: function (str) {
+		// change the exponential
+		return str.toString()
+			.replace(/(^|\W)u(\w)/g, '$1&#x00B5;$2')
+			.replace(/\^\(?([\-\d]+)\)?/g, '<sup>$1</sup>')
+			.replace(/ /g, "&nbsp;")
+	},
+  
   addParameter: function (url, param) {
     return url + (("&?".indexOf(url.charAt(url.length - 1)) == -1) ?  (url.indexOf('?') > 0 ? "&" : "?") : '') + param;
   },
@@ -123,15 +139,7 @@ jT.ui = a$.extend(jT.ui, {
       "'": '&#039;'
     };
     return str.replace(/[&<>"']/g, function(m) { return map[m]; });
-  },
-  
-	formatUnits: function (str) {
-		// change the exponential
-		return str.toString()
-			.replace(/(^|\W)u(\w)/g, '$1&#x00B5;$2')
-			.replace(/\^\(?([\-\d]+)\)?/g, '<sup>$1</sup>')
-			.replace(/ /g, "&nbsp;")
-	}
+  }
   
 });
 /** jToxKit - chem-informatics multi toolkit.

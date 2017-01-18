@@ -13,7 +13,7 @@
       * {{placeholders}} from the provided `info`.
       */
   	fillTemplate: function(selector, info) {
-  		return $(jT.ui.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\"")).removeAttr("id");
+  		return $(jT.ui.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\""));
   	},
   	
     updateCounter: function (str, count, total) {
@@ -53,7 +53,7 @@
 
 jT.ListWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
-	this.target = settings.target;
+	this.target = $(settings.target);
 	this.length = 0;
 	
 	this.clearItems();
@@ -66,9 +66,9 @@ jT.ListWidget.prototype = {
   	this.items = docs;
   	this.length = docs.length;
   	
-  	$(this.target).empty();
+  	this.target.empty();
   	for (var i = 0, l = docs.length; i < l; i++)
-  		$(this.target).append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
+      this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
   },
   
   addItem: function (doc) {
@@ -78,7 +78,7 @@ jT.ListWidget.prototype = {
   },
   
   clearItems: function () {
-  	$(this.target).empty();
+  	this.target.empty();
   	this.items = [];
   	this.length = 0;
   },
@@ -97,7 +97,7 @@ jT.ListWidget.prototype = {
   },
   
   enumerateItems: function (callback) {
-  	var els = $(this.target).children();
+  	var els = this.target.children();
   	for (var i = 0, l = this.items.length; i < l; ++i)
   		callback.call(els[i], this.items[i]);
   }
@@ -112,39 +112,36 @@ jT.ListWidget.prototype = {
 jT.TagWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
 
-  if (!!this.nesting)
-    this.facet.domain = a$.extend(this.facet.domain, { blockChildren: this.nesting } );
-
   this.target = $(settings.target);
-  this.header = $(settings.header);
+  if (!!this.subtarget)
+    this.target = this.target.find(this.subtarget).eq(0);
+    
   this.id = settings.id;  
   this.color = this.color || this.target.data("color");
+  if (!!this.color)
+    this.target.addClass(this.color);
 };
 
 jT.TagWidget.prototype = {
-  __expects: [ "hasValue", "clickHandler", "getFacetCounts" ],
+  __expects: [ "hasValue", "clickHandler" ],
   color: null,
-  renderTag: null,
-  nesting: null,          // Wether there is a nesting in the docs
+  renderItem: null,
+  onUpdated: null,
+  subtarget: null,
   
   init: function (manager) {
     a$.pass(this, jT.TagWidget, "init", manager);
     this.manager = manager;
   },
   
-  afterTranslation: function (data) {
-    a$.pass(this, jT.TagWidget, 'afterTranslation'); 
-
+  populate: function (objectedItems) {
     var self = this,
-        objectedItems = this.getFacetCounts(data.facets), 
-    		facet = null, 
+    		item = null, 
     		total = 0,
-    		hdr = getHeaderText(this.header),
-    		refresh = this.header.data("refreshPanel"),
-    		el, selected;
+    		el, selected, value;
         
     objectedItems.sort(function (a, b) {
-      return a.val < b.val ? -1 : 1;
+      return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
     });
     
     if (objectedItems.length == 0)
@@ -152,27 +149,26 @@ jT.TagWidget.prototype = {
     else {
       this.target.empty();
       for (var i = 0, l = objectedItems.length; i < l; i++) {
-        facet = objectedItems[i];
-        selected = this.hasValue(facet.val);
-        total += facet.count;
+        item = objectedItems[i];
+        value = item.value || item.val;
+        selected = this.hasValue(value);
+        total += item.count;
         
-        facet.title = facet.val.toString();
+        item.title = value.toString();
         if (typeof this.modifyTag === 'function')
-          facet = this.modifyTag(facet);
+          item = this.modifyTag(item);
 
         if (!selected)
-          facet.onMain = self.clickHandler(facet.val);
+          item.onMain = self.clickHandler(value);
         
-        this.target.append(el = this.renderTag(facet));
+        this.target.append(el = this.renderItem(item));
         
         if (selected)
           el.addClass("selected");
       }
     }
       
-    hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
-    if (!!refresh)
-    	refresh.call();
+    a$.act(this, this.onUpdated, total);
   }
 };
 /** jToxKit - chem-informatics multi-tool-kit.
@@ -203,17 +199,17 @@ jT.AutocompleteWidget = function (settings) {
   this.spyManager = new settings.SpyManager({ parameters: a$.extend(true, defaultParameters, settings.parameters) });
   var self = this;
   
-  a$.each(settings.facetFields, function (facet, id) {
-    self.spyManager.addParameter('facet.field', facet.field, a$.extend(true, { key: id }, facet.facet.domain));
+  a$.each(settings.groups, function (facet) {
+    self.spyManager.addParameter('facet.field', facet.field, a$.extend(true, { key: facet.id }, facet.facet.domain));
   });
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "set" ],
+  __expects: [ "doRequest", "setValue" ],
   servlet: "autophrase",
   useJson: false,
   maxResults: 30,
-  facetFields: {},
+  groups: {},
   
   init: function (manager) {
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
@@ -224,7 +220,7 @@ jT.AutocompleteWidget.prototype = {
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {
       var thi$ = $(this);
-      if (!self.set(thi$.val()) || self.requestSent)
+      if (!self.setValue(thi$.val()) || self.requestSent)
         return;
         
       thi$.blur().autocomplete("disable");
@@ -273,15 +269,15 @@ jT.AutocompleteWidget.prototype = {
     var self = this,
         list = [];
         
-    a$.each(this.facetFields, function (f, id) {
+    a$.each(this.groups, function (f) {
       if (list.length >= self.maxResults)
         return;
         
-      for (var facet in response.facet_counts.facet_fields[id]) {
+      for (var facet in response.facet_counts.facet_fields[f.id]) {
         list.push({
-          id: id,
+          id: f.id,
           value: facet,
-          label: (lookup[facet] || facet) + ' (' + response.facet_counts.facet_fields[id][facet] + ') - ' + id
+          label: (lookup[facet] || facet) + ' (' + response.facet_counts.facet_fields[f.id][facet] + ') - ' + f.id
         });
         
         if (list.length >= self.maxResults)
@@ -297,6 +293,88 @@ jT.AutocompleteWidget.prototype = {
     var qval = this.manager.getParameter('q').value;
     this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
     this.requestSent = false;
+  }
+};
+/** jToxKit - chem-informatics multi-tool-kit.
+  * A very simple, template rendering Item Widget. Suitable for
+  * both ListWidget and TagWidgets
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
+  */
+
+jT.SimpleItemWidget = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+  this.target = $(settings.target);
+};
+
+jT.SimpleItemWidget.prototype = {
+  template: null,
+  classes: null,
+  
+  renderItem: function (info) {
+    return jT.ui.fillTemplate(template, info).addClass(this.classes);
+  }
+};
+/** jToxKit - chem-informatics multi-tool-kit.
+  * An expansion builder for existing Accordion widget
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+  */
+
+jT.AccordionExpansion = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+
+  this.target = $(settings.target);
+  this.header = null;
+  
+  // We're resetting the target, so the rest of skills get a true one.
+  if (this.automatic)
+    settings.target = this.makeExpansion();
+};
+
+jT.AccordionExpansion.prototype = {
+  automatic: true,
+  title: null,
+  hdrClasses: null,
+  mainClasses: null,
+  template: null,
+  
+  renderExpansion: function (info) {
+    return jT.ui.fillTemplate(this.template, info).addClass(this.classes);
+  },
+  
+  makeExpansion: function (before, title) {
+    // Check if we've already made the expansion
+    if (!!this.header)
+      return; 
+      
+    this.title = title || this.title || this.id;
+    var el$ = this.renderExpansion(this);
+
+    this.accordion = this.target;
+    
+    if (!before)
+      this.accordion.append(el$);
+    else if (typeof before === "number")
+      this.accordion.children().eq(before).before(el$);
+    else if (typeof before === "string")
+      $(before, this.accordion[0]).before(el$);
+    else
+      $(before).before(el$);
+   
+    this.refresh();
+    this.header = $("#" + this.id + "_header");
+		return this.target = $("#" + this.id); // ATTENTION: This presumes we've put that ID to the content part!
+  },
+  
+  getHeaderText: function () {
+    return this.header.contents().filter(function () { return this.nodeType == 3; })[0];
+  },
+  
+  refresh: function () {
+		this.accordion.accordion("refresh");
   }
 };
 

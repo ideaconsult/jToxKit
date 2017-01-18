@@ -8,39 +8,36 @@
 jT.TagWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
 
-  if (!!this.nesting)
-    this.facet.domain = a$.extend(this.facet.domain, { blockChildren: this.nesting } );
-
   this.target = $(settings.target);
-  this.header = $(settings.header);
+  if (!!this.subtarget)
+    this.target = this.target.find(this.subtarget).eq(0);
+    
   this.id = settings.id;  
   this.color = this.color || this.target.data("color");
+  if (!!this.color)
+    this.target.addClass(this.color);
 };
 
 jT.TagWidget.prototype = {
-  __expects: [ "hasValue", "clickHandler", "getFacetCounts" ],
+  __expects: [ "hasValue", "clickHandler" ],
   color: null,
-  renderTag: null,
-  nesting: null,          // Wether there is a nesting in the docs
+  renderItem: null,
+  onUpdated: null,
+  subtarget: null,
   
   init: function (manager) {
     a$.pass(this, jT.TagWidget, "init", manager);
     this.manager = manager;
   },
   
-  afterTranslation: function (data) {
-    a$.pass(this, jT.TagWidget, 'afterTranslation'); 
-
+  populate: function (objectedItems) {
     var self = this,
-        objectedItems = this.getFacetCounts(data.facets), 
-    		facet = null, 
+    		item = null, 
     		total = 0,
-    		hdr = getHeaderText(this.header),
-    		refresh = this.header.data("refreshPanel"),
-    		el, selected;
+    		el, selected, value;
         
     objectedItems.sort(function (a, b) {
-      return a.val < b.val ? -1 : 1;
+      return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
     });
     
     if (objectedItems.length == 0)
@@ -48,26 +45,25 @@ jT.TagWidget.prototype = {
     else {
       this.target.empty();
       for (var i = 0, l = objectedItems.length; i < l; i++) {
-        facet = objectedItems[i];
-        selected = this.hasValue(facet.val);
-        total += facet.count;
+        item = objectedItems[i];
+        value = item.value || item.val;
+        selected = this.hasValue(value);
+        total += item.count;
         
-        facet.title = facet.val.toString();
+        item.title = value.toString();
         if (typeof this.modifyTag === 'function')
-          facet = this.modifyTag(facet);
+          item = this.modifyTag(item);
 
         if (!selected)
-          facet.onMain = self.clickHandler(facet.val);
+          item.onMain = self.clickHandler(value);
         
-        this.target.append(el = this.renderTag(facet));
+        this.target.append(el = this.renderItem(item));
         
         if (selected)
           el.addClass("selected");
       }
     }
       
-    hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
-    if (!!refresh)
-    	refresh.call();
+    a$.act(this, this.onUpdated, total);
   }
 };

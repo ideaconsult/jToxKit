@@ -26,17 +26,17 @@ jT.AutocompleteWidget = function (settings) {
   this.spyManager = new settings.SpyManager({ parameters: a$.extend(true, defaultParameters, settings.parameters) });
   var self = this;
   
-  a$.each(settings.facetFields, function (facet, id) {
-    self.spyManager.addParameter('facet.field', facet.field, a$.extend(true, { key: id }, facet.facet.domain));
+  a$.each(settings.groups, function (facet) {
+    self.spyManager.addParameter('facet.field', facet.field, a$.extend(true, { key: facet.id }, facet.facet.domain));
   });
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "set" ],
+  __expects: [ "doRequest", "setValue" ],
   servlet: "autophrase",
   useJson: false,
   maxResults: 30,
-  facetFields: {},
+  groups: {},
   
   init: function (manager) {
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
@@ -47,7 +47,7 @@ jT.AutocompleteWidget.prototype = {
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {
       var thi$ = $(this);
-      if (!self.set(thi$.val()) || self.requestSent)
+      if (!self.setValue(thi$.val()) || self.requestSent)
         return;
         
       thi$.blur().autocomplete("disable");
@@ -96,15 +96,15 @@ jT.AutocompleteWidget.prototype = {
     var self = this,
         list = [];
         
-    a$.each(this.facetFields, function (f, id) {
+    a$.each(this.groups, function (f) {
       if (list.length >= self.maxResults)
         return;
         
-      for (var facet in response.facet_counts.facet_fields[id]) {
+      for (var facet in response.facet_counts.facet_fields[f.id]) {
         list.push({
-          id: id,
+          id: f.id,
           value: facet,
-          label: (lookup[facet] || facet) + ' (' + response.facet_counts.facet_fields[id][facet] + ') - ' + id
+          label: (lookup[facet] || facet) + ' (' + response.facet_counts.facet_fields[f.id][facet] + ') - ' + f.id
         });
         
         if (list.length >= self.maxResults)
