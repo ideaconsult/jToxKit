@@ -21,10 +21,10 @@ jT.AccordionExpansion.prototype = {
   title: null,
   hdrClasses: null,
   mainClasses: null,
-  template: null,
+  expansionTemplate: null,
   
   renderExpansion: function (info) {
-    return jT.ui.fillTemplate(this.template, info).addClass(this.classes);
+    return jT.ui.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
   },
   
   makeExpansion: function (before, title) {
