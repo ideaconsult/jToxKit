@@ -139,21 +139,23 @@ jT.TagWidget.prototype = {
     		item = null, 
     		total = 0,
     		el, selected, value;
-        
-    objectedItems.sort(function (a, b) {
-      return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
-    });
     
-    if (objectedItems.length == 0)
-      this.target.html('No items found in current selection');
+    if (objectedItems.length == null || objectedItems.length == 0) {
+      if (!preserve)
+        this.target.html('No items found in current selection');
+    }
     else {
+      objectedItems.sort(function (a, b) {
+        return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
+      });
+      
       if (!preserve)
         this.target.empty();
         
       for (var i = 0, l = objectedItems.length; i < l; i++) {
         item = objectedItems[i];
         value = item.value || item.val;
-        selected = this.hasValue(value);
+        selected = this.exclusion && this.hasValue(value);
         total += item.count;
         
         item.title = value.toString();
