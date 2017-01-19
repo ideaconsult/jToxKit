@@ -40,6 +40,8 @@
     }
     
   });
+  
+  jT.kits = {};
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -49,5 +51,6 @@ import "TagWidget";
 import "AutocompleteWidget";
 import "SimpleItemWidget";
 import "AccordionExpansion";
+import "SliderWidget";
 
 })(jToxKit, asSys, jQuery);
