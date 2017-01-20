@@ -20,6 +20,7 @@ var defaultParameters = {
 jT.AutocompleteWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.target = $(settings.target);
+  this.id = settings.id;
   this.delayed = null;
   this.fqName = this.useJson ? "json.filter" : "fq";
 

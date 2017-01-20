@@ -44,6 +44,9 @@ jT.SliderWidget.prototype = {
   },
   
   updateSlider: function (value, limits) {
+    if (Array.isArray(value))
+      value = value.join(",");
+      
     if (limits != null) {
       this.prepareLimits(limits);
       this.target.jRange('updateRange', this.limits, value);      
@@ -77,15 +80,12 @@ jT.SliderWidget.prototype = {
     if (this.color != null)
       settings.theme = "theme-" + this.color;
       
-    settings.ondragend = function () {
-      var self = this;
-      return function (value) {
-        if (typeof value === "string" && self.isRange)
-          value = value.split(",");
-          
-        value = Array.isArray(value) ? value.map(function (v) { return parseFloat(v); }) : parseFloat(value);
-        return updateHandler(value);
-      };
+    settings.ondragend = function (value) {
+      if (typeof value === "string" && self.isRange)
+        value = value.split(",");
+        
+      value = Array.isArray(value) ? value.map(function (v) { return parseFloat(v); }) : parseFloat(value);
+      return updateHandler(value);
     };
       
     return this.target.jRange(settings);

@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.1.3" };
+var jToxKit = { version: "2.1.4" };
 
 (function (jT, a$) {
   // Now import all the actual skills ...
@@ -47,11 +47,9 @@ jT.ui = a$.extend(jT.ui, {
   },
   
   formatNumber: function (num, prec) {
-    return parseFloat(parseInt(Math.round(num / prec))) * 0.001;
-  /*
-    var v = Math.round(num / prec) * prec;
-    return parseFloat(v.toString().replace(new RegExp("\\.(\\d{" + (-Math.log10(prec)) + "})\\d*"), ".$1"));
-  */
+    if (prec < 1)
+      prec = parseInt(1.0 / prec);
+    return Math.round(num * prec) / prec;
   },
   
 	formatUnits: function (str) {
