@@ -470,6 +470,9 @@ jT.AutocompleteWidget.prototype = {
     this.manager = manager;
     
     var self = this;
+        
+    if (manager.getParameter('q').value == null)
+      self.addValue("");
     
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {

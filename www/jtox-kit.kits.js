@@ -133,7 +133,7 @@ var defaultSettings = {
       var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
           
       title = view.replace(/^caNanoLab\./, "").replace(/^http\:\/\/dx\.doi\.org/, "");
-      title = (this.lookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
+      title = (jT.FacetedSearch.prototype.__kits[0].lookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
     	  
       var aux$ = $('<span/>').html(tag.count || 0);
       if (typeof tag.onAux === 'function')
@@ -166,6 +166,12 @@ jT.FacetedSearch = function (settings) {
   this.id = null;
   a$.extend(true, this, defaultSettings, settings);
   
+  if (typeof this.lookupMap === "string")
+    this.lookupMap = window[this.lookupMap];
+  
+  if (this.lookupMap == null)
+    this.lookupMap = {};
+    
   $(settings.target).html(jT.ui.templates['faceted-search-kit']);
   delete this.target;
   
@@ -177,7 +183,8 @@ jT.FacetedSearch = function (settings) {
 jT.FacetedSearch.prototype = {
   initDom: function () {
   	// Now instantiate and things around it.
-  	this.accordion = $("#accordion").accordion({
+  	this.accordion = $("#accordion");
+  	this.accordion.accordion({
   		heightStyle: "content",
   		collapsible: true,
   		animate: 200,
@@ -226,6 +233,11 @@ jT.FacetedSearch.prototype = {
   		}
   	});
   	
+  	$(document).on("click", "ul.tag-group", function (e) { 
+  		$(this).toggleClass("folded");
+  		$(this).parents(".widget-root").data("refreshPanel").call();
+  	});
+  	
   	// ... and prepare the actual filtering funtion.
   	$(document).on('keyup', "#accordion input.widget-filter", function (e) {
   		var needle = $(this).val().toLowerCase(),
@@ -267,7 +279,8 @@ jT.FacetedSearch.prototype = {
   	});
   		    
   	var resDiv = $("#result-tabs"),
-  	    resSize;
+  	    resSize,
+        self = this;
   	
   	resDiv.tabs( { } );
   		
@@ -387,7 +400,6 @@ jT.FacetedSearch.prototype = {
 			exclusion: true,
 			useJson: true,
 			renderTag: tagRender,
-			target: this.accordion,
 			classes: "dynamic-tab",
 			nesting: "type_s:substance",
       domain: { type: "parent", "which": "type_s:substance" }
@@ -440,7 +452,8 @@ jT.FacetedSearch.prototype = {
   
   initExport: function () {
 	  // Prepare the export tab
-    var exportEl = $("#export_tab div.data_types"),
+    var self = this,
+        exportEl = $("#export_tab div.data_types"),
         updateButton = function (e) {
     			var form = this.form,
     			b = $("button", this.form);
@@ -516,7 +529,7 @@ jT.FacetedSearch.prototype = {
 					$("button", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
 
 					var qval = self.manager.getParameter('q'),
-					    hasFilter = Manager.getParameter('fq').length > 1 || (!!qval && qval != '*:*');
+					    hasFilter = self.manager.getParameter('fq').length > 1 || (!!qval && qval != '*:*');
 
 					$("#selected_data")[0].disabled = self.basket.length < 1;
 					$("#selected_data")[0].checked = self.basket.length > 0 && !hasFilter;
@@ -937,7 +950,10 @@ jT.ItemListWidget.prototype = {
   onClick: null,
   summaryRenderers: {
     "RESULTS": function (val, topic) { 
-      return val.map(function (study) { return study.split(".").map(function (one) { return this.lookupMap[one] || one; }).join("."); });
+      var self = this;
+      return val.map(function (study) { 
+        return study.split(".").map(function (one) { return self.lookupMap[one] || one; }).join("."); 
+      });
     },
     "REFOWNERS": function (val, topic) {
       return val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
@@ -1224,9 +1240,11 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "</div>" +
 "</div>" +
 "" +
-"" +
 "<!-- query container -->" +
 "</div>" +
+""; // end of #faceted-search-kit 
+
+jToxKit.ui.templates['faceted-search-templates']  = 
 "" +
 "<section id=\"result-item\">" +
 "<article id=\"{{item_id}}\" class=\"item\">" +
@@ -1273,5 +1291,5 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<a target=\"_blank\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +
 "</div>" +
 "</div>" +
-""; // end of #faceted-search-kit 
+""; // end of #faceted-search-templates 
 

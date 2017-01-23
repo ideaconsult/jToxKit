@@ -17,7 +17,10 @@ jT.ItemListWidget.prototype = {
   onClick: null,
   summaryRenderers: {
     "RESULTS": function (val, topic) { 
-      return val.map(function (study) { return study.split(".").map(function (one) { return this.lookupMap[one] || one; }).join("."); });
+      var self = this;
+      return val.map(function (study) { 
+        return study.split(".").map(function (one) { return self.lookupMap[one] || one; }).join("."); 
+      });
     },
     "REFOWNERS": function (val, topic) {
       return val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
