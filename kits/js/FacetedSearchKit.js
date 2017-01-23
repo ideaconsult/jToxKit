@@ -197,11 +197,13 @@ jT.FacetedSearch.prototype = {
       },
       resize: function(e, ui) {
         self.accordion.accordion( "refresh" );
+        $('#query-sticky-wrapper').width( self.accordion.width());
+        $(this).width($(this).width() - 7); // minus the total padding of parent elements
         resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
       }
     });
     
-		$(".query-left#query").sticky({ topSpacing: this.topSpacing });
+    $(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
   },
   
   /** The actual widget and communication initialization routine!
