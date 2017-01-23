@@ -1,6 +1,7 @@
 # jToxKit - next generation
-A JavaScript client library of chem-informatics related widgets, components, etc.
+## A JavaScript client library of chem-informatics related widgets, components, etc.
 
+(a replacement of https://github.com/ideaconsult/Toxtree.js)
 
 ## TODO:
 - Move ketcher within our repository as sub-module
