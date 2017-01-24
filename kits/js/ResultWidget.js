@@ -12,7 +12,7 @@ jT.ItemListWidget = function (settings) {
 
 jT.ItemListWidget.prototype = {
   baseUrl: "",
-  summaryPrime: "RESULTS",
+  summaryPrimes: [ "RESULTS" ],
   onCreated: null,
   onClick: null,
   summaryRenderers: {
@@ -23,16 +23,19 @@ jT.ItemListWidget.prototype = {
       });
     },
     "REFOWNERS": function (val, topic) {
-      return val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
+      return { 'topic': "Study Providers", 'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
         href: "#", 
         hint: "Freetext search", 
         target: "_self", 
         value: ref, 
         css: "freetext_selector" 
-      }); });
+      }); }) };
     },
     "REFS": function (val, topic) { 
-      return val.map(function (ref) { return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref }); });
+      return { 
+        'topic': "References",
+        'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref }); })
+      }
     }
   },
 	
@@ -77,6 +80,9 @@ jT.ItemListWidget.prototype = {
   renderSubstance: function(doc) {
 		var summaryhtml = $("#summary-item").html(),
 		    summarylist = this.buildSummary(doc),
+		    summaryRender = function (summarylist) { 
+  		    return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
+  		  },
 		    item = { 
   				logo: "images/logo.png",
   				link: "#",
@@ -88,7 +94,7 @@ jT.ItemListWidget.prototype = {
   				composition: this.renderComposition(doc, 
     				  '<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>'
     				).join("<br/>"),
-    		  summary: summarylist.length > 0 ? jT.ui.formatString(summaryhtml, summarylist[0]) : "",
+    		  summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
   				item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
   				footer: 
   					'<a href="' + this.baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
@@ -97,12 +103,10 @@ jT.ItemListWidget.prototype = {
   			};
 
     // Build the outlook of the summary item
-    if (summarylist.length > 1) {
-			summarylist.splice(0, 1);
+    if (summarylist.length > 1)
 			item.summary += 
 				'<a href="#" class="more">more</a>' +
-				'<div class="more-less" style="display:none;">' + summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("") + '</div>';
-    }
+				'<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
     
     // Check if external references are provided and prepare and show them.
 		if (doc.content == null) {
@@ -206,8 +210,9 @@ jT.ItemListWidget.prototype = {
       if (!item.content)
         item.content = Array.isArray(item.values) ? item.values.join(", ") : item.values.toString();
         
-      if (name == self.summaryPrime)
-        items.unshift(item);
+      var primeIdx = self.summaryPrimes.indexOf(name);
+      if (primeIdx > -1 && primeIdx < items.length)
+        items.splice(primeIdx, 0, item);
       else
         items.push(item);
   	});
