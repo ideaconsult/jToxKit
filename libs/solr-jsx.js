@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.11.3" };
+  Solr = { version: "0.14.2" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -21,7 +21,7 @@
   */
   
 Solr.Management = function (settings) {
-  a$.extend(true, this, settings);
+  a$.extend(true, this, a$.common(settings, this));
   
   this.listeners = {};  // The set of listeners - based on their 'id'.
   this.response = null;
@@ -258,20 +258,15 @@ Solr.parseParameter = function (str) {
   return param;
 };
 
-Solr.Configuring = function (obj) {
+Solr.Configuring = function (settings) {
   // Now make some reformating of initial parameters.
-  var self = this,
-      parameters = null;
+  var self = this;
+  this.parameterHistory = [];
       
-  if (obj != null) {
-    parameters = obj.parameters;
-    delete obj.parameters;  
-  }
-
-  a$.extend(true, this, obj);
-      
+  a$.extend(true, this, a$.common(settings, this));
+  
   this.resetParameters();
-  a$.each(parameters, function (p, name) {
+  a$.each(settings && settings.parameters, function (p, name) {
     if (typeof p === 'string')
       self.addParameter(Solr.parseParameter(name + '=' + p));
     else
@@ -404,7 +399,7 @@ Solr.Configuring.prototype = {
     a$.each(this.parameterStore, function (p) {
       if (deep && Array.isArray(p))
         a$.each(p, callback);
-      else
+      else if (p !== undefined)
         callback(p);
     });
   },
@@ -413,6 +408,30 @@ Solr.Configuring.prototype = {
     */
   resetParameters: function () {
     this.parameterStore = {};
+  },
+  
+  /** Saves the current set of parameters and "opens" a new one, 
+    * depending on the argument:
+    *
+    * @param {Boolean|Oblect} copy  If it is an object - uses it directly as a new parameter store,
+    *                               if it is a boolean - determines whether to keep the old one.
+    */
+  pushParametes: function(copy) {
+    this.parameterHistory.push(this.parameterStore);
+    if (typeof copy === "object")
+      this.parameterStore = copy;
+    else if (copy === false)
+      this.parameterStore = {};
+    else
+      this.parameteStore = a$.extend(true, {}, this.parameterStore);
+  },
+  
+  /** Pops the last saved parameters, discarding (and returning) the current one.
+    */
+  popParameters: function () {
+    var ret = this.parameterStore;
+    this.parameterStore = this.parameterHistory.pop();
+    return ret;
   }
 };
 /** SolrJsX library - a neXt Solr queries JavaScript library.
@@ -456,8 +475,7 @@ Solr.stringifyDomain = function (param) {
   return prefix.length > 0 ? "{!" + prefix.join(" ") + "}" : "";
 };
 
-Solr.QueryingURL = function (obj) {
-  a$.extend(true, this, obj);
+Solr.QueryingURL = function (settings) {
 };
 
 var paramValue = function (value) {
@@ -518,13 +536,14 @@ var paramJsonName = function (name) {
   return m && m[1];
 };
 
-Solr.QueryingJson = function (obj) {
-  this.useBody = true;
-  a$.extend(true, this, obj);
+Solr.QueryingJson = function (settings) {
+  this.useBody = settings && settings.useBody === "false" ? false : true;
 };
 
 Solr.QueryingJson.prototype = {
-  __expects: [ "enumerateParameters" ],  
+  __expects: [ "enumerateParameters" ],
+  useBody: true,
+  
   prepareQuery: function () {
     var url = [ ],
         json = { 'params': {} },
@@ -630,19 +649,18 @@ Solr.Persistency.prototype = {
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   */
   
-Solr.Paging = function (obj) {
-  a$.extend(true, this, obj);
+Solr.Paging = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+
   this.manager = null;
   this.currentPage = this.totalPages = this.totalEntries = null;
 };
 
 Solr.Paging.prototype = {
   pageSize: 20,           // The default page size
-  multivalue: false,      // If this filter allows multiple values
-  exclusion: false,       // Whether to exclude THIS field from filtering from itself.
   domain: null,
   
-  /** Make the initial setup of the manager for this faceting skill (field, exclusion, etc.)
+  /** Make the initial setup of the manager
     */
   init: function (manager) {
     this.manager = manager;
@@ -732,18 +750,15 @@ Solr.Paging.prototype = {
   */
     
 Solr.Requesting = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
   this.manager = null;
-  if (!!settings) {
-    this.customResponse = settings.customResponse;
-    this.resetPage = !!settings.resetPage;
-  }
 };
 
 Solr.Requesting.prototype = {
   resetPage: true,      // Whether to reset to the first page on each requst.
   customResponse: null, // A custom response function, which if present invokes priavte doRequest.
   
-  /** Make the initial setup of the manager for this faceting skill (field, exclusion, etc.)
+  /** Make the initial setup of the manager.
     */
   init: function (manager) {
     a$.pass(this, Solr.Requesting, "init", manager);
@@ -757,16 +772,34 @@ Solr.Requesting.prototype = {
       this.manager.addParameter('start', 0);
     this.manager.doRequest(self.customResponse);
   },
-  
+
   /**
-   * @param {String} value The value.
+   * @param {String} value The value which should be handled
+   * @param {...} a, b, c, d Some parameter that will be transfered to addValue call
    * @returns {Function} Sends a request to Solr if it successfully adds a
    *   filter query with the given value.
    */
-  clickHandler: function (value) {
+   updateHandler: function () {
+    var self = this;
+    return function () {
+      var res = self.addValue.apply(self, arguments);
+      if (res)
+        self.doRequest();
+        
+      return res;
+    };
+   },
+  
+  /**
+   * @param {String} value The value which should be handled
+   * @param {...} a, b, c, d Some parameter that will be transfered to addValue call
+   * @returns {Function} Sends a request to Solr if it successfully adds a
+   *   filter query with the given value.
+   */
+  clickHandler: function (value, a, b, c) {
     var self = this;
     return function (e) {
-      if (self.addValue(value))
+      if (self.addValue(value, a, b, c))
         self.doRequest();
         
       return false;
@@ -775,13 +808,14 @@ Solr.Requesting.prototype = {
 
   /**
    * @param {String} value The value.
+   * @param {...} a, b, c Some parameter that will be transfered to addValue call
    * @returns {Function} Sends a request to Solr if it successfully removes a
    *   filter query with the given value.
    */
-  unclickHandler: function (value) {
+  unclickHandler: function (value, a, b, c) {
     var self = this;
     return function (e) {
-      if (self.removeValue(value)) 
+      if (self.removeValue(value, a, b, c)) 
         self.doRequest();
         
       return false;
@@ -802,14 +836,14 @@ Solr.Delaying = function (settings) {
 };
 
 Solr.Delaying.prototype = {
-  delayed: false,       // Number of milliseconds to delay the request
+  delayed: 300,       // Number of milliseconds to delay the request
   
   /** Make the actual request obeying the "delayed" settings.
     */
   doRequest: function () {
     var self = this,
         doInvoke = function () {
-          a$.pass(this, Solr.Delaying, "doRequest");
+          a$.pass(self, Solr.Delaying, "doRequest");
           self.delayTimer = null;
         };
     if (this.delayed == null || this.delayed < 10)
@@ -860,19 +894,15 @@ Solr.Patterning.prototype = {
   */
   
 Solr.Texting = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
   this.manager = null;
-  
-  if (settings != null) {
-    this.domain = settings.domain || this.domain;
-    this.customResponse = settings.customResponse;
-  }
 };
 
 Solr.Texting.prototype = {
   domain: null,         // Additional attributes to be adde to query parameter.
   customResponse: null, // A custom response function, which if present invokes priavte doRequest.
   
-  /** Make the initial setup of the manager for this faceting skill (field, exclusion, etc.)
+  /** Make the initial setup of the manager.
     */
   init: function (manager) {
     a$.pass(this, Solr.Texting, "init", manager);
@@ -885,7 +915,7 @@ Solr.Texting.prototype = {
    * @param {String} q The new Solr query.
    * @returns {Boolean} Whether the selection changed.
    */
-  set: function (q) {
+  addValue: function (q) {
     var before = this.manager.getParameter('q'),
         res = this.manager.addParameter('q', q, this.domain);
         after = this.manager.getParameter('q');
@@ -902,30 +932,27 @@ Solr.Texting.prototype = {
   },
 
   /**
-   * Returns a function to unset the main Solr query.
+   * Sets the main Solr query to the empty string.
    *
-   * @returns {Function}
+   * @returns {Boolean} Whether the selection changed.
    */
-  unclickHandler: function () {
-    var self = this;
-    return function () {
-      if (self.clear())
-        self.doRequest();
-
-      return false;
-    }
+  removeValue: function () {
+    this.clear();
   },
 
   /**
    * Returns a function to set the main Solr query.
    *
-   * @param {String} value The new Solr query.
+   * @param {Object} src Source that has val() method capable of providing the value.
    * @returns {Function}
    */
-  clickHandler: function (q) {
+  clickHandler: function (src) {
     var self = this;
     return function () {
-      if (self.set(q))
+      if (!el) 
+        el = this;
+      
+      if (self.addValue(typeof el.val === "function" ? el.val() : el.value))
         self.doRequest();
 
       return false;
@@ -951,7 +978,8 @@ var FacetParameters = {
     'method': null,
     'enum.cache.minDf': null
   },
-  bracketsRegExp = /^\s*\(\s*|\s*\)\s*$/g;
+  bracketsRegExp = /^\s*\(\s*|\s*\)\s*$/g,
+  statsRegExp = /^([^()]+)\(([^)]+)\)$/g;
 
 /**
   * Forms the string for filtering of the current facet value
@@ -971,24 +999,70 @@ Solr.facetValue = function (value) {
  * @returns {Object} { field: {String}, value: {Combined}, exclude: {Boolean} }.
  */ 
 Solr.parseFacet = function (value) {
-  var sarr = value.replace(bracketsRegExp, "").replace(/\\"/g, "%0022").match(/"[^\s:\/"]+"|[^\s"]+/g);
+  var old = value.length, 
+      sarr, brackets;
+  
+  value = value.replace(bracketsRegExp, "");
+  brackets = old > value.length;
+
+  sarr = value.replace(/\\"/g, "%0022").match(/[^\s:\/"]+|"[^"]+"/g);
+  if (!brackets && sarr.length > 1) // we can't have multi-values without a brackets here.
+    return null;
 
   for (var i = 0, sl = sarr.length; i < sl; ++i)
-    sarr[i] = sarr[i].replace(/^"|"$/, "").replace("%0022", '"');
+    sarr[i] = sarr[i].replace(/^"|"$/g, "").replace("%0022", '"');
   
   return sl > 1 ? sarr : sarr[0];
 };
 
+/** Build and add stats fields for non-Json scenario
+  * TODO: This has never been tested!
+  */
+Solr.facetStats = function (manager, tag, statistics) {
+  manager.addParameter('stats', true);
+  var statLocs = {};
+  
+  // Scan to build the local (domain) parts for each stat    
+  a$.each(statistics, function (stats, key) {
+    var parts = stats.match(statsRegExp);
+        
+    if (!parts)
+      return;
+      
+    var field = parts[2],
+        func = parts[1],
+        loc = statLocs[field];
+        
+    if (loc === undefined) {
+      statLocs[field] = loc = {};
+      loc.tag = tag;
+    }
+    
+    loc[func] = true;
+    loc.key = key; // Attention - this overrides.
+  });
+  
+  // Finally add proper parameters
+  a$.each(statLocs, function (s, f) {
+    manager.addParameter('stats.field', f, s);
+  });
+};
 
 Solr.Faceting = function (settings) {
-  a$.extend(true, this, settings);
+  this.id = this.field = null;
+  a$.extend(true, this, a$.common(settings, this));
   this.manager = null;
   
   // We cannot have aggregattion if we don't have multiple values.
   if (!this.multivalue)
     this.aggregate = false;
+    
+  if (!this.jsonLocation)
+    this.jsonLocation = 'json.facet.' + this.id;
+    
+  this.facet = settings && settings.facet || {};
 
-  this.fqRegExp = new RegExp('^-?' + this.field + ':([^]+)');
+  this.fqRegExp = new RegExp('^-?' + this.field + ':([^]+)$');
 };
 
 Solr.Faceting.prototype = {
@@ -996,8 +1070,11 @@ Solr.Faceting.prototype = {
   aggregate: false,       // If additional values are aggregated in one filter.
   exclusion: false,       // Whether to exclude THIS field from filtering from itself.
   domain: null,           // Some local attributes to be added to each parameter
+  nesting: null,          // Wether there is a nesting in the docs - a easier than domain approach.
   useJson: false,         // Whether to use the Json Facet API.
-  facet: { },             // A default, empty definition.
+  jsonLocation: null,     // Location in Json faceting object to put the parameter to.
+  domain: null,           // By default we don't have any domain data for the requests.
+  statistics: null,       // Possibility to add statistics
   
   /** Make the initial setup of the manager for this faceting skill (field, exclusion, etc.)
     */
@@ -1007,6 +1084,9 @@ Solr.Faceting.prototype = {
     
     var exTag = null;
 
+    if (!!this.nesting)
+      this.facet.domain = a$.extend(this.facet.domain, { blockChildren: this.nesting } );
+
     if (this.exclusion) {
       this.domain = a$.extend(this.domain, { tag: this.id + "_tag" });
       exTag = this.id + "_tag";
@@ -1014,17 +1094,20 @@ Solr.Faceting.prototype = {
 
     if (this.useJson) {
       var facet = { type: "terms", field: this.field, mincount: 1, limit: -1 };
-
-      this.fqName = "json.filter";
+      
+      if (!!this.statistics)
+        facet.facet = this.statistics;
+      
       if (exTag != null)
         facet.domain = { excludeTags: exTag };
-  
-      this.manager.addParameter('json.facet.' + this.id, a$.extend(facet, this.facet));
+        
+      this.fqName = "json.filter";
+      this.manager.addParameter(this.jsonLocation, a$.extend(true, facet, this.facet));
     }
     else {
-    var self = this,
-        fpars = a$.extend({}, FacetParameters),
-        domain = { key: this.id };
+      var self = this,
+          fpars = a$.extend(true, {}, FacetParameters),
+          domain = { key: this.id };
         
       if (exTag != null)
         domain.ex = exTag;
@@ -1058,6 +1141,11 @@ Solr.Faceting.prototype = {
       // related per-field parameters to the parameter store.
       else {
         this.facet.field = true;
+        if (!!this.statistics) {
+          domain.stats = this.id + "_stats";
+          Solr.facetStats(this.manager, domain.stats, this.statistics);
+        }
+          
         this.manager.addParameter('facet.field', this.field, domain);
       }
       
@@ -1065,6 +1153,7 @@ Solr.Faceting.prototype = {
       a$.each(fpars, function (p, k) { 
         self.manager.addParameter('f.' + self.field + '.facet.' + k, p); 
       });
+      
     }
   },
   
@@ -1168,12 +1257,11 @@ Solr.Faceting.prototype = {
    * @returns {Boolean} If the given value can be found
    */      
   hasValue: function (value) {
-    var indices = this.manager.findParameters(this.fqName, this.fqRegExp),
-        value = Solr.escapeValue(value);
+    var indices = this.manager.findParameters(this.fqName, this.fqRegExp);
         
     for (var p, i = 0, il = indices.length; i < il; ++i) {
       p = this.manager.getParameter(this.fqName, indices[i]);
-      if (p.value.replace(this.fqRegExp, "").indexOf(value) > -1)
+      if (this.fqParse(p.value).indexOf(value) > -1)
         return true;
     }
     
@@ -1199,12 +1287,16 @@ Solr.Faceting.prototype = {
   getFacetCounts: function (facet_counts) {
     var property;
     
+    if (this.useJson === true) {
+        if (facet_counts == null)
+          facet_counts = this.manager.response.facets;
+      return facet_counts.count > 0 ? facet_counts[this.id].buckets : [];
+    }
+    
     if (facet_counts == null)
       facet_counts = this.manager.response.facet_counts;
-      
-    if (this.useJson === true)
-      return facet_counts.count > 0 ? facet_counts[this.id].buckets : [];
-    else if (this.facet.field !== undefined)
+    
+    if (this.facet.field !== undefined)
       property = 'facet_fields';
     else if (this.facet.date !== undefined)
       property = 'facet_dates';
@@ -1324,10 +1416,15 @@ Solr.parseRange = function (value) {
 
 
 Solr.Ranging = function (settings) {
-  a$.extend(true, this, settings);
+  this.field = this.id = null;
+  
+  a$.extend(true, this, a$.common(settings, this));
   this.manager = null;
   
-  this.fqRegExp = new RegExp("^-?" + this.field + ":\\s*\\[\\s*[^\\s]+\\s+TO\\s+[^\\s]+\\s*\\]");
+  this.fqRegExp = new RegExp("^-?" + this.field + ":\\s*\\[\\s*([^\\s])+\\s+TO\\s+([^\\s])+\\s*\\]");
+  this.fqName = this.useJson ? "json.filter" : "fq";
+  if (this.exclusion)
+    this.domain = a$.extend(true, this.domain, { tag: this.id + "_tag" });
 };
 
 Solr.Ranging.prototype = {
@@ -1335,21 +1432,17 @@ Solr.Ranging.prototype = {
   exclusion: false,       // Whether to exclude THIS field from filtering from itself.
   domain: null,           // Some local attributes to be added to each parameter.
   useJson: false,         // Whether to use the Json Facet API.
+  domain: null,           // The default, per request local (domain) data.
   
-  /** Make the initial setup of the manager for this faceting skill (field, exclusion, etc.)
+  /** Make the initial setup of the manager.
     */
   init: function (manager) {
     a$.pass(this, Solr.Ranging, "init", manager);
     this.manager = manager;
-    
-    if (this.exclusion)
-      this.domain = a$.extend(this.domain, { tag: this.id + "_tag" });
-
-    this.fqName = this.useJson ? "json.filter" : "fq";
   },
   
   /**
-   * Add a facet filter parameter to the Manager
+   * Add a range filter parameter to the Manager
    *
    * @returns {Boolean} Whether the filter was added.
    */    
@@ -1371,7 +1464,7 @@ Solr.Ranging.prototype = {
   },
   
   /**
-   * Tells whether given value is part of facet filter.
+   * Tells whether given value is part of range filter.
    *
    * @returns {Boolean} If the given value can be found
    */      
@@ -1381,7 +1474,7 @@ Solr.Ranging.prototype = {
   },
   
   /**
-   * Removes all filter queries using the widget's facet field.
+   * Removes all filter queries using the widget's range field.
    *
    * @returns {Boolean} Whether a filter query was removed.
    */
@@ -1390,13 +1483,215 @@ Solr.Ranging.prototype = {
   },
   
    /**
-   * @param {String} value The facet value.
+   * @param {String} value The range value.
    * @param {Boolean} exclude Whether to exclude this fq parameter value.
    * @returns {String} An fq parameter value.
    */
   fqValue: function (value, exclude) {
     return (exclude ? '-' : '') + this.field + ':' + Solr.rangeValue(value);
+  },
+  
+   /**
+   * @param {String} value The range value.
+   * @param {Boolean} exclude Whether to exclude this fq parameter value.
+   * @returns {String} An fq parameter value.
+   */
+  fqParse: function (value) {
+    var m = value.match(this.fqRegExp);
+    if (!m)
+      return null;
+    m.shift();
+    return m;
   }
+  
+};
+/** SolrJsX library - a neXt Solr queries JavaScript library.
+  * Pivoting, i.e. nested faceting skils.
+  *
+  * Author: Ivan Georgiev
+  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+  */
+
+var DefaultFaceter = a$(Solr.Faceting);
+
+Solr.Pivoting = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+  this.manager = null;
+  this.faceters = { };
+
+  this.id = settings.id;
+  this.settings = settings;
+  this.rootId = null;
+};
+
+Solr.Pivoting.prototype = {
+  pivot: null,          // If document nesting is present - here are the rules for it.
+  useJson: false,       // Whether to prepare everything with Json-based parameters.
+  statistics: null,     // The per-facet statistics that are needed.
+  domain: null,         // The default domain for requests
+  
+  /** Creates a new faceter for the corresponding level
+    */
+  addFaceter: function (facet, idx) {
+    return new DefaultFaceter(facet);
+  },
+  
+  /** Make the initial setup of the manager.
+    */
+  init: function (manager) {
+    a$.pass(this, Solr.Pivoting, 'init', manager);
+    
+    this.manager = manager;
+
+    var stats = this.statistics;
+    if (!this.useJson) {
+      // TODO: Test this!
+      var loc = { };
+      if (!!stats) {
+        loc.stats = this.id + "_stats";
+        Solr.facetStats(this.manager, loc.stats, stats);
+        
+        // We clear this to avoid later every faceter from using it.
+        stats = null;
+      }
+        
+      if (this.exclusion)
+        loc.ex = this.id + "_tag";
+        
+      this.manager.addParameter('facet.pivot', this.pivot.map(function(f) { return (typeof f === "string") ? f : f.field; }).join(","), loc);
+    }
+    
+    var location = "json";
+    for (var i = 0, pl = this.pivot.length; i < pl; ++i) {
+      var p = this.pivot[i],
+          f = a$.extend(true, { }, this.settings, typeof p === "string" ? { id: p, field: p, disabled: true } : p);
+      
+      location += ".facet." + f.id;
+      if (this.useJson)
+        f.jsonLocation = location;
+      if (this.rootId == null)
+        this.rootId = f.id;
+        
+      // TODO: Make these work some day
+      f.exclusion = false;
+      
+      // We usually don't need nesting on the inner levels.
+      if (p.nesting == null && i > 0)
+        delete f.nesting;
+        
+      f.statistics = stats;
+        
+      (this.faceters[f.id] = this.addFaceter(f, i)).init(manager);
+    }
+  },
+
+  getPivotEntry: function (idx) {
+    var p = this.pivot[idx];
+    return p === undefined ? null : (typeof p === "object" ? p : { id: p, field: p });
+  },
+  
+  getFaceterEntry: function (idx) {
+    var p = this.pivot[idx];
+    return this.faceters[typeof p === "string" ? p : p.id];  
+  },
+  
+  getPivotCounts: function (pivot_counts) {
+    if (this.useJson === true) {
+      if (pivot_counts == null)
+        pivot_counts = this.manager.response.facets;
+      
+      return pivot_counts.count > 0 ? pivot_counts[this.rootId].buckets : [];
+    }
+    else {
+      if (pivot_counts == null)
+        pivot_counts = this.manager.response.pivot;
+
+      throw { error: "Not supported for now!" }; // TODO!!!
+    }
+  },
+  
+  addValue: function (value, exclude) {
+    var p = this.parseValue(value);
+    return this.faceters[p.id].addValue(p.value, exclude);
+  },
+  
+  removeValue: function (value) {
+    var p = this.parseValue(value);
+    return this.faceters[p.id].removeValue(p.value);
+  },
+  
+  clearValues: function () {
+    a$.each(this.faceters, function (f) { f.clearValues(); });
+  },
+  
+  hasValue: function (value) {
+    var p = this.parseValue(value);
+    return p.id != null ? this.faceters[p.id].hasValue(p.value) : false;
+  },
+  
+  parseValue: function (value) {
+    var m = value.match(/^(\w+):(.+)$/);
+    return !m || this.faceters[m[1]] === undefined ? { value: value } : { value: m[2], id: m[1] };
+  },
+  
+   /**
+   * @param {String} value The stringified facet value
+   * @returns {Object|String} The value that produced this output
+   */
+  fqParse: function (value) {
+    var p = this.parseValue(value),
+        v = null;
+        
+    if (p.id != null)
+      v = this.faceters[p.id].fqParse(p.value);
+    else for (var id in this.faceters) {
+      v = this.faceters[id].fqParse(p.value);
+      if (!!v) {
+        p.id = id;
+        break;
+      }
+    }
+    
+    if (Array.isArray(v))
+      v = v.map(function (one) { return p.id + ":" + one; });
+    else if (v != null)
+      v = p.id + ":" + v;
+
+    return v;
+  }
+  
+};
+/** SolrJsX library - a neXt Solr queries JavaScript library.
+  * Result list tunning and preparation.
+  *
+  * Author: Ivan Georgiev
+  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+  */
+  
+Solr.Listing = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+  this.manager = null;
+};
+
+Solr.Listing.prototype = {
+  nestingRules: null,         // If document nesting is present - here are the rules for it.
+  listingFields: [ "*" ],     // The fields that need to be present in the result list.
+  
+  /** Make the initial setup of the manager.
+    */
+  init: function (manager) {
+    a$.pass(this, Solr.Listing, 'init', manager);
+    
+    a$.each(this.nestingRules, function (r, i) {
+      manager.addParameter('fl', 
+        "[child parentFilter=" + r.field + ":" + r.parent 
+        + " childFilter=" + r.field + ":" + i 
+        + " limit=" + r.limit + "]");
+    });
+
+    a$.each(this.listingFields, function (f) { manager.addParameter('fl', f)});    
+  }
+  
 };
 
   /** ... and finish with some module / export definition for according platforms

@@ -21,7 +21,8 @@ jT.AutocompleteWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.target = $(settings.target);
   this.id = settings.id;
-  this.delayed = null;
+  this.lookupMap = settings.lookupMap || {};
+
   this.fqName = this.useJson ? "json.filter" : "fq";
 
   this.spyManager = new settings.SpyManager({ parameters: a$.extend(true, defaultParameters, settings.parameters) });
@@ -37,13 +38,16 @@ jT.AutocompleteWidget.prototype = {
   servlet: "autophrase",
   useJson: false,
   maxResults: 30,
-  groups: {},
+  groups: null,
   
   init: function (manager) {
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
     this.manager = manager;
     
     var self = this;
+        
+    if (manager.getParameter('q').value == null)
+      self.addValue("");
     
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {
@@ -105,7 +109,7 @@ jT.AutocompleteWidget.prototype = {
         list.push({
           id: f.id,
           value: facet,
-          label: (lookup[facet] || facet) + ' (' + response.facet_counts.facet_fields[f.id][facet] + ') - ' + f.id
+          label: (self.lookupMap[facet] || facet) + ' (' + response.facet_counts.facet_fields[f.id][facet] + ') - ' + f.id
         });
         
         if (list.length >= self.maxResults)

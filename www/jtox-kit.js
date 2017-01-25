@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.1.4" };
+var jToxKit = { version: "2.1.6" };
 
 (function (jT, a$) {
   // Now import all the actual skills ...
@@ -352,7 +352,7 @@ jT.NestedSolrTranslation.prototype = {
   if ( typeof module === "object" && module && typeof module.exports === "object" )
   	module.exports = jToxKit;
   else {
-    this.jToxKit = a$.extend({}, this.jToxKit, jToxKit);
+    this.jToxKit = this.jT = a$.extend({}, this.jToxKit, jToxKit);
     if ( typeof define === "function" && define.amd )
       define(jToxKit);
   }
