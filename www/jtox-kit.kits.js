@@ -97,7 +97,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 })(Solr, asSys, jQuery, jToxKit);
 (function(Solr, a$, $, jT) {
 
-var defaultSettings = {
+var mainLookupMap = {},
+    defaultSettings = {
   		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
   		servlet: "autophrase",
   		connector: $,
@@ -133,14 +134,14 @@ var defaultSettings = {
       var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
           
       title = view.replace(/^caNanoLab\./, "").replace(/^http\:\/\/dx\.doi\.org/, "");
-      title = (jT.FacetedSearch.prototype.__kits[0].lookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
+      title = (mainLookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
     	  
       var aux$ = $('<span/>').html(tag.count || 0);
       if (typeof tag.onAux === 'function')
         aux$.click(tag.onAux);
         
       var el$ = $('<li/>')
-        .append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + title + ']' : '') + '">' + view + '</a>')
+        .append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + view + ']' : '') + '">' + title + '</a>')
           .append(aux$)
         );
 
@@ -171,6 +172,7 @@ jT.FacetedSearch = function (settings) {
   
   if (this.lookupMap == null)
     this.lookupMap = {};
+  mainLookupMap = this.lookupMap;
     
   $(settings.target).html(jT.ui.templates['faceted-search-kit']);
   delete this.target;
@@ -251,12 +253,15 @@ jT.FacetedSearch.prototype = {
   			$('li,ul', div[0]).show();
   		else {
   			$('li>a', div[0]).each( function () {
-  				var fold = $(this).parents("ul.tag-group");
+  				var fold = $(this).closest("ul.tag-group"),
+  				    tag = $(this).parent();
   				cnt = fold.data("hidden") || 0;
-  				if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
-  					$(this).parent().show();
+  				if (tag.hasClass("category"))
+  				  ;
+  				else if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
+  					tag.show();
   				else {
-  					$(this).parent().hide();
+  					tag.hide();
   					++cnt;
   				}
   				
@@ -268,8 +273,9 @@ jT.FacetedSearch.prototype = {
   		// now check if some of the boxes need to be hidden.
   		$("ul.tag-group", div[0]).each(function () {
     		var me = $(this);
+
   			cnt = parseInt(me.data("hidden")) || 0;
-  			if (me.children().length > cnt)
+  			if (me.children().length > cnt + 1)
   				me.show().removeClass("folded");
   			else
   				me.hide().addClass("folded");
@@ -661,6 +667,7 @@ jT.FacetedSearch.prototype = {
     
     prepareTag: function (value) {
       var p = this.parseValue(value);
+
       return {
         title: p.value,
         color: this.faceters[p.id].color,
@@ -725,15 +732,19 @@ jT.FacetedSearch.prototype = {
 })(Solr, asSys, jQuery, jToxKit);
 (function (Solr, a$, $, jT) {
   
-  function SimpleRanger(settings) { }
+  function SimpleRanger(settings) { 
+    this.sliderRoot = settings.sliderRoot;
+  }
   
   SimpleRanger.prototype.__expects = [ "addValue", "doRequest" ];
   SimpleRanger.prototype.targetValue = null;
   SimpleRanger.prototype.updateHandler = function () {
     var self = this;
     return function (values) {
-      if (!!self.addValue(values))
+      if (!!self.addValue(values)) {
+        self.sliderRoot.updateRequest = true;
         self.doRequest();
+      } 
     };
   }
   SimpleRanger.prototype.doRequest = function () {
@@ -784,6 +795,8 @@ jT.FacetedSearch.prototype = {
             
       if (!this.pivotMap)
         this.pivotMap =  this.buildPivotMap(pivot);
+      else if (!this.updateRequest)
+        this.rangeRemove();
       else if (this.rangeWidgets.length > 0) {
         var pivotMap = this.buildPivotMap(pivot), w, ref;
         
@@ -793,6 +806,8 @@ jT.FacetedSearch.prototype = {
           w.updateSlider([ ref[i].min, ref[i].max ]);
         }
       }
+      
+      this.updateRequest = false;
     },
     
     buildPivotMap: function (pivot) {
@@ -849,6 +864,9 @@ jT.FacetedSearch.prototype = {
     rangeRemove: function() {
       this.slidersTarget.empty().parent().removeClass("active");
 
+      for (var i = 0, wl = this.rangeWidgets.length;i < wl; ++i)
+        this.rangeWidgets[i].clearValues();
+
       this.rangeWidgets = [];
       this.lastPivotMap = this.lastPivotValue = null;
     },
@@ -876,18 +894,19 @@ jT.FacetedSearch.prototype = {
       var self = this;
       
       return function (event) {
+        event.stopPropagation();
+
+        self.rangeRemove();
+
+        // we've clicked out pivot button - clearing was enough.
+        if (value == self.lastPivotValue)
+          return false;
+
         var entry = self.pivotMap[value],
             pivotMap = self.lastPivotMap = self.buildPivotMap(self.getPivotCounts()),
             current = pivotMap[value];
-
-        event.stopPropagation();
-
-        // deal with clicking the button on somebody else
-        if (value == self.lastPivotValue) {
-          self.rangeRemove();
-          return false;
-        }
         
+        self.lastPivotValue = value;
         self.slidersTarget.empty().parent().addClass("active");
 
         for (var i = 0, el = entry.length; i < el; ++i) {
@@ -913,6 +932,7 @@ jT.FacetedSearch.prototype = {
           setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
           setup.useJson = self.useJson;
           setup.domain = self.domain;
+          setup.sliderRoot = self;
             
           self.rangeWidgets.push(w = new SingleRangeWidget(setup));
           w.init(self.manager);
@@ -923,9 +943,6 @@ jT.FacetedSearch.prototype = {
     },
     
     clearValues: function () {
-      for (var i = 0, wl = this.rangeWidgets.length;i < wl; ++i)
-        this.rangeWidgets[i].clearValues();
-        
       this.rangeRemove();
       a$.pass(this, jT.RangeWidgeting, "clearValues");
     }

@@ -1,6 +1,7 @@
 (function(Solr, a$, $, jT) {
 
-var defaultSettings = {
+var mainLookupMap = {},
+    defaultSettings = {
   		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
   		servlet: "autophrase",
   		connector: $,
@@ -36,14 +37,14 @@ var defaultSettings = {
       var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
           
       title = view.replace(/^caNanoLab\./, "").replace(/^http\:\/\/dx\.doi\.org/, "");
-      title = (jT.FacetedSearch.prototype.__kits[0].lookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
+      title = (mainLookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
     	  
       var aux$ = $('<span/>').html(tag.count || 0);
       if (typeof tag.onAux === 'function')
         aux$.click(tag.onAux);
         
       var el$ = $('<li/>')
-        .append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + title + ']' : '') + '">' + view + '</a>')
+        .append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + view + ']' : '') + '">' + title + '</a>')
           .append(aux$)
         );
 
@@ -74,6 +75,7 @@ jT.FacetedSearch = function (settings) {
   
   if (this.lookupMap == null)
     this.lookupMap = {};
+  mainLookupMap = this.lookupMap;
     
   $(settings.target).html(jT.ui.templates['faceted-search-kit']);
   delete this.target;
@@ -154,12 +156,15 @@ jT.FacetedSearch.prototype = {
   			$('li,ul', div[0]).show();
   		else {
   			$('li>a', div[0]).each( function () {
-  				var fold = $(this).parents("ul.tag-group");
+  				var fold = $(this).closest("ul.tag-group"),
+  				    tag = $(this).parent();
   				cnt = fold.data("hidden") || 0;
-  				if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
-  					$(this).parent().show();
+  				if (tag.hasClass("category"))
+  				  ;
+  				else if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
+  					tag.show();
   				else {
-  					$(this).parent().hide();
+  					tag.hide();
   					++cnt;
   				}
   				
@@ -171,8 +176,9 @@ jT.FacetedSearch.prototype = {
   		// now check if some of the boxes need to be hidden.
   		$("ul.tag-group", div[0]).each(function () {
     		var me = $(this);
+
   			cnt = parseInt(me.data("hidden")) || 0;
-  			if (me.children().length > cnt)
+  			if (me.children().length > cnt + 1)
   				me.show().removeClass("folded");
   			else
   				me.hide().addClass("folded");

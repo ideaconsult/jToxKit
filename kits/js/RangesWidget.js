@@ -1,14 +1,18 @@
 (function (Solr, a$, $, jT) {
   
-  function SimpleRanger(settings) { }
+  function SimpleRanger(settings) { 
+    this.sliderRoot = settings.sliderRoot;
+  }
   
   SimpleRanger.prototype.__expects = [ "addValue", "doRequest" ];
   SimpleRanger.prototype.targetValue = null;
   SimpleRanger.prototype.updateHandler = function () {
     var self = this;
     return function (values) {
-      if (!!self.addValue(values))
+      if (!!self.addValue(values)) {
+        self.sliderRoot.updateRequest = true;
         self.doRequest();
+      } 
     };
   }
   SimpleRanger.prototype.doRequest = function () {
@@ -59,6 +63,8 @@
             
       if (!this.pivotMap)
         this.pivotMap =  this.buildPivotMap(pivot);
+      else if (!this.updateRequest)
+        this.rangeRemove();
       else if (this.rangeWidgets.length > 0) {
         var pivotMap = this.buildPivotMap(pivot), w, ref;
         
@@ -68,6 +74,8 @@
           w.updateSlider([ ref[i].min, ref[i].max ]);
         }
       }
+      
+      this.updateRequest = false;
     },
     
     buildPivotMap: function (pivot) {
@@ -124,6 +132,9 @@
     rangeRemove: function() {
       this.slidersTarget.empty().parent().removeClass("active");
 
+      for (var i = 0, wl = this.rangeWidgets.length;i < wl; ++i)
+        this.rangeWidgets[i].clearValues();
+
       this.rangeWidgets = [];
       this.lastPivotMap = this.lastPivotValue = null;
     },
@@ -151,18 +162,19 @@
       var self = this;
       
       return function (event) {
+        event.stopPropagation();
+
+        self.rangeRemove();
+
+        // we've clicked out pivot button - clearing was enough.
+        if (value == self.lastPivotValue)
+          return false;
+
         var entry = self.pivotMap[value],
             pivotMap = self.lastPivotMap = self.buildPivotMap(self.getPivotCounts()),
             current = pivotMap[value];
-
-        event.stopPropagation();
-
-        // deal with clicking the button on somebody else
-        if (value == self.lastPivotValue) {
-          self.rangeRemove();
-          return false;
-        }
         
+        self.lastPivotValue = value;
         self.slidersTarget.empty().parent().addClass("active");
 
         for (var i = 0, el = entry.length; i < el; ++i) {
@@ -188,6 +200,7 @@
           setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
           setup.useJson = self.useJson;
           setup.domain = self.domain;
+          setup.sliderRoot = self;
             
           self.rangeWidgets.push(w = new SingleRangeWidget(setup));
           w.init(self.manager);
@@ -198,9 +211,6 @@
     },
     
     clearValues: function () {
-      for (var i = 0, wl = this.rangeWidgets.length;i < wl; ++i)
-        this.rangeWidgets[i].clearValues();
-        
       this.rangeRemove();
       a$.pass(this, jT.RangeWidgeting, "clearValues");
     }

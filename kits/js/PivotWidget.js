@@ -113,6 +113,7 @@
     
     prepareTag: function (value) {
       var p = this.parseValue(value);
+
       return {
         title: p.value,
         color: this.faceters[p.id].color,
