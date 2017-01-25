@@ -38,7 +38,7 @@ jT.TagWidget.prototype = {
     
     if (objectedItems.length == null || objectedItems.length == 0) {
       if (!preserve)
-        this.target.html('No items found in current selection');
+        this.target.html("No items found in this selection").addClass("jt-no-tags");
     }
     else {
       objectedItems.sort(function (a, b) {

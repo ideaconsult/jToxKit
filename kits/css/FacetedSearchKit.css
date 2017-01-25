@@ -329,6 +329,11 @@ div.slider-container.theme-orange .back-bar div.selected-bar {
   height: 100%;
 }
 
+#accordion .jt-no-tags {
+  font-size: smaller;
+  font-style: italic;
+}
+
 #accordion .tags li {
   width: auto;
   max-width: 130px;
