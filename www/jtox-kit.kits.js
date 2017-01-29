@@ -301,7 +301,7 @@ jT.FacetedSearch.prototype = {
 	  resize: function(e, ui) {
 		self.accordion.accordion( "refresh" );
 		$('#query-sticky-wrapper').width( self.accordion.width());
-		$(this).width($(this).width() - 7); // minus the total padding of parent elements
+		$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
 		resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
 	  }
 	});
