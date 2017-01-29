@@ -1060,27 +1060,29 @@ jT.ItemListWidget.prototype = {
   onCreated: null,
   onClick: null,
   summaryRenderers: {
-	"RESULTS": function (val, topic) { 
-	  var self = this;
-	  return val.map(function (study) { 
-		return study.split(".").map(function (one) { return self.lookupMap[one] || one; }).join("."); 
-	  });
-	},
-	"REFOWNERS": function (val, topic) {
-	  return { 'topic': "Study Providers", 'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
-		href: "#", 
-		hint: "Freetext search", 
-		target: "_self", 
-		value: ref, 
-		css: "freetext_selector" 
-	  }); }) };
-	},
-	"REFS": function (val, topic) { 
-	  return { 
-		'topic': "References",
-		'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref }); })
-	  }
-	}
+    "RESULTS": function (val, topic) { 
+      var self = this;
+      return val.map(function (study) { 
+        return study.split(".").map(function (one) { return self.lookupMap[one] || one; }).join("."); 
+      });
+    },
+    "REFOWNERS": function (val, topic) {
+      return { 'topic': "Study Providers", 'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
+        href: "#", 
+        hint: "Freetext search", 
+        target: "_self", 
+        value: ref, 
+        css: "freetext_selector" 
+      }); }) };
+    },
+    "REFS": function (val, topic) { 
+      return { 
+        'topic': "References",
+        'content': val.map(function (ref) { 
+          return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref, css: "freetext_selector" }); 
+        })
+      }
+    }
   },
 	
   renderItem: function (doc) {
@@ -1123,31 +1125,31 @@ jT.ItemListWidget.prototype = {
 	 */
   renderSubstance: function(doc) {
 		var summaryhtml = $("#summary-item").html(),
-			summarylist = this.buildSummary(doc),
-			summaryRender = function (summarylist) { 
-			return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
-		  },
-			item = { 
-				logo: "images/logo.png",
-				link: "#",
-				href: "#",
-				title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
-					  + (doc.substanceType == null ? "" : (" " 
-						+ (this.lookupMap[doc.substanceType] || doc.substanceType)
-					  )),
-				composition: this.renderComposition(doc, 
-					  '<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>'
-					).join("<br/>"),
-			  summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
-				item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
-				footer: 
-					'<a href="' + this.baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
-					'<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
-					'<a href="' + this.baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
-			};
+		    summarylist = this.buildSummary(doc),
+		    summaryRender = function (summarylist) { 
+  		    return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
+  		  },
+		    item = { 
+  				logo: "images/logo.png",
+  				link: "#",
+  				href: "#",
+  				title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
+  				      + (doc.substanceType == null ? "" : (" " 
+  				        + (this.lookupMap[doc.substanceType] || doc.substanceType)
+  				      )),
+  				composition: this.renderComposition(doc, 
+    				  '<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>'
+    				).join("<br/>"),
+    		  summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
+  				item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
+  				footer: 
+  					'<a href="' + this.baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
+  					'<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
+  					'<a href="' + this.baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
+  			};
 
-	// Build the outlook of the summary item
-	if (summarylist.length > 1)
+    // Build the outlook of the summary item
+    if (summarylist.length > 0)
 			item.summary += 
 				'<a href="#" class="more">more</a>' +
 				'<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
@@ -1186,48 +1188,48 @@ jT.ItemListWidget.prototype = {
 	},
 	
   renderComposition: function (doc, defValue) {
-	var summary = [];
-		composition = doc._extended_ && doc._extended_.composition;
-		
-	if (!!composition) {
-	  var cmap = {};
-	  a$.each(composition, function(c) {
-		var ce = cmap[c.component],
-			se = [];
-		if (ce === undefined)
-		  cmap[c.component] = ce = [];
-		
-		a$.each(c, function (v, k) {
-		  k = k.match(/([^_]+)_?\a?/)[1];
-		  if (k != "type" && k != "id" && k != "component")
-			se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v }));
-		});
-		
-		ce.push(se.join(", "));
-		});
-		
-		a$.each(cmap, function (map, type) {
-		var entry = "";
-		for (var i = 0;i < map.length; ++i) {
-		  if (map[i] == "")
-			continue;
-			
-			entry += (i == 0) ? ": " : "; ";
-			if (map.length > 1)
-			  entry += "<strong>[" + (i + 1) + "]</strong>&nbsp;";
-		  entry += map[i];
-		}
-		
-		if (entry === "")
-		  entry = ":&nbsp;" + defValue;
-		  
-		entry = type + " (" + map.length + ")" + entry;
-		  
-		summary.push(entry);
-		});
-	}
-	
-	return summary;
+  	var summary = [],
+  	    composition = doc._extended_ && doc._extended_.composition;
+  	    
+    if (!!composition) {
+      var cmap = {};
+      a$.each(composition, function(c) {
+        var ce = cmap[c.component_s],
+            se = [];
+        if (ce === undefined)
+          cmap[c.component_s] = ce = [];
+        
+        a$.each(c, function (v, k) {
+          k = k.match(/([^_]+)_?\a?/)[1];
+          if (k != "type" && k != "id" && k != "component_s")
+            se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v, css:"freetext_selector" }));
+        });
+        
+        ce.push(se.join(", "));
+    	});
+    	
+    	a$.each(cmap, function (map, type) {
+        var entry = "";
+        for (var i = 0;i < map.length; ++i) {
+          if (map[i] == "")
+            continue;
+            
+        	entry += (i == 0) ? ": " : "; ";
+        	if (map.length > 1)
+        	  entry += "<strong>[" + (i + 1) + "]</strong>&nbsp;";
+          entry += map[i];
+      	}
+      	
+      	if (entry === "")
+      	  entry = ":&nbsp;" + defValue;
+      	  
+        entry = type + " (" + map.length + ")" + entry;
+      	  
+      	summary.push(entry);
+    	});
+    }
+  	
+  	return summary;
 	},
 	
   buildSummary: function(doc) {

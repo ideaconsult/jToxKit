@@ -34,7 +34,9 @@ jT.ItemListWidget.prototype = {
     "REFS": function (val, topic) { 
       return { 
         'topic': "References",
-        'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref }); })
+        'content': val.map(function (ref) { 
+          return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref, css: "freetext_selector" }); 
+        })
       }
     }
   },
@@ -103,7 +105,7 @@ jT.ItemListWidget.prototype = {
   			};
 
     // Build the outlook of the summary item
-    if (summarylist.length > 1)
+    if (summarylist.length > 0)
 			item.summary += 
 				'<a href="#" class="more">more</a>' +
 				'<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
@@ -142,21 +144,21 @@ jT.ItemListWidget.prototype = {
 	},
 	
   renderComposition: function (doc, defValue) {
-  	var summary = [];
+  	var summary = [],
   	    composition = doc._extended_ && doc._extended_.composition;
   	    
     if (!!composition) {
       var cmap = {};
       a$.each(composition, function(c) {
-        var ce = cmap[c.component],
+        var ce = cmap[c.component_s],
             se = [];
         if (ce === undefined)
-          cmap[c.component] = ce = [];
+          cmap[c.component_s] = ce = [];
         
         a$.each(c, function (v, k) {
           k = k.match(/([^_]+)_?\a?/)[1];
-          if (k != "type" && k != "id" && k != "component")
-            se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v }));
+          if (k != "type" && k != "id" && k != "component_s")
+            se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v, css:"freetext_selector" }));
         });
         
         ce.push(se.join(", "));
