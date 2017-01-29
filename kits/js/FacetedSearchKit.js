@@ -372,7 +372,7 @@ jT.FacetedSearch.prototype = {
 			if (!form.export_dataset.value){
 				b.button("option", "label", "No target dataset selected...");
 			}else if( !self.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
-				b.button("disable").button("option", "label", "No filter params...");
+				b.button("disable").button("option", "label", "No filters selected...");
 			}else if (!!form.export_format.value  ){
 				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(this.form.export_format).data('name').toUpperCase());
 			} 
