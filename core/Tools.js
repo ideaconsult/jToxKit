@@ -33,11 +33,9 @@ jT.ui = a$.extend(jT.ui, {
   },
   
   formatNumber: function (num, prec) {
-    return parseFloat(parseInt(Math.round(num / prec))) * 0.001;
-  /*
-    var v = Math.round(num / prec) * prec;
-    return parseFloat(v.toString().replace(new RegExp("\\.(\\d{" + (-Math.log10(prec)) + "})\\d*"), ".$1"));
-  */
+    if (prec < 1)
+      prec = parseInt(1.0 / prec);
+    return Math.round(num * prec) / prec;
   },
   
 	formatUnits: function (str) {
