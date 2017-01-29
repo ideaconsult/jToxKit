@@ -593,6 +593,19 @@ td.jtox-multi table {
   float: right !important;
 }
 
+h6{
+  margin-top:10px;
+}
+.data_formats.selected .jtox-ds-download{
+  transform: scale(0.9);
+}
+.data_formats .jtox-ds-download.selected{
+  transform: scale(1.1);
+}
+.data_formats .jtox-ds-download:hover{
+  transform: scale(1.1);
+}
+
 .jtox-ds-download {
   padding:0px 5px 0px 5px;
 }

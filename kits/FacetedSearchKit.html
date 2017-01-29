@@ -73,10 +73,12 @@
   		<div id="export_tab">
     		<form target="_blank" method="post">
       		<input type="hidden" name="q"/>
+          <input type="hidden" name="search"/>
+          <input type="hidden" name="fq"/>
       		
       		<h6>Select output format</h6>
-      		<input type="hidden" name="export_type" id="export_type"/>
-    		  <div class="data_types"></div>
+      		<input type="hidden" name="export_format" id="export_format"/>
+    		  <div class="data_formats"></div>
       		
           <h6>Select dataset to export</h6>
       		<div id="export_dataset">
@@ -85,7 +87,10 @@
             <input type="radio" value="selected" name="export_dataset" id="selected_data"/>
             <label for="selected_data">Selected entries</label>
           </div>
-          
+
+          <h6>Select export type</h6>
+          <div id="export_type"></div>
+
           <h6>Click to download</h6>
           <button type="submit" name="export_go" data-prefix="Download">?</button>
           
@@ -140,10 +145,14 @@
 		<input type="hidden"/>
   </div>
 
-  <div id="export-type">
+  <div id="export-format">
     <div class="jtox-inline jtox-ds-download jtox-fadable">
-      <a target="_blank" data-mime="{{mime}}" href="#"><img class="borderless" jt-src="{{icon}}"/></a>
+      <a target="_blank" data-mime="{{mime}}" data-name="{{name}}" data-url="{{server}}" href="#"><img class="borderless" jt-src="{{icon}}"/></a>
     </div>
+  </div>
+  <div id="export-type">
+    <input type="radio" value="{{fields}}" {{selected}} name="export_type" id="{{type}}"/>
+    <label for="{{type}}">{{type}}</label>
   </div>
 <!-- // end of #faceted-search-templates ]]-->
 
