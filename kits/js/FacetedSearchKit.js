@@ -391,13 +391,13 @@ jT.FacetedSearch.prototype = {
   
 		$("#export_tab form").on("submit", function (e) {
 			var form = this,
-			mime = form.export_format.value,
-			server = $('.data_formats .selected a').attr('data-url'),
-			fields = ( server == 'ambitURL' )? 's_uuid_hs' : form.export_type.value,
-			params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
-			mime = mime.substr(mime.indexOf("/") + 1),
-			serverURL = self[server],
-			fq = [];
+			    mime = form.export_format.value,
+    			server = $('.data_formats .selected a').attr('data-url'),
+    			fields = ( server == 'ambitURL' )? 's_uuid_hs' : form.export_type.value,
+    			params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
+    			mime = mime.substr(mime.indexOf("/") + 1),
+    			serverURL = self[server],
+    			fq = [];
 
 			if (mime == "tsv"){
 				params.push("wt=csv", "csv.separator=%09");
@@ -478,7 +478,7 @@ jT.FacetedSearch.prototype = {
 			});
 			
 			var serverURL = self[$('.data_formats .selected a').attr('data-url')],
-			mime = form.export_format.value;
+			    mime = form.export_format.value;
 
 			form.search.value = ids.join(" ");
 			form.action = serverURL+'query/substance/study/uuid?media='+encodeURIComponent(mime);
@@ -495,8 +495,7 @@ jT.FacetedSearch.prototype = {
 				var me = $(this);
 				if (!me.hasClass("selected")) {
 					var form = me.closest("form")[0],
-					cont = me.closest("div.data_formats"),
-					mime = me.data("mime");
+    					cont = me.closest("div.data_formats");
 
 					form.export_format.value = me.data("mime") ;
 
@@ -534,8 +533,8 @@ jT.FacetedSearch.prototype = {
 				var me = $(this);
 				if (!me.hasClass("selected")) {
 					var form = me.closest("form")[0],
-					cont = me.closest("div.data_formats"),
-					mime = me.data("mime");
+    					cont = me.closest("div.data_formats"),
+    					mime = me.data("mime");
 
 					form.export_type.value = mime = mime.substr(mime.indexOf("/") + 1);
 					updateButton.call(form.export_type, e);

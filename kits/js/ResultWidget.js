@@ -1,8 +1,10 @@
 (function (Solr, a$, $, jT) {
 
-var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>';
+var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>',
+    plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
   
 jT.ItemListWidget = function (settings) {
+	settings.baseUrl = jT.ui.fixBaseUrl(settings.baseUrl) + "/";
   a$.extend(true, this, a$.common(settings, this));
 
   this.lookupMap = settings.lookupMap || {};
@@ -35,7 +37,10 @@ jT.ItemListWidget.prototype = {
       return { 
         'topic': "References",
         'content': val.map(function (ref) { 
-          return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref, css: "freetext_selector" }); 
+          return jT.ui.formatString(
+            ref.match(/^https?:\/\//) ? htmlLink : plainLink,
+            { href: ref, hint: "External reference", target: "ref", value: ref }
+          );
         })
       }
     }
