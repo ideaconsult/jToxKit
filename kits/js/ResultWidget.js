@@ -37,9 +37,11 @@ jT.ItemListWidget.prototype = {
       return { 
         'topic': "References",
         'content': val.map(function (ref) { 
+          var link = ref.match(/^doi:(.+)$/);
+          link = link != null ? "https://www.doi.org/" + link[1] : ref;
           return jT.ui.formatString(
-            ref.match(/^https?:\/\//) ? htmlLink : plainLink,
-            { href: ref, hint: "External reference", target: "ref", value: ref }
+            link.match(/^https?:\/\//) ? htmlLink : plainLink,
+            { href: link, hint: "External reference", target: "ref", value: ref }
           );
         })
       }
