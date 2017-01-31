@@ -1367,8 +1367,6 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<h6>Click to download</h6>" +
 "<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
 "" +
-"<h6><div style=\"float: left; text-align: center\"><a id=\"whole_dataset\" href=\"https://zenodo.org/record/173258\" target=\"_blank\">Full dataset download</a><br><span style=\"color: black; font-style: italic\">hosted on <a href=\"https://zenodo.org/about\" target=\"_blank\"><img src=\"images/zenodo-black.svg\" width=\"50px\" style=\"padding-bottom: 7px\" alt=\"Zenodo logo\"></a></span></div></h6>" +
-"" +
 "</form>" +
 "</div>" +
 "</div>" +
