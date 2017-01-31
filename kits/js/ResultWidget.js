@@ -163,9 +163,16 @@ jT.ItemListWidget.prototype = {
           cmap[c.component_s] = ce = [];
         
         a$.each(c, function (v, k) {
-          k = k.match(/([^_]+)_?\a?/)[1];
-          if (k != "type" && k != "id" && k != "component_s")
-            se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v, css:"freetext_selector" }));
+          var m = k.match(/^(\w+)_[shd]+$/);
+          k = m && m[1] || k;
+          if (k != "type" && k != "id" && k != "component")
+            se.push(jT.ui.formatString(htmlLink, { 
+              href: "#", 
+              hint: "Freetext search on '" + k + "'", 
+              target: "_self", 
+              value: v, 
+              css:"freetext_selector" 
+            }));
         });
         
         ce.push(se.join(", "));
