@@ -1363,8 +1363,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "" +
 "<h6>Select export type</h6>" +
 "<div id=\"export_type\"></div>" +
-"" +
-"<h6>Click to download</h6>" +
+"<br/>" +
 "<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
 "" +
 "</form>" +
