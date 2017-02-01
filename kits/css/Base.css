@@ -579,7 +579,9 @@ td.jtox-multi table {
   z-index: 10;
   height: auto;
 }
-
+h6{
+  margin-top: 10px;
+}
 .jtox-ds-tables .jtox-inline,
 .jtox-ds-tables td {
   vertical-align: top;
@@ -592,6 +594,12 @@ td.jtox-multi table {
 .jtox-ds-export {
   float: right !important;
 }
+
+.data_formats.disabled .jtox-ds-download,
+.data_formats .jtox-ds-download a.disabled{
+  opacity:0.4;
+}
+
 .data_formats.selected .jtox-ds-download{
   transform: scale(0.9);
 }
