@@ -216,7 +216,7 @@ jT.FacetedSearch.prototype = {
 	*/
   initComm: function () {
 	var Manager, Basket,
-		PivotWidget = a$(Solr.Requesting, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
+		PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
 		TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
 
 	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
@@ -302,9 +302,9 @@ jT.FacetedSearch.prototype = {
 			  { id: "endpointcategory", field: "endpointcategory_s", color: "blue" },
 			  { id: "effectendpoint", field: "effectendpoint_s", color: "green", ranging: true }, 
 			  { id: "unit", field: "unit_s", disabled: true, ranging: true }
-	  ],
-	  statistics: { 'min': "min(loValue_d)", 'max': "max(loValue_d)", 'avg': "avg(loValue_d)" },
-	  slidersTarget: $("#sliders"),
+  	  ],
+  	  statistics: { 'min': "min(loValue_d)", 'max': "max(loValue_d)", 'avg': "avg(loValue_d)" },
+  	  slidersTarget: $("#sliders"),
 			
 			multivalue: true,
 			aggregate: true,
