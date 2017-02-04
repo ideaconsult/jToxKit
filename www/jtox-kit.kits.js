@@ -377,7 +377,7 @@ jT.FacetedSearch.prototype = {
 				}, f))
 	  
 	  w.afterTranslation = function (data) { 
-		this.populate(this.getFacetCounts(data.facets)); 
+		  this.populate(this.getFacetCounts(data.facets)); 
 	  };
 				
 			Manager.addListeners(w);
