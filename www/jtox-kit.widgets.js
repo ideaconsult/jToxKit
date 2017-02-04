@@ -460,10 +460,12 @@ jT.AutocompleteWidget = function (settings) {
 
 jT.AutocompleteWidget.prototype = {
   __expects: [ "addValue" ],
-  servlet: "autophrase",
-  useJson: false,
-  maxResults: 30,
-  groups: null,
+
+  servlet: "autophrase",      // what phrase to use on the internal queries
+  urlFeed: null,              // which URL parameter to use for initial setup
+  useJson: false,             // Whether to use JSON-style parameter setup
+  maxResults: 30,             // maximum results in the Autocomplete box
+  groups: null,               // Information for value grouping
   
   init: function (manager) {
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
@@ -471,9 +473,6 @@ jT.AutocompleteWidget.prototype = {
     
     var self = this;
         
-    if (manager.getParameter('q').value == null)
-      self.addValue("");
-    
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {
       var thi$ = $(this);
@@ -483,6 +482,15 @@ jT.AutocompleteWidget.prototype = {
       thi$.blur().autocomplete("disable");
       manager.doRequest();
     });
+
+    // make the initial values stuff
+    if (self.urlFeed != null) {
+      var needle = $.url().param(self.urlFeed);
+      self.addValue(needle);
+      self.findBox.val(needle);
+    }
+    else if (manager.getParameter('q').value == null)
+      self.addValue("");
        
     // configure the auto-complete box. 
     self.findBox.autocomplete({
