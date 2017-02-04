@@ -542,8 +542,7 @@ jT.FacetedSearch.prototype = {
 
 					$("button", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
 
-					var qval = self.manager.getParameter('q'),
-					hasFilter = self.manager.getParameter("json.filter").length > 0;
+					var hasFilter = self.manager.getParameter("json.filter").length > 0;
 
 					$("#selected_data")[0].disabled = self.basket.length < 1;
 					$("#filtered_data")[0].disabled = !hasFilter;
@@ -1362,12 +1361,13 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<div style=\"padding-top: 70px;\"></div>" +
 "</div>" +
 "<div id=\"export_tab\">" +
-"<form target=\"_blank\" method=\"post\" data-ambit=\"true\">" +
+"<form target=\"_blank\" method=\"post\">" +
 "<input type=\"hidden\" name=\"q\"/>" +
 "<input type=\"hidden\" name=\"search\"/>" +
 "<input type=\"hidden\" name=\"fq\"/>" +
 "" +
-
+"" +
+"" +
 "<h6>Select dataset to export</h6>" +
 "<div id=\"export_dataset\">" +
 "<input type=\"radio\" value=\"filtered\" name=\"export_dataset\" id=\"filtered_data\" checked=\"checked\"/>" +
@@ -1378,16 +1378,13 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "" +
 "<h6>Select export type</h6>" +
 "<div id=\"export_type\"></div>" +
-"<h6>Select output format</h6>" +
-"<input type=\"hidden\" name=\"export_format\" id=\"export_format\"/>" +
-"<div class=\"data_formats selected \"></div>" +
-"" +
 "<br/>" +
 "<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
-"<div class='ui-state-error ui-corner-all warning-message' style='padding: 0 .7em;'>"+
-		"<p><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span>"+
-		"<strong>Warning:</strong>Please either add entries to the selection or specify a query</p>"+
-	"</div>"+
+"<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>Warning:</strong>Please either add entries to the selection or specify a query</p></div>" +
+"" +
+"<h6>Select output format</h6>" +
+"<input type=\"hidden\" name=\"export_format\" id=\"export_format\"/>" +
+"<div class=\"data_formats\"></div>" +
 "" +
 "</form>" +
 "</div>" +
@@ -1438,7 +1435,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<div id=\"slider-one\">" +
 "<input type=\"hidden\"/>" +
 "</div>" +
-""+
+"" +
 "<div id=\"export-format\">" +
 "<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
 "<a target=\"_blank\" data-mime=\"{{mime}}\" data-name=\"{{name}}\" data-url=\"{{server}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +

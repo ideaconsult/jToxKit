@@ -459,7 +459,7 @@ jT.AutocompleteWidget = function (settings) {
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "addValue" ],
+  __expects: [ "addValue" ],
   servlet: "autophrase",
   useJson: false,
   maxResults: 30,
@@ -481,7 +481,7 @@ jT.AutocompleteWidget.prototype = {
         return;
         
       thi$.blur().autocomplete("disable");
-      self.manager.doRequest();
+      manager.doRequest();
     });
        
     // configure the auto-complete box. 

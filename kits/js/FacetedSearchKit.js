@@ -445,8 +445,7 @@ jT.FacetedSearch.prototype = {
 
 					$("button", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
 
-					var qval = self.manager.getParameter('q'),
-					hasFilter = self.manager.getParameter("json.filter").length > 0;
+					var hasFilter = self.manager.getParameter("json.filter").length > 0;
 
 					$("#selected_data")[0].disabled = self.basket.length < 1;
 					$("#filtered_data")[0].disabled = !hasFilter;
