@@ -1222,7 +1222,7 @@ jT.ItemListWidget.prototype = {
         a$.each(c, function (v, k) {
           var m = k.match(/^(\w+)_[shd]+$/);
           k = m && m[1] || k;
-          if (k != "type" && k != "id" && k != "component")
+          if (!k.match(/type|id|component/))
             se.push(jT.ui.formatString(htmlLink, { 
               href: "#", 
               hint: "Freetext search on '" + k + "'", 
