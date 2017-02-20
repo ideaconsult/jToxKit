@@ -572,7 +572,7 @@ jT.FacetedSearch.prototype = {
 				}
 			}
 		});
-  	},
+  },
 	sendAmbitRequest: function(form, fq){
 		var self = this, 
 		ids=[];
@@ -622,10 +622,7 @@ jT.FacetedSearch.prototype = {
 			return false;
 			});
 		}
-
 	},
-
-
 
 	getTypes: function(){
 		var exportEl = $("#export_tab div#export_type"),
