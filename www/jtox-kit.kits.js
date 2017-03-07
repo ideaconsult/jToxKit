@@ -1414,13 +1414,14 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "" +
 "<h6>Select export type</h6>" +
 "<div id=\"export_type\"></div>" +
-"<br/>" +
-"<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
-"<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>Warning:</strong>Please either add entries to the selection or specify a query</p></div>" +
 "" +
 "<h6>Select output format</h6>" +
 "<input type=\"hidden\" name=\"export_format\" id=\"export_format\"/>" +
 "<div class=\"data_formats\"></div>" +
+"" +
+"<br/>" +
+"<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
+"<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>Warning:</strong>Please either add entries to the selection or specify a query</p></div>" +
 "" +
 "</form>" +
 "</div>" +
