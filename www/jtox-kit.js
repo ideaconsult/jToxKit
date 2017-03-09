@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.1.7" };
+var jToxKit = { version: "2.1.6" };
 
 (function (jT, a$) {
   // Now import all the actual skills ...
@@ -19,7 +19,7 @@ var jToxKit = { version: "2.1.7" };
   * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
   */
   
-jT.ui = a$.extend(jT.ui, {
+jT.ui = {
 	/* formats a string, replacing {{number | property}} in it with the corresponding value in the arguments
   */
   formatString: function(str, info, def) {
@@ -139,7 +139,7 @@ jT.ui = a$.extend(jT.ui, {
     return str.replace(/[&<>"']/g, function(m) { return map[m]; });
   }
   
-});
+};
 /** jToxKit - chem-informatics multi toolkit.
   * Data translation basic skills.
   *
