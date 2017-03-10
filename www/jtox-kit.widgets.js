@@ -438,7 +438,6 @@ var defaultParameters = {
   'fl': "id",
   'facet.limit': -1,
   'facet.mincount': 1,
-  'json.nl': "map",
   'echoParams': "none"
 };
   
@@ -447,23 +446,21 @@ jT.AutocompleteWidget = function (settings) {
   this.target = $(settings.target);
   this.id = settings.id;
   this.lookupMap = settings.lookupMap || {};
-
-  this.fqName = this.useJson ? "json.filter" : "fq";
-
-  this.spyManager = new settings.SpyManager({ parameters: a$.extend(true, defaultParameters, settings.parameters) });
-  var self = this;
   
-  a$.each(settings.groups, function (facet) {
-    self.spyManager.addParameter('facet.field', facet.field, a$.extend(true, { key: facet.id }, facet.facet.domain));
-  });
+  this.parameters = a$.extend(true, { }, defaultParameters);
+  this.facetPath = this.useJson ? "facets" : "facet_counts.facet_fields";
+  if (!this.useJson)
+    this.parameters['json.nl'] = "map";    
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "addValue" ],
-  servlet: "autophrase",
-  useJson: false,
-  maxResults: 30,
-  groups: null,
+  __expects: [ "addValue", "doSpying" ],
+
+  servlet: "autophrase",      // what phrase to use on the internal queries
+  urlFeed: null,              // which URL parameter to use for initial setup
+  useJson: false,             // Whether to use JSON-style parameter setup
+  maxResults: 30,             // maximum results in the Autocomplete box
+  activeFacets: null,         // a map of active / inactive facets. Default is ON.
   
   init: function (manager) {
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
@@ -471,9 +468,6 @@ jT.AutocompleteWidget.prototype = {
     
     var self = this;
         
-    if (manager.getParameter('q').value == null)
-      self.addValue("");
-    
     // now configure the independent free text search.
     self.findBox = this.target.find('input').on("change", function (e) {
       var thi$ = $(this);
@@ -481,19 +475,22 @@ jT.AutocompleteWidget.prototype = {
         return;
         
       thi$.blur().autocomplete("disable");
-      self.manager.doRequest();
+      manager.doRequest();
     });
+
+    // make the initial values stuff
+    if (self.urlFeed != null) {
+      var needle = $.url().param(self.urlFeed);
+      self.addValue(needle);
+      self.findBox.val(needle);
+    }
        
     // configure the auto-complete box. 
     self.findBox.autocomplete({
       'minLength': 0,
       'source': function (request, callback) {
         self.reportCallback = callback;
-        self.makeRequest(request.term, function (response) { 
-          self.onResponse(response); 
-        }, function (jxhr, status, err) {
-          callback([ "Err : '" + status + '!']);
-        });
+        self.makeRequest(request.term);
       },
       'select': function(event, ui) {
         if (ui.item) {
@@ -505,41 +502,45 @@ jT.AutocompleteWidget.prototype = {
     });
   },
   
-  makeRequest: function (term, success, error) {
-    var fq = this.manager.getParameter(this.fqName);
-        
-    this.spyManager.removeParameters('fq');
-    for (var i = 0, fql = fq.length; i < fql; ++i)
-      this.spyManager.addParameter('fq', fq[i].value);
+  makeRequest: function (term) {
+    var self = this;
     
-    this.spyManager.addParameter('q', term || "*:*");
-    
-    var settings = a$.extend(settings, this.manager.ajaxSettings, this.spyManager.prepareQuery());
-    settings.url = this.manager.solrUrl + (this.servlet || this.manager.servlet) + settings.url + "&wt=json&json.wrf=?";
-    settings.success = success;
-    settings.error = error;
-    
-    return this.manager.connector.ajax( settings );
+    this.doSpying(
+      function (manager) {
+        manager.removeParameters('fl');
+        manager.mergeParameters(self.parameters);
+  
+        // manager and self.manager should be the same.
+        self.addValue(term || "");
+      },
+      function (response) { 
+        self.onResponse(response);
+      });
   },
   
   onResponse: function (response) {
     var self = this,
         list = [];
         
-    a$.each(this.groups, function (f) {
-      if (list.length >= self.maxResults)
+    a$.each(a$.path(response, this.facetPath), function (facet, fid) {
+      if (list.length >= self.maxResults ||
+          typeof facet !== "object" || 
+          self.activeFacets && self.activeFacets[fid] === false)
         return;
         
-      for (var facet in response.facet_counts.facet_fields[f.id]) {
-        list.push({
-          id: f.id,
-          value: facet,
-          label: (self.lookupMap[facet] || facet) + ' (' + response.facet_counts.facet_fields[f.id][facet] + ') - ' + f.id
-        });
-        
+      a$.each(self.useJson ? facet.buckets : facet, function (entry, key) {
         if (list.length >= self.maxResults)
-          break;
-      }
+          return;
+          
+        if (!self.useJson)
+          entry = { 'val': key, 'count': entry };
+
+        list.push({
+          id: fid,
+          value: entry.val,
+          label: (self.lookupMap[entry.val] || entry.val) + ' (' + entry.count + ') - ' + fid
+        });
+      });
     });
     
     if (typeof this.reportCallback === "function")
@@ -547,7 +548,7 @@ jT.AutocompleteWidget.prototype = {
   },
     
   afterRequest: function (response) {
-    var qval = this.manager.getParameter('q').value;
+    var qval = this.manager.getParameter('q').value || "";
     this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
     this.requestSent = false;
   }

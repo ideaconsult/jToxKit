@@ -1,8 +1,10 @@
 (function (Solr, a$, $, jT) {
 
-var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>';
+var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>',
+    plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
   
 jT.ItemListWidget = function (settings) {
+	settings.baseUrl = jT.ui.fixBaseUrl(settings.baseUrl) + "/";
   a$.extend(true, this, a$.common(settings, this));
 
   this.lookupMap = settings.lookupMap || {};
@@ -35,7 +37,12 @@ jT.ItemListWidget.prototype = {
       return { 
         'topic': "References",
         'content': val.map(function (ref) { 
-          return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref, css: "freetext_selector" }); 
+          var link = ref.match(/^doi:(.+)$/);
+          link = link != null ? "https://www.doi.org/" + link[1] : ref;
+          return jT.ui.formatString(
+            link.match(/^https?:\/\//) ? htmlLink : plainLink,
+            { href: link, hint: "External reference", target: "ref", value: ref }
+          );
         })
       }
     }
@@ -156,9 +163,16 @@ jT.ItemListWidget.prototype = {
           cmap[c.component_s] = ce = [];
         
         a$.each(c, function (v, k) {
-          k = k.match(/([^_]+)_?\a?/)[1];
-          if (k != "type" && k != "id" && k != "component_s")
-            se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v, css:"freetext_selector" }));
+          var m = k.match(/^(\w+)_[shd]+$/);
+          k = m && m[1] || k;
+          if (!k.match(/type|id|component/))
+            se.push(jT.ui.formatString(htmlLink, { 
+              href: "#", 
+              hint: "Freetext search on '" + k + "'", 
+              target: "_self", 
+              value: v, 
+              css:"freetext_selector" 
+            }));
         });
         
         ce.push(se.join(", "));

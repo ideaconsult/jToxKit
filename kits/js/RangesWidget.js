@@ -23,6 +23,16 @@
   
 	/** The general wrapper of all parts
   	*/
+  	
+  var defaultParameters = {
+    'facet': true,
+    'rows': 0,
+    'fl': "id",
+    'facet.limit': -1,
+    'facet.mincount': 1,
+    'echoParams': "none"
+  };
+  	
   jT.RangeWidgeting = function (settings) {
     a$.extend(true, this, a$.common(settings, this));
 
@@ -61,8 +71,11 @@
             
       a$.pass(this, jT.RangeWidgeting, "afterTranslation", data);
             
-      if (!this.pivotMap)
-        this.pivotMap =  this.buildPivotMap(pivot);
+      if (!this.pivotMap) {
+        var qval = this.manager.getParameter('q').value || "";
+        if ((!qval || qval == "*:*") && !this.manager.getParameter(this.useJson ? "json.filter" : "fq").value)
+          this.pivotMap =  this.buildPivotMap(pivot);
+      }
       else if (!this.updateRequest)
         this.rangeRemove();
       else if (this.rangeWidgets.length > 0) {
@@ -158,6 +171,68 @@
       return outs.join("/") + " <i>(" + info.count + ")</i>";
     },
     
+    ensurePivotMap: function (value) {
+      if (this.pivotMap != null)
+        return true;
+        
+      var fqName = this.useJson ? "json.filter" : "fq",
+          self = this;
+      
+      // We still don't have it - make a separate request
+      this.doSpying(
+        function (man) {
+          man.removeParameters(fqName);
+          man.removeParameters('fl');
+          man.getParameter('q').value = "";
+          man.mergeParameters(defaultParameters);
+        },
+        function (data) {
+          self.pivotMap = self.buildPivotMap(self.getPivotCounts(data.facets));
+          self.openRangers(value);
+        }
+      );
+      
+      return false;
+    },
+    
+    openRangers: function (value) {
+      var entry = this.pivotMap[value],
+          pivotMap = this.lastPivotMap = this.buildPivotMap(this.getPivotCounts()),
+          current = pivotMap[value];
+      
+      this.lastPivotValue = value;
+      this.slidersTarget.empty().parent().addClass("active");
+
+      for (var i = 0, el = entry.length; i < el; ++i) {
+        var all = entry[i],
+            ref = current[i],
+            setup = {}, w,
+            el$ = jT.ui.fillTemplate("#slider-one");
+
+        this.slidersTarget.append(el$);
+
+        setup.id = all.id;
+        setup.targetValue = value;          
+        setup.color = all.color;
+        setup.field = this.field;
+        setup.limits = [ all.min, all.max ];
+        setup.initial = [ ref.min, ref.max ];
+        setup.target = el$;
+        setup.isRange = true;
+        setup.valuePattern = all.pattern + "{{v}}";
+        setup.automatic = true;
+        setup.width = parseInt(this.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(el, 2) + 0.1);
+        setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
+        setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
+        setup.useJson = this.useJson;
+        setup.domain = this.domain;
+        setup.sliderRoot = this;
+          
+        this.rangeWidgets.push(w = new SingleRangeWidget(setup));
+        w.init(this.manager);
+      }
+    },
+    
     auxHandler: function (value) {
       var self = this;
       
@@ -167,44 +242,8 @@
         self.rangeRemove();
 
         // we've clicked out pivot button - clearing was enough.
-        if (value == self.lastPivotValue)
-          return false;
-
-        var entry = self.pivotMap[value],
-            pivotMap = self.lastPivotMap = self.buildPivotMap(self.getPivotCounts()),
-            current = pivotMap[value];
-        
-        self.lastPivotValue = value;
-        self.slidersTarget.empty().parent().addClass("active");
-
-        for (var i = 0, el = entry.length; i < el; ++i) {
-          var all = entry[i],
-              ref = current[i],
-              setup = {}, w,
-              el$ = jT.ui.fillTemplate("#slider-one");
-
-          self.slidersTarget.append(el$);
-
-          setup.id = all.id;
-          setup.targetValue = value;          
-          setup.color = all.color;
-          setup.field = self.field;
-          setup.limits = [ all.min, all.max ];
-          setup.initial = [ ref.min, ref.max ];
-          setup.target = el$;
-          setup.isRange = true;
-          setup.valuePattern = all.pattern + "{{v}}";
-          setup.automatic = true;
-          setup.width = parseInt(self.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(el, 2) + 0.1);
-          setup.title = self.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-          setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
-          setup.useJson = self.useJson;
-          setup.domain = self.domain;
-          setup.sliderRoot = self;
-            
-          self.rangeWidgets.push(w = new SingleRangeWidget(setup));
-          w.init(self.manager);
-        }
+        if (value != self.lastPivotValue && self.ensurePivotMap(value))
+          self.openRangers(value);
         
         return false;
       };

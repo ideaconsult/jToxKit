@@ -98,82 +98,82 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 (function(Solr, a$, $, jT) {
 
 var mainLookupMap = {},
-    defaultSettings = {
-  		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
-  		servlet: "autophrase",
-  		connector: $,
-  		onPrepare: function (settings) {
-  			var qidx = settings.url.indexOf("?");
+	defaultSettings = {
+		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
+		servlet: "autophrase",
+		connector: $,
+		onPrepare: function (settings) {
+			var qidx = settings.url.indexOf("?");
   
-  			if (this.proxyUrl) {
-  				settings.data = { query: settings.url.substr(qidx + 1) };
-  				settings.url = this.proxyUrl;
-  				settings.type = settings.method = 'POST';
-  			}
-  			else {
-  				settings.url += (qidx < 0 ? "?" : "&" ) + "wt=json"; 
-  			}
-  		},
-      solrParameters: {
-  			'facet.limit' : -1,
-  			'facet.mincount' : 1,
-  			'echoParams': "none",
-  			'fl' : "id",
-  			'json.nl' : "map",
-  			'q.alt': "*:*",
-  		},
-  		topSpacing: 10,
-  		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
-  		exportMaxRows: 999999, //2147483647
-  		exportTypes: [],
-  		listingFields: [],
-  		facets: [],
-  		summaryRenderers: {}
-    },
-    tagRender = function (tag) {
-      var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
-          
-      title = view.replace(/^caNanoLab\./, "").replace(/^http\:\/\/dx\.doi\.org/, "");
-      title = (mainLookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
-    	  
-      var aux$ = $('<span/>').html(tag.count || 0);
-      if (typeof tag.onAux === 'function')
-        aux$.click(tag.onAux);
-        
-      var el$ = $('<li/>')
-        .append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + view + ']' : '') + '">' + title + '</a>')
-          .append(aux$)
-        );
+			if (this.proxyUrl) {
+				settings.data = { query: settings.url.substr(qidx + 1) };
+				settings.url = this.proxyUrl;
+				settings.type = settings.method = 'POST';
+			}
+			else {
+				settings.url += (qidx < 0 ? "?" : "&" ) + "wt=json"; 
+			}
+		},
+	  solrParameters: {
+			'facet.limit' : -1,
+			'facet.mincount' : 1,
+			'echoParams': "none",
+			'fl' : "id",
+			'json.nl' : "map",
+			'q.alt': "*:*",
+		},
+		topSpacing: 10,
+		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
+		exportMaxRows: 999999, //2147483647
+		exportTypes: [],
+		listingFields: [],
+		facets: [],
+		summaryRenderers: {}
+	},
+	tagRender = function (tag) {
+	  var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
+		  
+	  title = view.replace(/^caNanoLab\./, "").replace(/^http\:\/\/dx\.doi\.org/, "");
+	  title = (mainLookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
+		  
+	  var aux$ = $('<span/>').html(tag.count || 0);
+	  if (typeof tag.onAux === 'function')
+		aux$.click(tag.onAux);
+		
+	  var el$ = $('<li/>')
+		.append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + view + ']' : '') + '">' + title + '</a>')
+		  .append(aux$)
+		);
 
-      if (typeof tag.onMain === 'function')
-        el$.click(tag.onMain);
-      if (tag.color)
-        el$.addClass(tag.color);
-        
-      return el$;
-    },
-    tagInit = function (manager) {
+	  if (typeof tag.onMain === 'function')
+		el$.click(tag.onMain);
+	  if (tag.color)
+		el$.addClass(tag.color);
+		
+	  return el$;
+	},
+	tagInit = function (manager) {
 			jT.TagWidget.prototype.init.call(this, manager);
-      manager.getListener("current").registerWidget(this);
+	  manager.getListener("current").registerWidget(this);
 		},
 		tagsUpdated = function (total) {
 			var hdr = this.getHeaderText();
-      hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
-      a$.act(this, this.header.data("refreshPanel"));
+	  hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
+	  a$.act(this, this.header.data("refreshPanel"));
 		};
-    
+	
 
 jT.FacetedSearch = function (settings) {
   this.id = null;
   a$.extend(true, this, defaultSettings, settings);
   
   if (typeof this.lookupMap === "string")
-    this.lookupMap = window[this.lookupMap];
+	this.lookupMap = window[this.lookupMap];
   
   if (this.lookupMap == null)
-    this.lookupMap = {};
+	this.lookupMap = {};
   mainLookupMap = this.lookupMap;
-    
+	
   $(settings.target).html(jT.ui.templates['faceted-search-kit']);
   delete this.target;
   
@@ -184,144 +184,144 @@ jT.FacetedSearch = function (settings) {
 
 jT.FacetedSearch.prototype = {
   initDom: function () {
-  	// Now instantiate and things around it.
-  	this.accordion = $("#accordion");
-  	this.accordion.accordion({
-  		heightStyle: "content",
-  		collapsible: true,
-  		animate: 200,
-  		active: false,
-  		activate: function( event, ui ) {
-  			if (!!ui.newPanel && !!ui.newPanel[0]) {
-  				var header = ui.newHeader[0],
-  						panel = ui.newPanel[0],
-  						filter = $("input.widget-filter", panel),
-  						widgetFilterScroll = filter.outerHeight(true),
-  						refreshPanel;
-  				
-  				if (!$("span.ui-icon-search", header).length) {
-  					refreshPanel = function () {
-  			  		if (panel.scrollHeight > panel.clientHeight || filter.val() != "" || $(header).hasClass("nested-tab") ) {
-  							$(panel).scrollTop(widgetFilterScroll);
-  							filter.show()
-  							$("span.ui-icon-search", header).removeClass("unused");
-  						}
-  						else {
-  							filter.hide();
-  							$("span.ui-icon-search", header).addClass("unused");
-  						}
-  					};
+	// Now instantiate and things around it.
+	this.accordion = $("#accordion");
+	this.accordion.accordion({
+		heightStyle: "content",
+		collapsible: true,
+		animate: 200,
+		active: false,
+		activate: function( event, ui ) {
+			if (!!ui.newPanel && !!ui.newPanel[0]) {
+				var header = ui.newHeader[0],
+						panel = ui.newPanel[0],
+						filter = $("input.widget-filter", panel),
+						widgetFilterScroll = filter.outerHeight(true),
+						refreshPanel;
+				
+				if (!$("span.ui-icon-search", header).length) {
+					refreshPanel = function () {
+					if (panel.scrollHeight > panel.clientHeight || filter.val() != "" || $(header).hasClass("nested-tab") ) {
+							$(panel).scrollTop(widgetFilterScroll);
+							filter.show()
+							$("span.ui-icon-search", header).removeClass("unused");
+						}
+						else {
+							filter.hide();
+							$("span.ui-icon-search", header).addClass("unused");
+						}
+					};
   
-  					ui.newPanel.data("refreshPanel", refreshPanel);
-  					ui.newHeader.data("refreshPanel", refreshPanel);
-  					ui.newHeader.append($('<span class="ui-icon ui-icon-search"></span>').on("click", function (e) {
-  						ui.newPanel.animate({ scrollTop: ui.newPanel.scrollTop() > 0 ? 0 : widgetFilterScroll }, 300, function () {
-  							if (ui.newPanel.scrollTop() > 0)
-  								$("input.widget-filter", panel).blur();
-  							else
-  								$("input.widget-filter", panel).focus();
-  						});
-  							
-  						e.stopPropagation();
-  						e.preventDefault();
-  					}));
-  				}
-  				else
-  					refreshPanel = ui.newPanel.data("refreshPanel");
-  				
-  				filter.val("");
-  				refreshPanel();
-  	  	}
-  		}
-  	});
-  	
-  	$(document).on("click", "ul.tag-group", function (e) { 
-  		$(this).toggleClass("folded");
-  		$(this).parents(".widget-root").data("refreshPanel").call();
-  	});
-  	
-  	// ... and prepare the actual filtering funtion.
-  	$(document).on('keyup', "#accordion input.widget-filter", function (e) {
-  		var needle = $(this).val().toLowerCase(),
-  				div = $(this).parent('div.widget-root'),
-  				cnt;
+					ui.newPanel.data("refreshPanel", refreshPanel);
+					ui.newHeader.data("refreshPanel", refreshPanel);
+					ui.newHeader.append($('<span class="ui-icon ui-icon-search"></span>').on("click", function (e) {
+						ui.newPanel.animate({ scrollTop: ui.newPanel.scrollTop() > 0 ? 0 : widgetFilterScroll }, 300, function () {
+							if (ui.newPanel.scrollTop() > 0)
+								$("input.widget-filter", panel).blur();
+							else
+								$("input.widget-filter", panel).focus();
+						});
+							
+						e.stopPropagation();
+						e.preventDefault();
+					}));
+				}
+				else
+					refreshPanel = ui.newPanel.data("refreshPanel");
+				
+				filter.val("");
+				refreshPanel();
+		}
+		}
+	});
+	
+	$(document).on("click", "ul.tag-group", function (e) { 
+		$(this).toggleClass("folded");
+		$(this).parents(".widget-root").data("refreshPanel").call();
+	});
+	
+	// ... and prepare the actual filtering funtion.
+	$(document).on('keyup', "#accordion input.widget-filter", function (e) {
+		var needle = $(this).val().toLowerCase(),
+				div = $(this).parent('div.widget-root'),
+				cnt;
   
-  		if ((e.keyCode || e.which) == 27)
-  			$(this).val(needle = "");
-  		
-  		if (needle == "")
-  			$('li,ul', div[0]).show();
-  		else {
-  			$('li>a', div[0]).each( function () {
-  				var fold = $(this).closest("ul.tag-group"),
-  				    tag = $(this).parent();
-  				cnt = fold.data("hidden") || 0;
-  				if (tag.hasClass("category"))
-  				  ;
-  				else if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
-  					tag.show();
-  				else {
-  					tag.hide();
-  					++cnt;
-  				}
-  				
-  				if (!!fold.length && !!cnt)
-  					fold.data("hidden", cnt);
-  			});
-  		}
-  		
-  		// now check if some of the boxes need to be hidden.
-  		$("ul.tag-group", div[0]).each(function () {
-    		var me = $(this);
+		if ((e.keyCode || e.which) == 27)
+			$(this).val(needle = "");
+		
+		if (needle == "")
+			$('li,ul', div[0]).show();
+		else {
+			$('li>a', div[0]).each( function () {
+				var fold = $(this).closest("ul.tag-group"),
+					tag = $(this).parent();
+				cnt = fold.data("hidden") || 0;
+				if (tag.hasClass("category"))
+				  ;
+				else if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
+					tag.show();
+				else {
+					tag.hide();
+					++cnt;
+				}
+				
+				if (!!fold.length && !!cnt)
+					fold.data("hidden", cnt);
+			});
+		}
+		
+		// now check if some of the boxes need to be hidden.
+		$("ul.tag-group", div[0]).each(function () {
+			var me = $(this);
 
-  			cnt = parseInt(me.data("hidden")) || 0;
-  			if (me.children().length > cnt + 1)
-  				me.show().removeClass("folded");
-  			else
-  				me.hide().addClass("folded");
+			cnt = parseInt(me.data("hidden")) || 0;
+			if (me.children().length > cnt + 1)
+				me.show().removeClass("folded");
+			else
+				me.hide().addClass("folded");
   
-  			me.data("hidden", null);
-  		});
-  	});
-  		    
-  	var resDiv = $("#result-tabs"),
-  	    resSize,
-        self = this;
-  	
-  	resDiv.tabs( { } );
-  		
-    $("#accordion-resizer").resizable({
-      minWidth: 150,
-      maxWidth: 450,
-      grid: [10, 10],
-      handles: "e",
-      start: function(e, ui) {
-        resSize = { width: resDiv.width(), height: resDiv.height() };
-      },
-      resize: function(e, ui) {
-        self.accordion.accordion( "refresh" );
-        $('#query-sticky-wrapper').width( self.accordion.width());
-        $(this).width($(this).width() - 7); // minus the total padding of parent elements
-        resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
-      }
-    });
-    
-    $(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
+			me.data("hidden", null);
+		});
+	});
+			
+	var resDiv = $("#result-tabs"),
+		  resSize,
+      self = this;
+	
+	resDiv.tabs( { } );
+		
+	$("#accordion-resizer").resizable({
+	  minWidth: 150,
+	  maxWidth: 450,
+	  grid: [10, 10],
+	  handles: "e",
+	  start: function(e, ui) {
+		resSize = { width: resDiv.width(), height: resDiv.height() };
+	  },
+	  resize: function(e, ui) {
+		self.accordion.accordion( "refresh" );
+		$('#query-sticky-wrapper').width( self.accordion.width());
+		$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
+		resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
+	  }
+	});
+	
+	$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
   },
   
   /** The actual widget and communication initialization routine!
-    */
+	*/
   initComm: function () {
-    var Manager, Basket,
-        PivotWidget = a$(Solr.Requesting, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-        TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
+	var Manager, Basket,
+		PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
+		TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
 
-    this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
+	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
 
-    Manager.addListeners(new jT.ResultWidget($.extend(true, {
+	Manager.addListeners(new jT.ResultWidget($.extend(true, {
 			id : 'result',
 			target : $('#docs'),
-  		itemId: "s_uuid",
+      itemId: "s_uuid",
 			onClick : function (e, doc, exp, widget) { 
 				if (Basket.findItem(doc.s_uuid) < 0) {
 					Basket.addItem(doc);
@@ -341,7 +341,7 @@ jT.FacetedSearch.prototype = {
 			}
 		}, this)));
 
-    Manager.addListeners(new (a$(Solr.Widgets.Pager))({
+	Manager.addListeners(new (a$(Solr.Widgets.Pager))({
 			id : 'pager',
 			target : $('#pager'),
 			prevLabel : '&lt;',
@@ -360,26 +360,26 @@ jT.FacetedSearch.prototype = {
 		// Now the actual initialization of facet widgets
 		for (var i = 0, fl = this.facets.length; i < fl; ++i) {
 			var f = this.facets[i],
-			    w = new TagWidget($.extend({
-    				target : this.accordion,
-    				expansionTemplate: "#tab-topcategory",
-    				subtarget: "ul",
-    				multivalue: true,
-    				aggregate: true,
-    				exclusion: true,
-    				useJson: true,
-    				renderItem: tagRender,
-    				init: tagInit,
-    				onUpdated: tagsUpdated,
-    				nesting: "type_s:substance",
-    				domain: { type: "parent", "which": "type_s:substance" },
-    				classes: f.color
-    			}, f))
-      
-      w.afterTranslation = function (data) { 
-        this.populate(this.getFacetCounts(data.facets)); 
-      };
-			    
+				w = new TagWidget($.extend({
+					target : this.accordion,
+					expansionTemplate: "#tab-topcategory",
+					subtarget: "ul",
+					multivalue: true,
+					aggregate: true,
+					exclusion: true,
+					useJson: true,
+					renderItem: tagRender,
+					init: tagInit,
+					onUpdated: tagsUpdated,
+					nesting: "type_s:substance",
+					domain: { type: "parent", "which": "type_s:substance" },
+					classes: f.color
+				}, f))
+	  
+	  w.afterTranslation = function (data) { 
+		  this.populate(this.getFacetCounts(data.facets)); 
+	  };
+				
 			Manager.addListeners(w);
 		};
 
@@ -399,9 +399,9 @@ jT.FacetedSearch.prototype = {
 			  { id: "endpointcategory", field: "endpointcategory_s", color: "blue" },
 			  { id: "effectendpoint", field: "effectendpoint_s", color: "green", ranging: true }, 
 			  { id: "unit", field: "unit_s", disabled: true, ranging: true }
-      ],
-      statistics: { 'min': "min(loValue_d)", 'max': "max(loValue_d)", 'avg': "avg(loValue_d)" },
-      slidersTarget: $("#sliders"),
+  	  ],
+  	  statistics: { 'min': "min(loValue_d)", 'max': "max(loValue_d)", 'avg': "avg(loValue_d)" },
+  	  slidersTarget: $("#sliders"),
 			
 			multivalue: true,
 			aggregate: true,
@@ -410,7 +410,7 @@ jT.FacetedSearch.prototype = {
 			renderTag: tagRender,
 			classes: "dynamic-tab",
 			nesting: "type_s:substance",
-      domain: { type: "parent", "which": "type_s:substance" }
+	  domain: { type: "parent", "which": "type_s:substance" }
 		}));
 		
     // ... And finally the current-selection one, and ...
@@ -422,11 +422,11 @@ jT.FacetedSearch.prototype = {
 		}));
 				
 		// Now add the basket.
-		this.basket = Basket = new (a$(jT.ListWidget, jT.ItemListWidget))({
+		this.basket = Basket = new (a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {
 			id : 'basket',
 			target : $('#basket-docs'),
-  		summaryRenderers: this.summaryRenderers,
-  		itemId: "s_uuid",
+      summaryRenderers: this.summaryRenderers,
+      itemId: "s_uuid",
 			onClick : function (e, doc) {
 				if (Basket.eraseItem(doc.s_uuid) === false) {
 					console.log("Trying to remove from basket an inexistent entry: " + JSON.stringify(doc));
@@ -435,21 +435,21 @@ jT.FacetedSearch.prototype = {
 				
 				$(this).remove();
 				var s = "", 
-				    jel = $('a[href="#basket_tab"]'),
-				    resItem = $("#result_" + doc.s_uuid);
-				    
+					jel = $('a[href="#basket_tab"]'),
+					resItem = $("#result_" + doc.s_uuid);
+					
 				jel.html(jT.ui.updateCounter(jel.html(), Basket.length));
 				Basket.enumerateItems(function (d) { s += d.s_uuid + ";";});
 				if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
 					window.history.pushState({ query : window.location.search }, document.title, s);
 							
-       		if (resItem.length > 0)
+			if (resItem.length > 0)
 				  $("footer", resItem[0]).toggleClass("add none");
 			},
 			onCreated: function (doc) {
 				$("footer", this).addClass("remove");
 			}			
-		});
+		}, this));
 
     a$.act(this, this.onPreInit, Manager);
 		Manager.init();
@@ -458,96 +458,198 @@ jT.FacetedSearch.prototype = {
 		Manager.doRequest();
   },
   
-  initExport: function () {
-	  // Prepare the export tab
-    var self = this,
-        exportEl = $("#export_tab div.data_types"),
-        updateButton = function (e) {
-    			var form = this.form,
-    			b = $("button", this.form);
-    
-    			if (!form.export_dataset.value)
-    				b.button("option", "label", "No target dataset selected...");
-    			else if (!!form.export_type.value)
-    				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + this.form.export_type.value.toUpperCase());
-    			return b;
-        };
-        
-		for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
-			var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
+	initExport: function () {
+  		// Prepare the export tab
+  		var self = this;
 
-			exportEl.append(el);
-			$("a", el[0]).on("click", function (e) {
-				var me = $(this);
-				if (!me.hasClass("selected")) {
-					var form = me.closest("form")[0],
-					cont = me.closest("div.data_types"),
-					mime = me.data("mime");
+		updateButton = function (e) {
+			var form = this.form,
+			b = $("button", this.form);
+			
+			if (!form.export_dataset.value){
+				b.button("option", "label", "No target dataset selected...");
+			}else if( !self.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
+				b.button("disable").button("option", "label", "No filters selected...");
+			}else if (!!form.export_format.value  ){
+				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(this.form.export_format).data('name').toUpperCase());
+			} 
 
-					form.export_type.value = mime = mime.substr(mime.indexOf("/") + 1);
-					updateButton.call(form.export_type, e);
+			return b;
+		};
 
-					$("div", cont[0]).removeClass("selected");
-					cont.addClass("selected");
-					me.closest(".jtox-fadable").addClass("selected");
-				}
-				return false;
-			});
-		}
-    
+		this.getFormats();
+
+		this.getTypes();
+  
 		$("#export_dataset").buttonset();
+		$("#export_type").buttonset();
 		$("#export_dataset input").on("change", updateButton);
 		$("#export_tab button").button({ disabled: true });
+  
 		$("#export_tab form").on("submit", function (e) {
 			var form = this,
-				mime = form.export_type.value,
-				params = ['rows=' + Settings.exportMaxRows, 'fl=' + encodeURIComponent(Settings.exportFields)];
+			    mime = form.export_format.value,
+    			server = $('.data_formats .selected a').attr('data-url'),
+    			fields = ( server == 'ambitURL' )? 's_uuid_hs' : form.export_type.value,
+    			params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
+    			mime = mime.substr(mime.indexOf("/") + 1),
+    			serverURL = self[server],
+    			fq = [];
 
-			if (mime == "tsv")
+			if (mime == "tsv"){
 				params.push("wt=csv", "csv.separator=%09");
-			else
+			}else if( server == 'ambitURL' ){
+				params.push('wt=json');
+			}else{
 				params.push('wt=' + mime);
-	      
-			if (form.export_dataset.value == "filtered") {
-				var values = self.manager.getAllValue("fq");
-
-				for (var i = 0, vl = values.length; i < vl; i++) {
-					if (!values[i].value.match(/collapse/))
-					params.push('fq=' + encodeURIComponent(values[i].value));
-				}
-
-				form.q.value = self.manager.gerParameter("q").value;
-			}else { // i.e. selected
-		        var fqset = [];
-		        Basket.enumerateItems(function (d) { fqset.push(d.s_uuid); });
-		        form.q.value = 's_uuid:(' + fqset.join(" ") + ')';
 			}
 
-			form.action = self.solrUrl + "select?" + params.join('&');
-	      
-			e.preventDefault();
-			form.submit();
-			return false;
+			form.q.value = "q={!parent which=type_s:substance}";  
+
+			var values = self.manager.getParameter("json.filter");
+			if (form.export_dataset.value == "filtered") {
+
+				for (var i = 0, vl = values.length; i < vl; i++) {  
+					var tag = (values[i].domain.hasOwnProperty('tag')) ? ' tag='+values[i].domain.tag : '';
+					fq.push('fq={!parent which=type_s:substance'+tag+'}' + encodeURIComponent(values[i].value));
+				}
+
+			}else { // i.e. selected
+				var fqset = [];
+
+				self.basket.enumerateItems(function (d) { 
+				fqset.push(d.s_uuid); });
+				fq.push('fq=s_uuid_hs:(' + fqset.join(" ")+')');
+			}
+
+			params = params.concat(fq);
+			if( server == 'ambitURL' || typeof $(form).attr('data-ambit') !== typeof undefined ){
+				self.sendAmbitRequest(form, fq);
+				return true;
+			}else{
+				form.action = serverURL + "select?" + params.join('&');
+	
+				return true;
+			}
 		});
 
 		$("#result-tabs").tabs( { 
 			activate: function (e, ui) {
 				if (ui.newPanel[0].id == 'export_tab') {
-					$("div", ui.newPanel[0]).removeClass("selected");
+					if( self.basket.length ){
+						$('input#selected_data').prop("checked", true);
+					}
+
 					$("button", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
 
-					var qval = self.manager.getParameter('q'),
-					    hasFilter = self.manager.getParameter('fq').length > 1 || (!!qval && qval != '*:*');
+					var hasFilter = self.manager.getParameter("json.filter").length > 0;
 
 					$("#selected_data")[0].disabled = self.basket.length < 1;
-					$("#selected_data")[0].checked = self.basket.length > 0 && !hasFilter;
 					$("#filtered_data")[0].disabled = !hasFilter;
-					$("#filtered_data")[0].checked = hasFilter;
+					if( self.basket.length ){
+						$('.data_formats').removeClass('disabled')
+						$( "#export_type" ).buttonset( "enable" );
+						$('.warning-message').hide();
+						$("#selected_data")[0].checked = true;
+					}else{
+						
+						$("#filtered_data")[0].checked = hasFilter;
+						if(hasFilter){
+							$('.data_formats').removeClass('disabled')
+							$( "#export_type" ).buttonset( "enable" );
+							$('.warning-message').hide();
+						}else{
+							$('.data_formats').addClass('disabled')
+							$( "#export_type" ).buttonset( "disable" );
+
+							$('.warning-message').show();
+						}
+					}
+
+					$('.data_formats .jtox-ds-download a').first().trigger("click");
 
 					$("#export_dataset").buttonset("refresh");
 				}
 			}
 		});
+  },
+	sendAmbitRequest: function(form, fq){
+		var self = this, 
+		ids=[];
+		$.ajaxSetup({async: false}); // we need a sync request
+
+		fq.push('q={!parent which=type_s:substance}');
+
+		$.getJSON( this.solrUrl + "select?fl=s_uuid_hs&wt=json&"+ fq.join('&'), function( data ) {
+			$.each(data.response.docs, function(index,value) {
+				ids.push(value.s_uuid_hs);
+			});
+			
+			var serverURL = self['ambitURL'],
+			    mime = form.export_format.value;
+
+			form.search.value = ids.join(" ");
+			form.action = serverURL+'query/substance/study/uuid?media='+encodeURIComponent(mime);
+		});
+
+		$.ajaxSetup({async: true}); // reset the request type
+	},
+	getFormats: function(){
+		var exportEl = $("#export_tab div.data_formats");
+		for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
+			var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
+			exportEl.append(el);
+			$("a", exportEl[0]).on("click", function (e) {
+				if( $(this).hasClass('disabled')) return false
+				var me = $(this);
+				if (!me.hasClass("selected")) {
+					var form = me.closest("form")[0],
+    					cont = me.closest("div.data_formats");
+
+					form.export_format.value = me.data("mime") ;
+
+					//save readable format name
+					$(form.export_format).data('name', me.data("name"));
+
+					updateButton.call(form.export_format, e);
+
+					$("div", cont[0]).removeClass("selected");
+					cont.addClass("selected");
+					me.closest(".jtox-fadable").addClass("selected");
+
+					$("#export_type").buttonset("refresh");
+				}
+			return false;
+			});
+		}
+	},
+
+	getTypes: function(){
+		var exportEl = $("#export_tab div#export_type"),
+			self = this;
+		for (var i = 0, elen = this.exportType.length; i < elen; ++i) {
+			this.exportType[i].selected = ( i == 0 )? 'checked="checked"' : '';
+			var el = jT.ui.fillTemplate("#export-type", this.exportType[i]);
+			exportEl.append(el);
+			$("input[name=export_type]").on("change", function (e) {
+				var me = $(this),
+				formats = me.data("formats");
+				$('.data_formats a').removeClass('disabled');
+				if( formats.indexOf('rdf') > -1 ){
+					$(this.form).attr('data-ambit', true);
+				}else{
+					$(this.form).removeAttr( "data-ambit" )
+				}
+				self.exportFormats.forEach(function (item) {
+					if( formats.indexOf(item.name) == -1 ){
+						$('.data_formats a[data-name='+item.name+']').addClass('disabled')
+					}
+				});
+	    		$('.data_formats a:visible').not('.disabled').first().trigger('click')
+				return false;
+			});
+		}
+
 	}
 };
 	
@@ -755,6 +857,16 @@ jT.FacetedSearch.prototype = {
   
 	/** The general wrapper of all parts
   	*/
+  	
+  var defaultParameters = {
+    'facet': true,
+    'rows': 0,
+    'fl': "id",
+    'facet.limit': -1,
+    'facet.mincount': 1,
+    'echoParams': "none"
+  };
+  	
   jT.RangeWidgeting = function (settings) {
     a$.extend(true, this, a$.common(settings, this));
 
@@ -793,8 +905,11 @@ jT.FacetedSearch.prototype = {
             
       a$.pass(this, jT.RangeWidgeting, "afterTranslation", data);
             
-      if (!this.pivotMap)
-        this.pivotMap =  this.buildPivotMap(pivot);
+      if (!this.pivotMap) {
+        var qval = this.manager.getParameter('q').value || "";
+        if ((!qval || qval == "*:*") && !this.manager.getParameter(this.useJson ? "json.filter" : "fq").value)
+          this.pivotMap =  this.buildPivotMap(pivot);
+      }
       else if (!this.updateRequest)
         this.rangeRemove();
       else if (this.rangeWidgets.length > 0) {
@@ -890,6 +1005,68 @@ jT.FacetedSearch.prototype = {
       return outs.join("/") + " <i>(" + info.count + ")</i>";
     },
     
+    ensurePivotMap: function (value) {
+      if (this.pivotMap != null)
+        return true;
+        
+      var fqName = this.useJson ? "json.filter" : "fq",
+          self = this;
+      
+      // We still don't have it - make a separate request
+      this.doSpying(
+        function (man) {
+          man.removeParameters(fqName);
+          man.removeParameters('fl');
+          man.getParameter('q').value = "";
+          man.mergeParameters(defaultParameters);
+        },
+        function (data) {
+          self.pivotMap = self.buildPivotMap(self.getPivotCounts(data.facets));
+          self.openRangers(value);
+        }
+      );
+      
+      return false;
+    },
+    
+    openRangers: function (value) {
+      var entry = this.pivotMap[value],
+          pivotMap = this.lastPivotMap = this.buildPivotMap(this.getPivotCounts()),
+          current = pivotMap[value];
+      
+      this.lastPivotValue = value;
+      this.slidersTarget.empty().parent().addClass("active");
+
+      for (var i = 0, el = entry.length; i < el; ++i) {
+        var all = entry[i],
+            ref = current[i],
+            setup = {}, w,
+            el$ = jT.ui.fillTemplate("#slider-one");
+
+        this.slidersTarget.append(el$);
+
+        setup.id = all.id;
+        setup.targetValue = value;          
+        setup.color = all.color;
+        setup.field = this.field;
+        setup.limits = [ all.min, all.max ];
+        setup.initial = [ ref.min, ref.max ];
+        setup.target = el$;
+        setup.isRange = true;
+        setup.valuePattern = all.pattern + "{{v}}";
+        setup.automatic = true;
+        setup.width = parseInt(this.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(el, 2) + 0.1);
+        setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
+        setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
+        setup.useJson = this.useJson;
+        setup.domain = this.domain;
+        setup.sliderRoot = this;
+          
+        this.rangeWidgets.push(w = new SingleRangeWidget(setup));
+        w.init(this.manager);
+      }
+    },
+    
     auxHandler: function (value) {
       var self = this;
       
@@ -899,44 +1076,8 @@ jT.FacetedSearch.prototype = {
         self.rangeRemove();
 
         // we've clicked out pivot button - clearing was enough.
-        if (value == self.lastPivotValue)
-          return false;
-
-        var entry = self.pivotMap[value],
-            pivotMap = self.lastPivotMap = self.buildPivotMap(self.getPivotCounts()),
-            current = pivotMap[value];
-        
-        self.lastPivotValue = value;
-        self.slidersTarget.empty().parent().addClass("active");
-
-        for (var i = 0, el = entry.length; i < el; ++i) {
-          var all = entry[i],
-              ref = current[i],
-              setup = {}, w,
-              el$ = jT.ui.fillTemplate("#slider-one");
-
-          self.slidersTarget.append(el$);
-
-          setup.id = all.id;
-          setup.targetValue = value;          
-          setup.color = all.color;
-          setup.field = self.field;
-          setup.limits = [ all.min, all.max ];
-          setup.initial = [ ref.min, ref.max ];
-          setup.target = el$;
-          setup.isRange = true;
-          setup.valuePattern = all.pattern + "{{v}}";
-          setup.automatic = true;
-          setup.width = parseInt(self.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(el, 2) + 0.1);
-          setup.title = self.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-          setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
-          setup.useJson = self.useJson;
-          setup.domain = self.domain;
-          setup.sliderRoot = self;
-            
-          self.rangeWidgets.push(w = new SingleRangeWidget(setup));
-          w.init(self.manager);
-        }
+        if (value != self.lastPivotValue && self.ensurePivotMap(value))
+          self.openRangers(value);
         
         return false;
       };
@@ -952,9 +1093,11 @@ jT.FacetedSearch.prototype = {
 })(Solr, asSys, jQuery, jToxKit);
 (function (Solr, a$, $, jT) {
 
-var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>';
+var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>',
+    plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
   
 jT.ItemListWidget = function (settings) {
+	settings.baseUrl = jT.ui.fixBaseUrl(settings.baseUrl) + "/";
   a$.extend(true, this, a$.common(settings, this));
 
   this.lookupMap = settings.lookupMap || {};
@@ -987,7 +1130,12 @@ jT.ItemListWidget.prototype = {
       return { 
         'topic': "References",
         'content': val.map(function (ref) { 
-          return jT.ui.formatString(htmlLink, { href: ref, hint: "External reference", target: "ref", value: ref, css: "freetext_selector" }); 
+          var link = ref.match(/^doi:(.+)$/);
+          link = link != null ? "https://www.doi.org/" + link[1] : ref;
+          return jT.ui.formatString(
+            link.match(/^https?:\/\//) ? htmlLink : plainLink,
+            { href: link, hint: "External reference", target: "ref", value: ref }
+          );
         })
       }
     }
@@ -1108,9 +1256,16 @@ jT.ItemListWidget.prototype = {
           cmap[c.component_s] = ce = [];
         
         a$.each(c, function (v, k) {
-          k = k.match(/([^_]+)_?\a?/)[1];
-          if (k != "type" && k != "id" && k != "component_s")
-            se.push(k + ":" + jT.ui.formatString(htmlLink, { href: "#", hint: "Freetext search", target: "_self", value: v, css:"freetext_selector" }));
+          var m = k.match(/^(\w+)_[shd]+$/);
+          k = m && m[1] || k;
+          if (!k.match(/type|id|component/))
+            se.push(jT.ui.formatString(htmlLink, { 
+              href: "#", 
+              hint: "Freetext search on '" + k + "'", 
+              target: "_self", 
+              value: v, 
+              css:"freetext_selector" 
+            }));
         });
         
         ce.push(se.join(", "));
@@ -1244,10 +1399,10 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<div id=\"export_tab\">" +
 "<form target=\"_blank\" method=\"post\">" +
 "<input type=\"hidden\" name=\"q\"/>" +
+"<input type=\"hidden\" name=\"search\"/>" +
+"<input type=\"hidden\" name=\"fq\"/>" +
 "" +
-"<h6>Select output format</h6>" +
-"<input type=\"hidden\" name=\"export_type\" id=\"export_type\"/>" +
-"<div class=\"data_types\"></div>" +
+"" +
 "" +
 "<h6>Select dataset to export</h6>" +
 "<div id=\"export_dataset\">" +
@@ -1257,10 +1412,16 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<label for=\"selected_data\">Selected entries</label>" +
 "</div>" +
 "" +
-"<h6>Click to download</h6>" +
-"<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
+"<h6>Select export type</h6>" +
+"<div id=\"export_type\"></div>" +
 "" +
-"<h6><div style=\"float: left; text-align: center\"><a id=\"whole_dataset\" href=\"https://zenodo.org/record/173258\" target=\"_blank\">Full dataset download</a><br><span style=\"color: black; font-style: italic\">hosted on <a href=\"https://zenodo.org/about\" target=\"_blank\"><img src=\"images/zenodo-black.svg\" width=\"50px\" style=\"padding-bottom: 7px\" alt=\"Zenodo logo\"></a></span></div></h6>" +
+"<h6>Select output format</h6>" +
+"<input type=\"hidden\" name=\"export_format\" id=\"export_format\"/>" +
+"<div class=\"data_formats\"></div>" +
+"" +
+"<br/>" +
+"<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
+"<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>Warning:</strong>Please either add entries to the selection or specify a query</p></div>" +
 "" +
 "</form>" +
 "</div>" +
@@ -1312,10 +1473,14 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<input type=\"hidden\"/>" +
 "</div>" +
 "" +
-"<div id=\"export-type\">" +
+"<div id=\"export-format\">" +
 "<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
-"<a target=\"_blank\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +
+"<a target=\"_blank\" data-mime=\"{{mime}}\" data-name=\"{{name}}\" data-url=\"{{server}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +
 "</div>" +
+"</div>" +
+"<div id=\"export-type\">" +
+"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" data-formats=\"{{formats}}\" id=\"{{type}}\"/>" +
+"<label for=\"{{type}}\">{{type}}</label>" +
 "</div>" +
 ""; // end of #faceted-search-templates 
 
