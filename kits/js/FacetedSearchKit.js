@@ -298,7 +298,7 @@ jT.FacetedSearch.prototype = {
 			lookupMap: this.lookupMap,
 			
 			pivot: [ 
-			  { id: "topcategory", field: "topcategory_s", disabled: true },
+			  { id: "topcategory", field: "topcategory_s", disabled: true, facet: { domain: { blockChildren: "type_s:params" } } },
 			  { id: "endpointcategory", field: "endpointcategory_s", color: "blue" },
 			  { id: "effectendpoint", field: "effectendpoint_s", color: "green", ranging: true }, 
 			  { id: "unit", field: "unit_s", disabled: true, ranging: true }
@@ -369,11 +369,11 @@ jT.FacetedSearch.prototype = {
 			var form = this.form,
 			b = $("button", this.form);
 			
-			if (!form.export_dataset.value){
+			if (!$(form).find('input[name=export_dataset]').val()){
 				b.button("option", "label", "No target dataset selected...");
 			}else if( !self.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
 				b.button("disable").button("option", "label", "No filters selected...");
-			}else if (!!form.export_format.value  ){
+			}else if ( $(form).find('input[name=export_dataset]').val()  ){
 				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(this.form.export_format).data('name').toUpperCase());
 			} 
 

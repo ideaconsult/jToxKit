@@ -5,7 +5,7 @@
   * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
   */
   
-jT.ui = a$.extend(jT.ui, {
+jT.ui = {
 	/* formats a string, replacing {{number | property}} in it with the corresponding value in the arguments
   */
   formatString: function(str, info, def) {
@@ -125,4 +125,4 @@ jT.ui = a$.extend(jT.ui, {
     return str.replace(/[&<>"']/g, function(m) { return map[m]; });
   }
   
-});
+};

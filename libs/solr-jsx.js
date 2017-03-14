@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.14.2" };
+  Solr = { version: "0.15.1" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -27,8 +27,8 @@ Solr.Management = function (settings) {
   this.response = null;
   this.error = null;
 
-  this.currentRequest = null;
-  this.pendingRequest = null;
+  this.pendingRequests = [];
+  this.inRequest = false;
   
   // If username and password are given, a basic authentication is assumed
   // and proper headers added.
@@ -65,30 +65,34 @@ Solr.Management.prototype = {
         cancel = null,
         settings = {};
         
+    // Suppress same request before this one is finished processing. We'll
+    // remember that we're being asked and will make _one_ request afterwards.
+    if (this.inRequest) {
+      this.pendingRequests.push(arguments);
+      return;
+    }
+
+    this.inRequest = true;
+    
     // fix the incoming parameters
     if (typeof servlet === "function") {
       callback = servlet;
       servlet = self.servlet;
     }
-    
-    // Suppress same request before this one is finished processing. We'll
-    // remember that we're being asked and will make _one_ request afterwards.
-    if (self.currentRequest != null && self.currentRequest == servlet) {
-      self.pendingRequest = servlet || self.servlet;
-      return;
-    }
-    self.inRequest = true;
-    
-    // Now go to inform the listeners that a request is going to happen and
-    // give them a change to cancel it.
-    a$.each(self.listeners, function (l) {
-      if (a$.act(l, l.beforeRequest, self) === false)
-        cancel = l;
-    })
 
-    if (cancel !== null) {
-      a$.act(cancel, self.onError, "Request cancelled", cancel);
-      return; 
+    // We don't make these calls on private requests    
+    if (typeof callback !== "function") {
+      // Now go to inform the listeners that a request is going to happen and
+      // give them a change to cancel it.
+      a$.each(self.listeners, function (l) {
+        if (a$.act(l, l.beforeRequest, self) === false)
+          cancel = l;
+      })
+  
+      if (cancel !== null) {
+        a$.act(cancel, self.onError, "Request cancelled", cancel);
+        return; 
+      }
     }
     
     // Now let the Querying skill build the settings.url / data
@@ -108,17 +112,19 @@ Solr.Management.prototype = {
   
         // Call this for Querying skills, if it is defined.
         a$.act(self, self.parseResponse, self.response, servlet);  
+      
+        // Time to call the passed on success handler.
+        a$.act(self, self.onSuccess);
       }
-      
-      // Time to call the passed on success handler.
-      a$.act(self, self.onSuccess);
-      
+    };
+    
+    settings.complete = function () {
       // Now deal with pending requests, if such exists.
       // Pay attention that this is _not_ recursion, because
       // We're in the success handler, i.e. - async.
-      self.currentRequest = null;
-      if (self.pendingRequest)
-        self.doRequest(self.pendingRequest);
+      self.inRequest = false;
+      if (self.pendingRequests.length > 0)
+        self.doRequest.apply(self, self.pendingRequests.shift());
     };
     
     // Inform all our skills for the preparation.
@@ -260,18 +266,12 @@ Solr.parseParameter = function (str) {
 
 Solr.Configuring = function (settings) {
   // Now make some reformating of initial parameters.
-  var self = this;
   this.parameterHistory = [];
       
   a$.extend(true, this, a$.common(settings, this));
   
   this.resetParameters();
-  a$.each(settings && settings.parameters, function (p, name) {
-    if (typeof p === 'string')
-      self.addParameter(Solr.parseParameter(name + '=' + p));
-    else
-      self.addParameter(name, p);
-  });
+  this.mergeParameters(settings && settings.parameters);
 };
 
 var paramIsMultiple = function (name) { 
@@ -389,6 +389,18 @@ Solr.Configuring.prototype = {
     return val;
   },
   
+  /** Merge the parameters from the given map into the current ones
+    */
+  mergeParameters: function (parameters) {
+    var self = this;
+    a$.each(parameters, function (p, name) {
+      if (typeof p === 'string')
+        self.addParameter(Solr.parseParameter(name + '=' + p));
+      else
+        self.addParameter(name, p);
+    });
+  },
+  
   /** Iterate over all parameters - including array-based, etc.
     */
   enumerateParameters: function (deep, callback) {
@@ -416,14 +428,14 @@ Solr.Configuring.prototype = {
     * @param {Boolean|Oblect} copy  If it is an object - uses it directly as a new parameter store,
     *                               if it is a boolean - determines whether to keep the old one.
     */
-  pushParametes: function(copy) {
+  pushParameters: function(copy) {
     this.parameterHistory.push(this.parameterStore);
     if (typeof copy === "object")
       this.parameterStore = copy;
     else if (copy === false)
       this.parameterStore = {};
     else
-      this.parameteStore = a$.extend(true, {}, this.parameterStore);
+      this.parameterStore = a$.extend(true, {}, this.parameterStore);
   },
   
   /** Pops the last saved parameters, discarding (and returning) the current one.
@@ -591,7 +603,7 @@ Solr.QueryingJson.prototype = {
   },
   
   parseQuery: function (response) {
-    if (response.responseHeader.params.json != null) {
+    if (response.responseHeader.params && response.responseHeader.params.json != null) {
       var json = JSON.parse(response.responseHeader.params.json);
       a$.extend(response.responseHeader.params, json, json.params);
       delete response.responseHeader.params.json;
@@ -756,7 +768,7 @@ Solr.Requesting = function (settings) {
 
 Solr.Requesting.prototype = {
   resetPage: true,      // Whether to reset to the first page on each requst.
-  customResponse: null, // A custom response function, which if present invokes priavte doRequest.
+  customResponse: null, // A custom response function, which if present invokes private doRequest.
   
   /** Make the initial setup of the manager.
     */
@@ -820,6 +832,52 @@ Solr.Requesting.prototype = {
         
       return false;
     };
+  }
+    
+};
+/** SolrJsX library - a neXt Solr queries JavaScript library.
+  * Spying, i.e. alternative requesting skill.
+  *
+  * Author: Ivan Georgiev
+  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+  */
+    
+Solr.Spying = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+  this.manager = null;
+};
+
+Solr.Spying.prototype = {
+  servlet: null,        // The custom servlet to use for the request
+  
+  /** Make the initial setup of the manager.
+    */
+  init: function (manager) {
+    a$.pass(this, Solr.Spying, "init", manager);
+    this.manager = manager;
+  },
+  
+  /** Make the actual request.
+    */
+  doSpying: function (settings, callback) {
+    var man = this.manager;
+
+    man.pushParameters(true);
+    if (typeof settings === "function")
+      settings(man);
+    else a$.each(settings, function (v, k) {
+      if (v == null)
+        man.removeParameters(k);
+      else if (Array.isArray(v))
+        a$.each(v, function (vv) { man.addParameter(k, vv); });
+      else if (typeof v === "object")
+        man.addParameter(v);
+      else
+        man.addParameter(k, v);
+    });
+    
+    man.doRequest(this.servlet, callback || this.onSpyResponse);
+    man.popParameters();
   }
     
 };
@@ -899,8 +957,11 @@ Solr.Texting = function (settings) {
 };
 
 Solr.Texting.prototype = {
+  __expects: [ "doRequest" ],
+  
   domain: null,         // Additional attributes to be adde to query parameter.
   customResponse: null, // A custom response function, which if present invokes priavte doRequest.
+  escapeNeedle: false,  // Whether to put a backslash before white spaces
   
   /** Make the initial setup of the manager.
     */
@@ -916,8 +977,9 @@ Solr.Texting.prototype = {
    * @returns {Boolean} Whether the selection changed.
    */
   addValue: function (q) {
-    var before = this.manager.getParameter('q'),
-        res = this.manager.addParameter('q', q, this.domain);
+    var val = this.escapeNeedle && q ? q.replace(/\s+/g, "\\ ") : q,
+        before = this.manager.getParameter('q'),
+        res = this.manager.addParameter('q', val, this.domain);
         after = this.manager.getParameter('q');
     return res && !a$.equal(before, after);
   },
