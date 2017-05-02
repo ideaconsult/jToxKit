@@ -1180,68 +1180,83 @@ jT.ItemListWidget.prototype = {
 	 * substance
 	 */
   renderSubstance: function(doc) {
-		var summaryhtml = $("#summary-item").html(),
-		    summarylist = this.buildSummary(doc),
-		    summaryRender = function (summarylist) { 
-  		    return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
-  		  },
-		    item = { 
-  				logo: "images/logo.png",
-  				link: "#",
-  				href: "#",
-  				title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
-  				      + (doc.substanceType == null ? "" : (" " 
-  				        + (this.lookupMap[doc.substanceType] || doc.substanceType)
-  				      )),
-  				composition: this.renderComposition(doc, 
-    				  '<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>'
-    				).join("<br/>"),
-    		  summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
-  				item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
-  				footer: 
-  					'<a href="' + this.baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
-  					'<a href="' + this.baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
-  					'<a href="' + this.baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
-  			};
+    var summaryhtml = $("#summary-item").html(),
+        summarylist = this.buildSummary(doc),
+        baseUrl = this.getBaseUrl(doc);
+        console.log(baseUrl);
+        summaryRender = function (summarylist) { 
+          return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
+        }
+       var item = { 
+          logo: "images/logo.png",
+          link: "#",
+          href: "#",
+          title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
+                + (doc.substanceType == null ? "" : (" " 
+                  + (this.lookupMap[doc.substanceType] || doc.substanceType)
+                )),
+          composition: this.renderComposition(doc, 
+              '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>'
+            ).join("<br/>"),
+          summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
+          item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
+          footer: 
+            '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
+            '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
+            '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
+        };
 
     // Build the outlook of the summary item
     if (summarylist.length > 0)
-			item.summary += 
-				'<a href="#" class="more">more</a>' +
-				'<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
+      item.summary += 
+        '<a href="#" class="more">more</a>' +
+        '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
     
     // Check if external references are provided and prepare and show them.
-		if (doc.content == null) {
-			item.link = this.baseUrl + doc.s_uuid;
-			item.href = item.link	+ "/study";
-			item.href_title = "Study";
-			item.href_target = doc.s_uuid;
-		} 
-		else {
-  		var external = "External database";
-  		
-			if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-				item.logo = "images/canano.jpg";
-				item.href_title = "caNanoLab: " + item.link;
-				item.href_target = external = "caNanoLab";
-				item.footer = '';
-			}
-			else {
-				item.logo = "images/external.png";
-				item.href_title = "External: " + item.link;
-				item.href_target = "external";
-			}
-			
-			if (doc.content.length > 0) {
-				item.link = doc.content[0];	
+    if (doc.content == null) {
+      item.link = this.baseUrl + doc.s_uuid;
+      item.href = item.link + "/study";
+      item.href_title = "Study";
+      item.href_target = doc.s_uuid;
+    } 
+    else {
+      var external = "External database";
+      
+      if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
+        item.logo = "images/canano.jpg";
+        item.href_title = "caNanoLab: " + item.link;
+        item.href_target = external = "caNanoLab";
+        item.footer = '';
+      }
+      else {
+        item.logo = "images/external.png";
+        item.href_title = "External: " + item.link;
+        item.href_target = "external";
+      }
+      
+      if (doc.content.length > 0) {
+        item.link = doc.content[0]; 
 
-				for (var i = 0, l = doc.content.length; i < l; i++)
-					item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + '</a>';
-			}
-		}	
-		
-		return jT.ui.fillTemplate("#result-item", item);
-	},
+        for (var i = 0, l = doc.content.length; i < l; i++)
+          item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + '</a>';
+      }
+    } 
+    
+    return jT.ui.fillTemplate("#result-item", item);
+  },
+  getBaseUrl: function(doc){
+    if(typeof this.manager.dbs !== 'undefined' && typeof this.manager.dbs[doc.dbtag_hss] !== 'undefined'){
+      var url = this.manager.dbs[doc.dbtag_hss].server,
+        lastChar = url.substr(-1);
+    if (lastChar != '/') {         
+        return url+"/";
+      }else{
+        return url;
+      }
+    }else{
+      return this.baseUrl;
+    }
+  },
 	
   renderComposition: function (doc, defValue) {
   	var summary = [],
