@@ -90,7 +90,6 @@ jT.ItemListWidget.prototype = {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
         baseUrl = this.getBaseUrl(doc);
-        console.log(baseUrl);
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
