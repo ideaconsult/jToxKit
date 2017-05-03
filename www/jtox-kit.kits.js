@@ -1248,9 +1248,9 @@ jT.ItemListWidget.prototype = {
       var url = Settings.dbs[doc.dbtag_hss].server,
         lastChar = url.substr(-1);
     if (lastChar != '/') {         
-        return url+"/";
+        return url+"/substance/";
       }else{
-        return url;
+        return url+"substance/";
       }
     }else{
       return this.baseUrl;
