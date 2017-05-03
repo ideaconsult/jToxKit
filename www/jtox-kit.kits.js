@@ -513,7 +513,7 @@ jT.FacetedSearch.prototype = {
 					var tag = (values[i].domain.hasOwnProperty('tag')) ? ' tag='+values[i].domain.tag : '';
 					fq.push('fq={!parent which=type_s:substance'+tag+'}' + encodeURIComponent(values[i].value));
 				}
-			}else if( self.manager.getParameter("q").value.length > 0 ){
+			}else if( typeof self.manager.getParameter("q").value !== 'undefined' && self.manager.getParameter("q").value.length > 0){
 				fq.push('fq={!parent which=type_s:substance}' + encodeURIComponent(self.manager.getParameter("q").value));
 			}else { // i.e. selected
 				var fqset = [];
@@ -1244,8 +1244,8 @@ jT.ItemListWidget.prototype = {
     return jT.ui.fillTemplate("#result-item", item);
   },
   getBaseUrl: function(doc){
-    if(typeof this.manager.dbs !== 'undefined' && typeof this.manager.dbs[doc.dbtag_hss] !== 'undefined'){
-      var url = this.manager.dbs[doc.dbtag_hss].server,
+    if(typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss] !== 'undefined'){
+      var url = Settings.dbs[doc.dbtag_hss].server,
         lastChar = url.substr(-1);
     if (lastChar != '/') {         
         return url+"/";

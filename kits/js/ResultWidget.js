@@ -151,8 +151,8 @@ jT.ItemListWidget.prototype = {
     return jT.ui.fillTemplate("#result-item", item);
   },
   getBaseUrl: function(doc){
-    if(typeof this.manager.dbs !== 'undefined' && typeof this.manager.dbs[doc.dbtag_hss] !== 'undefined'){
-      var url = this.manager.dbs[doc.dbtag_hss].server,
+    if(typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss] !== 'undefined'){
+      var url = Settings.dbs[doc.dbtag_hss].server,
         lastChar = url.substr(-1);
     if (lastChar != '/') {         
         return url+"/";

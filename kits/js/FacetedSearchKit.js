@@ -416,7 +416,7 @@ jT.FacetedSearch.prototype = {
 					var tag = (values[i].domain.hasOwnProperty('tag')) ? ' tag='+values[i].domain.tag : '';
 					fq.push('fq={!parent which=type_s:substance'+tag+'}' + encodeURIComponent(values[i].value));
 				}
-			}else if( self.manager.getParameter("q").value.length > 0 ){
+			}else if( typeof self.manager.getParameter("q").value !== 'undefined' && self.manager.getParameter("q").value.length > 0){
 				fq.push('fq={!parent which=type_s:substance}' + encodeURIComponent(self.manager.getParameter("q").value));
 			}else { // i.e. selected
 				var fqset = [];
