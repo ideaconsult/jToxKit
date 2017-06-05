@@ -46,7 +46,14 @@ Solr.Management.prototype = {
   solrUrl: "",          // The bas Solr Url to be used, excluding the servlet.
   servlet: "select",    // Default servlet to be used is "select".
   
-  onError: function (message) { window.console && console.log && console.log(message); },
+  onError: function (message) { 
+    window.console && console.log && console.log(message); 
+    if( message.status == 401 ){
+      $("<div>HTTP Error"+message.statusCode+" - Unauthorized: Access is denied due to invalid credentials.</div>").dialog();
+    }else{
+      $("<div>HTTP Error: Unable to recieve content</div>").dialog();
+    }
+  },
   onPrepare: function (ajaxSettings) { },
   onSuccess: null,
   ajaxSettings: {        // Default settings for the ajax call to the `connector`
