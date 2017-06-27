@@ -367,7 +367,7 @@ jT.FacetedSearch.prototype = {
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
 					multivalue: this.multipleSelection,
-					aggregate: this.multipleSelection,
+					aggregate: this.aggregateFacets,
 					exclusion: this.multipleSelection || this.keepAllFacets,
 					useJson: true,
 					renderItem: tagRender,
@@ -406,7 +406,7 @@ jT.FacetedSearch.prototype = {
   	  slidersTarget: $("#sliders"),
 			
 			multivalue: this.multipleSelection,
-			aggregate: this.multipleSelection,
+			aggregate: this.aggregateFacets,
 			exclusion: this.multipleSelection || this.keepAllFacets,
 			useJson: true,
 			renderTag: tagRender,
@@ -717,8 +717,11 @@ jT.FacetedSearch.prototype = {
   
   jT.PivotWidgeting.prototype = {
     __expects: [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ],
-    automatic: false,
-    renderTag: null,
+    automatic: false,   // Whether to build the list dynamically.
+    renderTag: null,    // A function for rendering the tags.
+    multivalue: false,      // If this filter allows multiple values. Values can be arrays.
+    aggregate: false,       // If additional values are aggregated in one filter.
+    exclusion: false,       // Whether to exclude THIS field from filtering from itself.
     
     init: function (manager) {
       a$.pass(this, jT.PivotWidgeting, "init", manager);
@@ -794,7 +797,10 @@ jT.FacetedSearch.prototype = {
             color: faceter.color,
             renderItem: this.renderTag,
             pivotWidget: this,
-            target: target
+            target: target,
+            multivalue: this.multivalue,
+            aggregate: this.aggregate,
+            exclusion: this.exclusion
           });
 
           w.init(this.manager);

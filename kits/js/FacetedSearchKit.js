@@ -270,7 +270,7 @@ jT.FacetedSearch.prototype = {
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
 					multivalue: this.multipleSelection,
-					aggregate: this.multipleSelection,
+					aggregate: this.aggregateFacets,
 					exclusion: this.multipleSelection || this.keepAllFacets,
 					useJson: true,
 					renderItem: tagRender,
@@ -309,7 +309,7 @@ jT.FacetedSearch.prototype = {
   	  slidersTarget: $("#sliders"),
 			
 			multivalue: this.multipleSelection,
-			aggregate: this.multipleSelection,
+			aggregate: this.aggregateFacets,
 			exclusion: this.multipleSelection || this.keepAllFacets,
 			useJson: true,
 			renderTag: tagRender,

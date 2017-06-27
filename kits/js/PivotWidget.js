@@ -59,8 +59,11 @@
   
   jT.PivotWidgeting.prototype = {
     __expects: [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ],
-    automatic: false,
-    renderTag: null,
+    automatic: false,   // Whether to build the list dynamically.
+    renderTag: null,    // A function for rendering the tags.
+    multivalue: false,      // If this filter allows multiple values. Values can be arrays.
+    aggregate: false,       // If additional values are aggregated in one filter.
+    exclusion: false,       // Whether to exclude THIS field from filtering from itself.
     
     init: function (manager) {
       a$.pass(this, jT.PivotWidgeting, "init", manager);
@@ -136,7 +139,10 @@
             color: faceter.color,
             renderItem: this.renderTag,
             pivotWidget: this,
-            target: target
+            target: target,
+            multivalue: this.multivalue,
+            aggregate: this.aggregate,
+            exclusion: this.exclusion
           });
 
           w.init(this.manager);
