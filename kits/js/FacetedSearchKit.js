@@ -392,52 +392,71 @@ jT.FacetedSearch.prototype = {
 		$("#export_tab button").button({ disabled: true });
   
 		$("#export_tab form").on("submit", function (e) {
-			var form = this,
-			    mime = form.export_format.value,
-    			server = $('.data_formats .selected a').attr('data-url'),
-    			fields = ( server == 'ambitURL' )? 's_uuid_hs' : form.export_type.value,
-    			params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
-    			mime = mime.substr(mime.indexOf("/") + 1),
-    			serverURL = self[server],
-    			fq = [];
+					var form = this,
+					    mime = form.export_format.value,
+		    			server = $('.data_formats .selected a').attr('data-url'),
+		    			params= [],
+		    			mime = mime.substr(mime.indexOf("/") + 1),
+		    			serverURL = self[server],
+		    			fq = [],
+		    			study_inner_filter= [];
 
-			if (mime == "tsv"){
-				params.push("wt=csv", "csv.separator=%09");
-			}else if( server == 'ambitURL' ){
-				params.push('wt=json');
-			}else{
-				params.push('wt=' + mime);
-			}
+					
 
-			form.q.value = "q={!parent which=type_s:substance}";  
+					form.q.value = "q={!parent which=type_s:substance}";  
 
-			var values = self.manager.getParameter("json.filter");
-			if (form.export_dataset.value == "filtered") {
+					var values = self.manager.getParameter("json.filter");
+					if (form.export_dataset.value == "filtered") {
+						for (var i = 0, vl = values.length; i < vl; i++) {  
+							var tag = (values[i].domain.hasOwnProperty('tag')) ? ' tag='+values[i].domain.tag : '',
+								study_inner = self.studyInnerFields.split(',');
 
-				for (var i = 0, vl = values.length; i < vl; i++) {  
-					var tag = (values[i].domain.hasOwnProperty('tag')) ? ' tag='+values[i].domain.tag : '';
-					fq.push('fq={!parent which=type_s:substance'+tag+'}' + encodeURIComponent(values[i].value));
-				}
-			}else if( typeof self.manager.getParameter("q").value !== 'undefined' && self.manager.getParameter("q").value.length > 0){
-				fq.push('fq={!parent which=type_s:substance}' + encodeURIComponent(self.manager.getParameter("q").value));
-			}else { // i.e. selected
-				var fqset = [];
+							fq.push('fq={!parent which=type_s:substance'+tag+'}' + encodeURIComponent(values[i].value));
+							
+							//build child filter if exists
+							$.each(study_inner, function(key, inner){
+								if ($.trim(values[i].value.substr(0, values[i].value.indexOf(":"))) == $.trim(inner)){
+									study_inner_filter.push(values[i].value);
+								}
+							});
+							var $active_type = $(this).find('input[name=export_type]:checked'),
+								childFilter = '';
+							if( study_inner_filter.length ){
+								childFilter = $active_type.val() + $(form).find('input[name=export_type]:checked').data('child-filter').replace("{{childFilter}}", study_inner_filter.join(','));
+							}else{
+								childFilter = $active_type.val() + $(form).find('input[name=export_type]:checked').data('child-filter').replace("{{childFilter}}", $(form).find('input[name=export_type]:checked').data('default-filter'));
+							}
+						}
+					}else if( typeof self.manager.getParameter("q").value !== 'undefined' && self.manager.getParameter("q").value.length > 0){
+						fq.push('fq={!parent which=type_s:substance}' + encodeURIComponent(self.manager.getParameter("q").value));
+					}else { // i.e. selected
+						var fqset = [];
 
-				self.basket.enumerateItems(function (d) { 
-				fqset.push(d.s_uuid); });
-				fq.push('fq=s_uuid_hs:(' + fqset.join(" ")+')');
-			}
+						self.basket.enumerateItems(function (d) { 
+						fqset.push(d.s_uuid); });
+						fq.push('fq=s_uuid_hs:(' + fqset.join(" ")+')');
+					}
+					var fields = ( server == 'ambitURL' )? 's_uuid_hs' : childFilter;
+					params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
+					params = params.concat(fq);
+					if (mime == "tsv"){
+						params.push("wt=csv", "csv.separator=%09");
+					}else if( server == 'ambitURL' ){
+						params.push('wt=json');
+					}else{
+						params.push('wt=' + mime);
+					}
 
-			params = params.concat(fq);
-			if( server == 'ambitURL' || typeof $(form).attr('data-ambit') !== typeof undefined ){
-				self.sendAmbitRequest(form, fq);
-				return true;
-			}else{
-				form.action = serverURL + "select?" + params.join('&');
-	
-				return true;
-			}
-		});
+					
+					if( server == 'ambitURL' || typeof $(form).attr('data-ambit') !== typeof undefined ){
+						self.sendAmbitRequest(form, fq);
+						return true;
+					}else{
+						form.action = serverURL + "select?" + params.join('&');
+			
+						return true;
+					}
+				});
 
 		$("#result-tabs").tabs( { 
 			activate: function (e, ui) {
