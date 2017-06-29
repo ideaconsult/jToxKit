@@ -498,13 +498,7 @@ jT.FacetedSearch.prototype = {
 		    			fq = [],
 		    			study_inner_filter= [];
 
-					if (mime == "tsv"){
-						params.push("wt=csv", "csv.separator=%09");
-					}else if( server == 'ambitURL' ){
-						params.push('wt=json');
-					}else{
-						params.push('wt=' + mime);
-					}
+					
 
 					form.q.value = "q={!parent which=type_s:substance}";  
 
@@ -542,6 +536,14 @@ jT.FacetedSearch.prototype = {
 					var fields = ( server == 'ambitURL' )? 's_uuid_hs' : childFilter;
 					params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
 					params = params.concat(fq);
+					if (mime == "tsv"){
+						params.push("wt=csv", "csv.separator=%09");
+					}else if( server == 'ambitURL' ){
+						params.push('wt=json');
+					}else{
+						params.push('wt=' + mime);
+					}
+
 					
 					if( server == 'ambitURL' || typeof $(form).attr('data-ambit') !== typeof undefined ){
 						self.sendAmbitRequest(form, fq);
