@@ -95,7 +95,7 @@ jT.ItemListWidget.prototype = {
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
        var item = { 
-          logo: baseUrl,
+          logo: logoURL,
           link: "#",
           href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
