@@ -1209,12 +1209,13 @@ jT.ItemListWidget.prototype = {
   renderSubstance: function(doc) {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
-        baseUrl = this.getBaseUrl(doc);
+        baseUrl = this.getBaseUrl(doc),
+        logoURL = (typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss].icon !== 'undefined') ? Settings.dbs[doc.dbtag_hss].icon : "images/logo.png";
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
        var item = { 
-          logo: "images/logo.png",
+          logo: baseUrl,
           link: "#",
           href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
