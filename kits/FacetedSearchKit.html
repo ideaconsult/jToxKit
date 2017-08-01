@@ -72,11 +72,7 @@
   		</div>
   		<div id="export_tab">
     		<form target="_blank" method="post">
-      		<input type="hidden" name="q"/>
           <input type="hidden" name="search"/>
-          <input type="hidden" name="fq"/>
-      		
-      		
       		
           <h6>Select dataset to export</h6>
       		<div id="export_dataset">
@@ -153,7 +149,7 @@
   
   <div id="export-format">
     <div class="jtox-inline jtox-ds-download jtox-fadable">
-      <a target="_blank" data-name="{{name}}" href="#"><img class="borderless" jt-src="{{icon}}"/></a>
+      <a target="_blank" data-name="{{name}}" data-mime="{{mime}}" href="#"><img class="borderless" jt-src="{{icon}}"/></a>
     </div>
   </div>  
 <!-- // end of #faceted-search-templates ]]-->
