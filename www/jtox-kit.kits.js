@@ -99,7 +99,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
 var mainLookupMap = {},
 	defaultSettings = {
-		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
 		servlet: "autophrase",
 		multipleSelection: true,
 		keepAllFacets: true,
@@ -116,22 +115,25 @@ var mainLookupMap = {},
 				settings.url += (qidx < 0 ? "?" : "&" ) + "wt=json"; 
 			}
 		},
-	  solrParameters: {
-			'facet.limit' : -1,
-			'facet.mincount' : 1,
-			'echoParams': "none",
-			'fl' : "id",
-			'json.nl' : "map",
-			'q.alt': "*:*",
-		},
 		topSpacing: 10,
-		nestingRules: { "composition": { field: "type_s", parent: "substance", limit: 100 } },
+		nestingField: "type_s",
+		nestingRules: { 
+  		"composition": { parent: "substance", limit: 100 },
+  		"study": { parent: "substance", limit: 10000 },
+  		"params": { parent: "study", limit: 10000 },
+  		"conditions": { parent: "study", limit: 10000 }
+    },
 		exportMaxRows: 999999, //2147483647
 		exportTypes: [],
+	  exportSolrDefaults: [
+  	  "facet=false",
+			"echoParams=none"
+	  ],
 		listingFields: [],
 		facets: [],
 		summaryRenderers: {}
 	},
+	
 	tagRender = function (tag) {
 	  var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
 		  
@@ -154,6 +156,7 @@ var mainLookupMap = {},
 		
 	  return el$;
 	},
+	
 	tagInit = function (manager) {
 			jT.TagWidget.prototype.init.call(this, manager);
 	  manager.getListener("current").registerWidget(this);
@@ -186,144 +189,145 @@ jT.FacetedSearch = function (settings) {
 
 jT.FacetedSearch.prototype = {
   initDom: function () {
-	// Now instantiate and things around it.
-	this.accordion = $("#accordion");
-	this.accordion.accordion({
-		heightStyle: "content",
-		collapsible: true,
-		animate: 200,
-		active: false,
-		activate: function( event, ui ) {
-			if (!!ui.newPanel && !!ui.newPanel[0]) {
-				var header = ui.newHeader[0],
-						panel = ui.newPanel[0],
-						filter = $("input.widget-filter", panel),
-						widgetFilterScroll = filter.outerHeight(true),
-						refreshPanel;
-				
-				if (!$("span.ui-icon-search", header).length) {
-					refreshPanel = function () {
-					if (panel.scrollHeight > panel.clientHeight || filter.val() != "" || $(header).hasClass("nested-tab") ) {
-							$(panel).scrollTop(widgetFilterScroll);
-							filter.show()
-							$("span.ui-icon-search", header).removeClass("unused");
-						}
-						else {
-							filter.hide();
-							$("span.ui-icon-search", header).addClass("unused");
-						}
-					};
+  	// Now instantiate and things around it.
+  	this.accordion = $("#accordion");
+  	this.accordion.accordion({
+  		heightStyle: "content",
+  		collapsible: true,
+  		animate: 200,
+  		active: false,
+  		activate: function( event, ui ) {
+  			if (!!ui.newPanel && !!ui.newPanel[0]) {
+  				var header = ui.newHeader[0],
+  						panel = ui.newPanel[0],
+  						filter = $("input.widget-filter", panel),
+  						widgetFilterScroll = filter.outerHeight(true),
+  						refreshPanel;
+  				
+  				if (!$("span.ui-icon-search", header).length) {
+  					refreshPanel = function () {
+  					if (panel.scrollHeight > panel.clientHeight || filter.val() != "" || $(header).hasClass("nested-tab") ) {
+  							$(panel).scrollTop(widgetFilterScroll);
+  							filter.show()
+  							$("span.ui-icon-search", header).removeClass("unused");
+  						}
+  						else {
+  							filter.hide();
+  							$("span.ui-icon-search", header).addClass("unused");
+  						}
+  					};
+    
+  					ui.newPanel.data("refreshPanel", refreshPanel);
+  					ui.newHeader.data("refreshPanel", refreshPanel);
+  					ui.newHeader.append($('<span class="ui-icon ui-icon-search"></span>').on("click", function (e) {
+  						ui.newPanel.animate({ scrollTop: ui.newPanel.scrollTop() > 0 ? 0 : widgetFilterScroll }, 300, function () {
+  							if (ui.newPanel.scrollTop() > 0)
+  								$("input.widget-filter", panel).blur();
+  							else
+  								$("input.widget-filter", panel).focus();
+  						});
+  							
+  						e.stopPropagation();
+  						e.preventDefault();
+  					}));
+  				}
+  				else
+  					refreshPanel = ui.newPanel.data("refreshPanel");
+  				
+  				filter.val("");
+  				refreshPanel();
+  		  }
+  		}
+  	});
+  	
+  	$(document).on("click", "ul.tag-group", function (e) { 
+  		$(this).toggleClass("folded");
+  		$(this).parents(".widget-root").data("refreshPanel").call();
+  	});
+  	
+  	// ... and prepare the actual filtering funtion.
+  	$(document).on('keyup', "#accordion input.widget-filter", function (e) {
+  		var needle = $(this).val().toLowerCase(),
+  				div = $(this).parent('div.widget-root'),
+  				cnt;
+    
+  		if ((e.keyCode || e.which) == 27)
+  			$(this).val(needle = "");
+  		
+  		if (needle == "")
+  			$('li,ul', div[0]).show();
+  		else {
+  			$('li>a', div[0]).each( function () {
+  				var fold = $(this).closest("ul.tag-group"),
+  					tag = $(this).parent();
+  				cnt = fold.data("hidden") || 0;
+  				if (tag.hasClass("category"))
+  				  ;
+  				else if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
+  					tag.show();
+  				else {
+  					tag.hide();
+  					++cnt;
+  				}
+  				
+  				if (!!fold.length && !!cnt)
+  					fold.data("hidden", cnt);
+  			});
+  		}
+  		
+  		// now check if some of the boxes need to be hidden.
+  		$("ul.tag-group", div[0]).each(function () {
+  			var me = $(this);
   
-					ui.newPanel.data("refreshPanel", refreshPanel);
-					ui.newHeader.data("refreshPanel", refreshPanel);
-					ui.newHeader.append($('<span class="ui-icon ui-icon-search"></span>').on("click", function (e) {
-						ui.newPanel.animate({ scrollTop: ui.newPanel.scrollTop() > 0 ? 0 : widgetFilterScroll }, 300, function () {
-							if (ui.newPanel.scrollTop() > 0)
-								$("input.widget-filter", panel).blur();
-							else
-								$("input.widget-filter", panel).focus();
-						});
-							
-						e.stopPropagation();
-						e.preventDefault();
-					}));
-				}
-				else
-					refreshPanel = ui.newPanel.data("refreshPanel");
-				
-				filter.val("");
-				refreshPanel();
-		}
-		}
-	});
-	
-	$(document).on("click", "ul.tag-group", function (e) { 
-		$(this).toggleClass("folded");
-		$(this).parents(".widget-root").data("refreshPanel").call();
-	});
-	
-	// ... and prepare the actual filtering funtion.
-	$(document).on('keyup', "#accordion input.widget-filter", function (e) {
-		var needle = $(this).val().toLowerCase(),
-				div = $(this).parent('div.widget-root'),
-				cnt;
-  
-		if ((e.keyCode || e.which) == 27)
-			$(this).val(needle = "");
-		
-		if (needle == "")
-			$('li,ul', div[0]).show();
-		else {
-			$('li>a', div[0]).each( function () {
-				var fold = $(this).closest("ul.tag-group"),
-					tag = $(this).parent();
-				cnt = fold.data("hidden") || 0;
-				if (tag.hasClass("category"))
-				  ;
-				else if (this.title.toLowerCase().indexOf(needle) >= 0 || this.innerText.toLowerCase().indexOf(needle) >= 0)
-					tag.show();
-				else {
-					tag.hide();
-					++cnt;
-				}
-				
-				if (!!fold.length && !!cnt)
-					fold.data("hidden", cnt);
-			});
-		}
-		
-		// now check if some of the boxes need to be hidden.
-		$("ul.tag-group", div[0]).each(function () {
-			var me = $(this);
-
-			cnt = parseInt(me.data("hidden")) || 0;
-			if (me.children().length > cnt + 1)
-				me.show().removeClass("folded");
-			else
-				me.hide().addClass("folded");
-  
-			me.data("hidden", null);
-		});
-	});
-			
-	var resDiv = $("#result-tabs"),
-		  resSize,
-      self = this;
-	
-	resDiv.tabs( { } );
-		
-	$("#accordion-resizer").resizable({
-	  minWidth: 150,
-	  maxWidth: 450,
-	  grid: [10, 10],
-	  handles: "e",
-	  start: function(e, ui) {
-		resSize = { width: resDiv.width(), height: resDiv.height() };
-	  },
-	  resize: function(e, ui) {
-		self.accordion.accordion( "refresh" );
-		$('#query-sticky-wrapper').width( self.accordion.width());
-		$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
-		resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
-	  }
-	});
-	
-	$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
+  			cnt = parseInt(me.data("hidden")) || 0;
+  			if (me.children().length > cnt + 1)
+  				me.show().removeClass("folded");
+  			else
+  				me.hide().addClass("folded");
+    
+  			me.data("hidden", null);
+  		});
+  	});
+  			
+  	var resDiv = $("#result-tabs"),
+  		  resSize,
+        self = this;
+  	
+  	resDiv.tabs( { } );
+  		
+  	$("#accordion-resizer").resizable({
+  	  minWidth: 150,
+  	  maxWidth: 450,
+  	  grid: [10, 10],
+  	  handles: "e",
+  	  start: function(e, ui) {
+  		resSize = { width: resDiv.width(), height: resDiv.height() };
+  	  },
+  	  resize: function(e, ui) {
+  		self.accordion.accordion( "refresh" );
+  		$('#query-sticky-wrapper').width( self.accordion.width());
+  		$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
+  		resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
+  	  }
+  	});
+  	
+  	$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
   },
   
   /** The actual widget and communication initialization routine!
 	*/
   initComm: function () {
-	var Manager, Basket,
-		PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-		TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
-
-	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
-
-	Manager.addListeners(new jT.ResultWidget($.extend(true, {
+  	var Manager, Basket,
+  		  PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
+        TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
+  
+  	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
+  
+  	Manager.addListeners(new jT.ResultWidget($.extend(true, {
 			id : 'result',
 			target : $('#docs'),
       itemId: "s_uuid",
+      nestLevel: "composition",
 			onClick : function (e, doc, exp, widget) { 
 				if (Basket.findItem(doc.s_uuid) < 0) {
 					Basket.addItem(doc);
@@ -342,8 +346,8 @@ jT.FacetedSearch.prototype = {
 				$("footer", this).addClass("add");
 			}
 		}, this)));
-
-	Manager.addListeners(new (a$(Solr.Widgets.Pager))({
+  
+  	Manager.addListeners(new (a$(Solr.Widgets.Pager))({
 			id : 'pager',
 			target : $('#pager'),
 			prevLabel : '&lt;',
@@ -378,13 +382,12 @@ jT.FacetedSearch.prototype = {
 					classes: f.color
 				}, f))
 	  
-	  w.afterTranslation = function (data) { 
-		  this.populate(this.getFacetCounts(data.facets)); 
-	  };
+  	  w.afterTranslation = function (data) { 
+  		  this.populate(this.getFacetCounts(data.facets)); 
+  	  };
 				
 			Manager.addListeners(w);
 		};
-
 		
 		// ... add the mighty pivot widget.
 		Manager.addListeners(new PivotWidget({
@@ -395,16 +398,9 @@ jT.FacetedSearch.prototype = {
 			before: "#cell_header",
 			field: "loValue_d",
 			lookupMap: this.lookupMap,
-			
-			pivot: [ 
-			  { id: "topcategory", field: "topcategory_s", disabled: true, facet: { domain: { blockChildren: "type_s:params" } } },
-			  { id: "endpointcategory", field: "endpointcategory_s", color: "blue" },
-			  { id: "effectendpoint", field: "effectendpoint_s", color: "green", ranging: true }, 
-			  { id: "unit", field: "unit_s", disabled: true, ranging: true }
-  	  ],
+			pivot: this.pivot,
   	  statistics: { 'min': "min(loValue_d)", 'max': "max(loValue_d)", 'avg': "avg(loValue_d)" },
   	  slidersTarget: $("#sliders"),
-			
 			multivalue: this.multipleSelection,
 			aggregate: this.aggregateFacets,
 			exclusion: this.multipleSelection || this.keepAllFacets,
@@ -412,7 +408,7 @@ jT.FacetedSearch.prototype = {
 			renderTag: tagRender,
 			classes: "dynamic-tab",
 			nesting: "type_s:substance",
-	  domain: { type: "parent", "which": "type_s:substance" }
+      domain: { type: "parent", "which": "type_s:substance" }
 		}));
 		
     // ... And finally the current-selection one, and ...
@@ -461,26 +457,24 @@ jT.FacetedSearch.prototype = {
   },
   
 	initExport: function () {
-  		// Prepare the export tab
-  		var self = this;
-
-		updateButton = function (e) {
-			var form = this.form,
-			b = $("button", this.form);
-			
-			if (!$(form).find('input[name=export_dataset]').val()){
-				b.button("option", "label", "No target dataset selected...");
-			}else if( !self.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
-				b.button("disable").button("option", "label", "No filters selected...");
-			}else if ( $(form).find('input[name=export_dataset]').val()  ){
-				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(this.form.export_format).data('name').toUpperCase());
-			} 
-
-			return b;
-		};
+		// Prepare the export tab
+		var self = this,
+		    updateButton = function (e) {
+    			var form = this.form,
+    			b = $("button", this.form);
+    			
+    			if (!$(form).find('input[name=export_dataset]').val()){
+    				b.button("option", "label", "No target dataset selected...");
+    			}else if( !self.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
+    				b.button("disable").button("option", "label", "No filters selected...");
+    			}else if ( $(form).find('input[name=export_dataset]').val()  ){
+    				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(this.form.export_format).data('name').toUpperCase());
+    			} 
+    
+    			return b;
+    		};
 
 		this.getFormats();
-
 		this.getTypes();
   
 		$("#export_dataset").buttonset();
@@ -489,71 +483,77 @@ jT.FacetedSearch.prototype = {
 		$("#export_tab button").button({ disabled: true });
   
 		$("#export_tab form").on("submit", function (e) {
-					var form = this,
-					    mime = form.export_format.value,
-		    			server = $('.data_formats .selected a').attr('data-url'),
-		    			params= [],
-		    			mime = mime.substr(mime.indexOf("/") + 1),
-		    			serverURL = self[server],
-		    			fq = [],
-		    			study_inner_filter= [];
+			var form = this,
+			    mime = form.export_format.value,
+    			mime = mime.substr(mime.indexOf("/") + 1),
+    			exFormat = self.exportFormats[$('.data_formats .selected a').data('index')],
+    			exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
+    			server = exFormat.server,
+    			fq = self.manager.getParameter("json.filter"),
+    			params = [],
+    			inners = [],
+    			makeParameter = function (par) {
+    				var np = { value: par.value };
+  
+//             if (par.domain && (par.domain.type != 'parent' || par.domain.which != exType.nestLevel);
+            return np;
+    			};
 
-					
+      // Prepare the parameters list, as well as
+			for (var i = 0, vl = fq.length; i < vl; i++) {
+				var par = fq[i],
+				    np = makeParameter(par),
+				    strnp = Solr.stringifyParameter(np);
+				    
+        params.push(strnp);
+        if (np.domain == null)
+          inners.push(strnp);
+      }
 
-					form.q.value = "q={!parent which=type_s:substance}";  
+      form.q.value = Solr.stringifyParameter(makeParameter(self.manager.getParameter('q')));
 
-					var values = self.manager.getParameter("json.filter");
-					if (form.export_dataset.value == "filtered") {
-						for (var i = 0, vl = values.length; i < vl; i++) {  
-							var tag = (values[i].domain.hasOwnProperty('tag')) ? ' tag='+values[i].domain.tag : '',
-								study_inner = self.studyInnerFields.split(',');
+			if (form.export_dataset.value != "filtered") {
+				var fqset = [];
 
-							fq.push('fq={!parent which=type_s:substance'+tag+'}' + encodeURIComponent(values[i].value));
-							
-							//build child filter if exists
-							$.each(study_inner, function(key, inner){
-								if ($.trim(values[i].value.substr(0, values[i].value.indexOf(":"))) == $.trim(inner)){
-									study_inner_filter.push(values[i].value);
-								}
-							});
-							var $active_type = $(this).find('input[name=export_type]:checked'),
-								childFilter = '';
-							if( study_inner_filter.length ){
-								childFilter = $active_type.val() + $(form).find('input[name=export_type]:checked').data('child-filter').replace("{{childFilter}}", study_inner_filter.join(','));
-							}else{
-								childFilter = $active_type.val() + $(form).find('input[name=export_type]:checked').data('child-filter').replace("{{childFilter}}", $(form).find('input[name=export_type]:checked').data('default-filter'));
-							}
-						}
-					}else if( typeof self.manager.getParameter("q").value !== 'undefined' && self.manager.getParameter("q").value.length > 0){
-						fq.push('fq={!parent which=type_s:substance}' + encodeURIComponent(self.manager.getParameter("q").value));
-					}else { // i.e. selected
-						var fqset = [];
-
-						self.basket.enumerateItems(function (d) { 
-						fqset.push(d.s_uuid); });
-						fq.push('fq=s_uuid_hs:(' + fqset.join(" ")+')');
-					}
-					var fields = ( server == 'ambitURL' )? 's_uuid_hs' : childFilter;
-					params = ['rows=' + self.exportMaxRows, 'fl=' + encodeURIComponent(fields)];
-					params = params.concat(fq);
-					if (mime == "tsv"){
-						params.push("wt=csv", "csv.separator=%09");
-					}else if( server == 'ambitURL' ){
-						params.push('wt=json');
-					}else{
-						params.push('wt=' + mime);
-					}
-
-					
-					if( server == 'ambitURL' || typeof $(form).attr('data-ambit') !== typeof undefined ){
-						self.sendAmbitRequest(form, fq);
-						return true;
-					}else{
-						form.action = serverURL + "select?" + params.join('&');
+				self.basket.enumerateItems(function (d) { fqset.push(d.s_uuid); });
+				params.push('fq=' + encodeURIComponent('s_uuid_hs:(' + fqset.join(" ")+')'));
+			}
 			
-						return true;
-					}
-				});
+			// Now we have all the filtering parameters in the `params`.
+			if( server == 'ambitUrl' || $(form).attr('data-ambit') !== undefined ) {
+  			params.push('wt=json');
+  			params.push('q=' + form.q.value);
+    		$.ajax({
+      		url: this.solrUrl + "select?fl=s_uuid_hs&wt=json&" + params.join('&'), 
+      		async: true,
+      		dataType: "json",
+      		success: function( data ) {
+            var ids = [];
+      			$.each(data.response.docs, function(index,value) {
+      				ids.push(value.s_uuid_hs);
+      			});
+      			
+      			form.search.value = ids.join(" ");
+      			form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
+      		}
+        });
+			} else {
+  			// Fill the rest of the Solr parameters for the real Solr call.
+        if (!!exType.extraParams)
+          Array.prototype.push.apply(params, exType.extraParams);
+        params.push('fl=' + encodeURIComponent(exType.fields.replace("{{filter}}", inners.length > 0 ? inners.join(',') : exType.defaultFilter)));
+        params.push('rows=' + self.exportMaxRows);
+  			
+  			if (mime == "tsv")
+  				params.push("wt=csv", "csv.separator=%09");
+  			else
+  				params.push('wt=' + mime);
+
+				form.action = serverURL + "select?" + params.join('&');
+			}
+				
+      return true;
+		});
 
 		$("#result-tabs").tabs( { 
 			activate: function (e, ui) {
@@ -594,32 +594,12 @@ jT.FacetedSearch.prototype = {
 			}
 		});
   },
-	sendAmbitRequest: function(form, fq){
-		var self = this, 
-		ids=[];
-		$.ajaxSetup({async: false}); // we need a sync request
-
-		fq.push('q={!parent which=type_s:substance}');
-
-		$.getJSON( this.solrUrl + "select?fl=s_uuid_hs&wt=json&"+ fq.join('&'), function( data ) {
-			$.each(data.response.docs, function(index,value) {
-				ids.push(value.s_uuid_hs);
-			});
-			
-			var serverURL = self['ambitURL'],
-			    mime = form.export_format.value;
-
-			form.search.value = ids.join(" ");
-			form.action = serverURL+'query/substance/study/uuid?media='+encodeURIComponent(mime);
-		});
-
-		$.ajaxSetup({async: true}); // reset the request type
-	},
+  
 	getFormats: function(){
 		var exportEl = $("#export_tab div.data_formats");
 		for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
 			var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
-			exportEl.append(el);
+			exportEl.append(el).data("index", i);
 			$("a", exportEl[0]).on("click", function (e) {
 				if( $(this).hasClass('disabled')) return false
 				var me = $(this);
@@ -647,14 +627,14 @@ jT.FacetedSearch.prototype = {
 
 	getTypes: function(){
 		var exportEl = $("#export_tab div#export_type"),
-			self = this;
-		for (var i = 0, elen = this.exportType.length; i < elen; ++i) {
-			this.exportType[i].selected = ( i == 0 )? 'checked="checked"' : '';
-			var el = jT.ui.fillTemplate("#export-type", this.exportType[i]);
-			exportEl.append(el);
+			  self = this;
+		for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
+			this.exportTypes[i].selected = ( i == 0 ) ? 'checked="checked"' : '';
+			var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
+			exportEl.append(el).data("index", i);
 			$("input[name=export_type]").on("change", function (e) {
 				var me = $(this),
-				formats = me.data("formats");
+				formats = this.exportTypes[me.data("index")].formats;
 				$('.data_formats a').removeClass('disabled');
 				if( formats.indexOf('rdf') > -1 ){
 					$(this.form).attr('data-ambit', true);
@@ -663,14 +643,13 @@ jT.FacetedSearch.prototype = {
 				}
 				self.exportFormats.forEach(function (item) {
 					if( formats.indexOf(item.name) == -1 ){
-						$('.data_formats a[data-name='+item.name+']').addClass('disabled')
+						$('.data_formats a[data-name=' + item.name + ']').addClass('disabled')
 					}
 				});
-	    		$('.data_formats a:visible').not('.disabled').first().trigger('click')
+	    	$('.data_formats a:visible').not('.disabled').first().trigger('click');
 				return false;
 			});
 		}
-
 	}
 };
 	
@@ -1135,6 +1114,7 @@ jT.ItemListWidget = function (settings) {
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
+  tagDbs: {},
   onCreated: null,
   onClick: null,
   summaryRenderers: {
@@ -1210,7 +1190,7 @@ jT.ItemListWidget.prototype = {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
         baseUrl = this.getBaseUrl(doc),
-        logoURL = (typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss].icon !== 'undefined') ? Settings.dbs[doc.dbtag_hss].icon : "images/logo.png";
+        logoURL = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png";
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
@@ -1272,8 +1252,8 @@ jT.ItemListWidget.prototype = {
     return jT.ui.fillTemplate("#result-item", item);
   },
   getBaseUrl: function(doc){
-    if(typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss] !== 'undefined'){
-      var url = Settings.dbs[doc.dbtag_hss].server,
+    if(this.tagDbs[doc.dbtag_hss] !== undefined){
+      var url = this.tagDbs[doc.dbtag_hss].server,
         lastChar = url.substr(-1);
     if (lastChar != '/') {         
         return url+"/substance/";
@@ -1515,14 +1495,15 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<input type=\"hidden\"/>" +
 "</div>" +
 "" +
+"<div id=\"export-type\">" +
+"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" id=\"{{name}}\"/>" +
+"<label for=\"{{name}}\">{{name}}</label>" +
+"</div>" +
+"" +
 "<div id=\"export-format\">" +
 "<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
-"<a target=\"_blank\" data-mime=\"{{mime}}\" data-name=\"{{name}}\" data-url=\"{{server}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +
+"<a target=\"_blank\" data-name=\"{{name}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +
 "</div>" +
-"</div>" +
-"<div id=\"export-type\">" +
-"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" data-formats=\"{{formats}}\" data-child-filter=\"{{childFilter}}\" data-default-filter=\"{{defaultChildFilter}}\" id=\"{{type}}\"/>" +
-"<label for=\"{{type}}\">{{type}}</label>" +
 "</div>" +
 ""; // end of #faceted-search-templates 
 

@@ -146,15 +146,16 @@
 		<input type="hidden"/>
   </div>
 
+  <div id="export-type">
+    <input type="radio" value="{{fields}}" {{selected}} name="export_type" id="{{name}}"/>
+    <label for="{{name}}">{{name}}</label>
+  </div>
+  
   <div id="export-format">
     <div class="jtox-inline jtox-ds-download jtox-fadable">
-      <a target="_blank" data-mime="{{mime}}" data-name="{{name}}" data-url="{{server}}" href="#"><img class="borderless" jt-src="{{icon}}"/></a>
+      <a target="_blank" data-name="{{name}}" href="#"><img class="borderless" jt-src="{{icon}}"/></a>
     </div>
-  </div>
-  <div id="export-type">
-    <input type="radio" value="{{fields}}" {{selected}} name="export_type" data-formats="{{formats}}" data-child-filter="{{childFilter}}" data-default-filter="{{defaultChildFilter}}" id="{{type}}"/>
-    <label for="{{type}}">{{type}}</label>
-  </div>
+  </div>  
 <!-- // end of #faceted-search-templates ]]-->
 
 </div>

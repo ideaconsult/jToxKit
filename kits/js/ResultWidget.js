@@ -15,6 +15,7 @@ jT.ItemListWidget = function (settings) {
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
+  tagDbs: {},
   onCreated: null,
   onClick: null,
   summaryRenderers: {
@@ -90,7 +91,7 @@ jT.ItemListWidget.prototype = {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
         baseUrl = this.getBaseUrl(doc),
-        logoURL = (typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss].icon !== 'undefined') ? Settings.dbs[doc.dbtag_hss].icon : "images/logo.png";
+        logoURL = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png";
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
@@ -152,8 +153,8 @@ jT.ItemListWidget.prototype = {
     return jT.ui.fillTemplate("#result-item", item);
   },
   getBaseUrl: function(doc){
-    if(typeof Settings.dbs !== 'undefined' && typeof Settings.dbs[doc.dbtag_hss] !== 'undefined'){
-      var url = Settings.dbs[doc.dbtag_hss].server,
+    if(this.tagDbs[doc.dbtag_hss] !== undefined){
+      var url = this.tagDbs[doc.dbtag_hss].server,
         lastChar = url.substr(-1);
     if (lastChar != '/') {         
         return url+"/substance/";
