@@ -1,0 +1,691 @@
+{
+	"variables": [],
+	"info": {
+		"name": "Testing requests",
+		"_postman_id": "d7cd0376-43e1-a6e4-b47f-3dab8863e1b2",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Result List",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"tests[\"Total found\"] = jsonData.response.numFound == globals.f_substances;",
+							"tests[\"Returned list count\"] = jsonData.response.docs.length === 20;",
+							"tests[\"Facets count\"] = jsonData.facets.count == globals.f_substances;",
+							"",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}autophrase?q={{p_substance}}&wt=json",
+					"host": [
+						"{{server}}autophrase"
+					],
+					"query": [
+						{
+							"key": "q",
+							"value": "{{p_substance}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"facet\": {\n    \"cell\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"cell_tag\"\n      }, \n      \"field\": \"Cell line_s\", \n      \"limit\": -1, \n      \"mincount\": 1, \n      \"type\": \"terms\"\n    }, \n    \"interpretation\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"interpretation_tag\"\n      }, \n      \"field\": \"interpretation_result_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"owner_name\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"owner_name_tag\"\n      }, \n      \"field\": \"owner_name_s\", \n      \"limit\": -1, \n      \"mincount\": 450, \n      \"type\": \"terms\"\n    }, \n    \"protocol\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"protocol_tag\"\n      }, \n      \"field\": \"guidance_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"reference\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"reference_tag\"\n      }, \n      \"field\": \"reference_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"reference_year\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"reference_year_tag\"\n      }, \n      \"field\": \"reference_year_s\", \n      \"limit\": -1, \n      \"mincount\": 1, \n      \"type\": \"terms\"\n    }, \n    \"species\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"species_tag\"\n      }, \n      \"field\": \"Species_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"substanceType\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"substanceType_tag\"\n      }, \n      \"field\": \"substanceType_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"topcategory\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\"\n      }, \n      \"facet\": {\n        \"avg\": \"avg(loValue_d)\", \n        \"endpointcategory\": {\n          \"facet\": {\n            \"avg\": \"avg(loValue_d)\", \n            \"effectendpoint\": {\n              \"facet\": {\n                \"avg\": \"avg(loValue_d)\", \n                \"max\": \"max(loValue_d)\", \n                \"min\": \"min(loValue_d)\", \n                \"unit\": {\n                  \"facet\": {\n                    \"avg\": \"avg(loValue_d)\", \n                    \"max\": \"max(loValue_d)\", \n                    \"min\": \"min(loValue_d)\"\n                  }, \n                  \"field\": \"unit_s\", \n                  \"limit\": -1, \n                  \"mincount\": 1, \n                  \"type\": \"terms\"\n                }\n              }, \n              \"field\": \"effectendpoint_s\", \n              \"limit\": -1, \n              \"mincount\": 1, \n              \"type\": \"terms\"\n            }, \n            \"max\": \"max(loValue_d)\", \n            \"min\": \"min(loValue_d)\"\n          }, \n          \"field\": \"endpointcategory_s\", \n          \"limit\": -1, \n          \"mincount\": 1, \n          \"type\": \"terms\"\n        }, \n        \"max\": \"max(loValue_d)\", \n        \"min\": \"min(loValue_d)\"\n      }, \n      \"field\": \"topcategory_s\", \n      \"limit\": -1, \n      \"mincount\": 1, \n      \"type\": \"terms\"\n    }\n  }, \n  \"filter\": [\n    \"{!parent which=type_s:substance}{{f_field}}:{{f_value}}\"\n  ], \n  \"params\": {\n    \"fl\": [\n      \"[child parentFilter=type_s:substance childFilter=type_s:composition limit=100]\", \n      \"dbtag_hss\", \n      \"name:name_hs\", \n      \"publicname:publicname_hs\", \n      \"owner_name:owner_name_hs\", \n      \"substanceType:substanceType_hs\", \n      \"s_uuid:s_uuid_hs\", \n      \"content:content_hss\", \n      \"SUMMARY.*\"\n    ], \n    \"rows\": 20\n  }\n}\n"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Autocomplete list",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"tests[\"Total found\"] = jsonData.response.numFound == globals.f_substances;",
+							"tests[\"Returned list count\"] = jsonData.response.docs.length === 20;",
+							"tests[\"Facets count\"] = jsonData.facets.count == globals.f_substances;",
+							"",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}autophrase?q={{p_substance}}&wt=json",
+					"host": [
+						"{{server}}autophrase"
+					],
+					"query": [
+						{
+							"key": "q",
+							"value": "{{p_substance}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"facet\": {\n    \"cell\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"cell_tag\"\n      }, \n      \"field\": \"Cell line_s\", \n      \"limit\": -1, \n      \"mincount\": 1, \n      \"type\": \"terms\"\n    }, \n    \"interpretation\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"interpretation_tag\"\n      }, \n      \"field\": \"interpretation_result_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"owner_name\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"owner_name_tag\"\n      }, \n      \"field\": \"owner_name_s\", \n      \"limit\": -1, \n      \"mincount\": 450, \n      \"type\": \"terms\"\n    }, \n    \"protocol\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"protocol_tag\"\n      }, \n      \"field\": \"guidance_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"reference\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"reference_tag\"\n      }, \n      \"field\": \"reference_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"reference_year\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"reference_year_tag\"\n      }, \n      \"field\": \"reference_year_s\", \n      \"limit\": -1, \n      \"mincount\": 1, \n      \"type\": \"terms\"\n    }, \n    \"species\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"species_tag\"\n      }, \n      \"field\": \"Species_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"substanceType\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\", \n        \"excludeTags\": \"substanceType_tag\"\n      }, \n      \"field\": \"substanceType_s\", \n      \"limit\": -1, \n      \"mincount\": 2, \n      \"type\": \"terms\"\n    }, \n    \"topcategory\": {\n      \"domain\": {\n        \"blockChildren\": \"type_s:substance\"\n      }, \n      \"facet\": {\n        \"avg\": \"avg(loValue_d)\", \n        \"endpointcategory\": {\n          \"facet\": {\n            \"avg\": \"avg(loValue_d)\", \n            \"effectendpoint\": {\n              \"facet\": {\n                \"avg\": \"avg(loValue_d)\", \n                \"max\": \"max(loValue_d)\", \n                \"min\": \"min(loValue_d)\", \n                \"unit\": {\n                  \"facet\": {\n                    \"avg\": \"avg(loValue_d)\", \n                    \"max\": \"max(loValue_d)\", \n                    \"min\": \"min(loValue_d)\"\n                  }, \n                  \"field\": \"unit_s\", \n                  \"limit\": -1, \n                  \"mincount\": 1, \n                  \"type\": \"terms\"\n                }\n              }, \n              \"field\": \"effectendpoint_s\", \n              \"limit\": -1, \n              \"mincount\": 1, \n              \"type\": \"terms\"\n            }, \n            \"max\": \"max(loValue_d)\", \n            \"min\": \"min(loValue_d)\"\n          }, \n          \"field\": \"endpointcategory_s\", \n          \"limit\": -1, \n          \"mincount\": 1, \n          \"type\": \"terms\"\n        }, \n        \"max\": \"max(loValue_d)\", \n        \"min\": \"min(loValue_d)\"\n      }, \n      \"field\": \"topcategory_s\", \n      \"limit\": -1, \n      \"mincount\": 1, \n      \"type\": \"terms\"\n    }\n  }, \n  \"filter\": [\n    \"{!parent which=type_s:substance}{{f_field}}:{{f_value}}\"\n  ], \n  \"params\": {\n    \"fl\": [\n      \"[child parentFilter=type_s:substance childFilter=type_s:composition limit=100]\", \n      \"dbtag_hss\", \n      \"name:name_hs\", \n      \"publicname:publicname_hs\", \n      \"owner_name:owner_name_hs\", \n      \"substanceType:substanceType_hs\", \n      \"s_uuid:s_uuid_hs\", \n      \"content:content_hss\", \n      \"SUMMARY.*\"\n    ], \n    \"rows\": 20\n  }\n}\n"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Materials & Study Export",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"tests[\"Substances count\"] = jsonData.response.numFound == globals.f_substances;",
+							"",
+							"tests[\"Required study conformance\"] = (function (docs) {",
+							"    var allGood = true;",
+							"        ",
+							"    for (var i = 0, dl = docs.length; i < dl && allGood; ++i) {",
+							"        var d = docs[i];",
+							"        for (var j = 0, chl = d['_childDocuments_'].length; j < chl && allGood; ++j) {",
+							"            var ch = d['_childDocuments_'][j];",
+							"            if (ch['type_s'] == \"study\" && ch[globals.f_field] != globals.f_value) {",
+							"                allGood = false;",
+							"                console.log(\"Wrong study: \" + ch.id);",
+							"            }",
+							"        }",
+							"    }",
+							"    ",
+							"    return allGood;",
+							"})(jsonData.response.docs);",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}select?rows=1000&fl=substance_uuid:s_uuid_hs,name:name_hs,publicname:publicname_hs,supplier:owner_name_hs,substanceType:substanceType_hs&fl=[child parentFilter=type_s:substance childFilter=\"{{f_field}}:{{f_value}} OR type_s:composition\" limit=100]&fq={{p_substance}}{{f_field}}:{{f_value}}&wt=json&q={{p_substance}}&echoParams=none",
+					"host": [
+						"{{server}}select"
+					],
+					"query": [
+						{
+							"key": "rows",
+							"value": "1000",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "substance_uuid:s_uuid_hs,name:name_hs,publicname:publicname_hs,supplier:owner_name_hs,substanceType:substanceType_hs",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "[child parentFilter=type_s:substance childFilter=\"{{f_field}}:{{f_value}} OR type_s:composition\" limit=100]",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fq",
+							"value": "{{p_substance}}{{f_field}}:{{f_value}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "q",
+							"value": "{{p_substance}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "echoParams",
+							"value": "none",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Materials & Study Export w/ deeper field",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody),",
+							"    dField = environment.deep_field.replace(\"\\\\ \", \" \");",
+							"",
+							"tests[\"Required study conformance\"] = (function (docs) {",
+							"    var allGood = true;",
+							"        ",
+							"    for (var i = 0, dl = docs.length; i < dl && allGood; ++i) {",
+							"        var d = docs[i];",
+							"        for (var j = 0, chl = d['_childDocuments_'].length; j < chl && allGood; ++j) {",
+							"            var ch = d['_childDocuments_'][j];",
+							"            if (!!ch[dField] && ch[dField] != environment.deep_value) {",
+							"                allGood = false;",
+							"                console.log(\"Wrong study: \" + ch.id);",
+							"            }",
+							"        }",
+							"    }",
+							"    ",
+							"    return allGood;",
+							"})(jsonData.response.docs);",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}select?rows=1000&fl=substance_uuid:s_uuid_hs,name:name_hs,publicname:publicname_hs,supplier:owner_name_hs,substanceType:substanceType_hs&fl=[child parentFilter=type_s:substance childFilter=\"{{p_study}}{{deep_field}}:{{deep_value}} OR type_s:composition\" limit=100]&fq={{p_substance}}{{deep_field}}:{{deep_value}}&wt=json&q={{p_substance}}&echoParams=none",
+					"host": [
+						"{{server}}select"
+					],
+					"query": [
+						{
+							"key": "rows",
+							"value": "1000",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "substance_uuid:s_uuid_hs,name:name_hs,publicname:publicname_hs,supplier:owner_name_hs,substanceType:substanceType_hs",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "[child parentFilter=type_s:substance childFilter=\"{{p_study}}{{deep_field}}:{{deep_value}} OR type_s:composition\" limit=100]",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fq",
+							"value": "{{p_substance}}{{deep_field}}:{{deep_value}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "q",
+							"value": "{{p_substance}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "echoParams",
+							"value": "none",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Materials Composition Export",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"tests[\"Substances count\"] = jsonData.response.numFound == globals.f_substances;",
+							"",
+							"tests[\"Composition conformance\"] = (function (docs) {",
+							"    var allGood = true;",
+							"        ",
+							"    for (var i = 0, dl = docs.length; i < dl && allGood; ++i) {",
+							"        var d = docs[i],",
+							"            did = d['substance_uuid'];",
+							"        for (var j = 0, chl = d['_childDocuments_'].length; j < chl && allGood; ++j) {",
+							"            var ch = d['_childDocuments_'][j];",
+							"            if (ch['s_uuid_hs'] != did)",
+							"                allGood = false;",
+							"        }",
+							"    }",
+							"    ",
+							"    return allGood;",
+							"})(jsonData.response.docs);",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}select?rows=1000&fl=substance_uuid:s_uuid_hs&fl=[child parentFilter=type_s:substance childFilter=type_s:composition limit=100]&fq={{p_substance}}endpointcategory_s:TO_GENETIC_IN_VITRO_SECTION&wt=json&q={{p_substance}}&echoParams=none",
+					"host": [
+						"{{server}}select"
+					],
+					"query": [
+						{
+							"key": "rows",
+							"value": "1000",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "substance_uuid:s_uuid_hs",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "[child parentFilter=type_s:substance childFilter=type_s:composition limit=100]",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fq",
+							"value": "{{p_substance}}endpointcategory_s:TO_GENETIC_IN_VITRO_SECTION",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "q",
+							"value": "{{p_substance}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "echoParams",
+							"value": "none",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Study Results Export",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody),",
+							"    docs = jsonData.response.docs,",
+							"    studyOk = true,",
+							"    paramsOk = true;",
+							"    ",
+							"for (var i = 0, dl = docs.length; i < dl && studyOk && paramsOk; ++i) {",
+							"    var d = docs[i],",
+							"        did = d['document_uuid_s'];",
+							"    if (d[globals.f_field] != globals.f_value) {",
+							"        console.log(\"Err on study: \" + did);",
+							"        studyOk = false;",
+							"        continue;",
+							"    }",
+							"    ",
+							"    for (var j = 0, chl = d['_childDocuments_'].length; j < chl; ++j) {",
+							"        var ch = d['_childDocuments_'][j];",
+							"        if (ch['document_uuid_s'] != did) {",
+							"            console.log(\"Err on conformity: \" + did);",
+							"            paramsOk = false;",
+							"            break;",
+							"        }",
+							"    }",
+							"}",
+							"",
+							"tests[\"Studies count\"] = jsonData.response.numFound == globals.f_studies;",
+							"tests[\"Required study\"] = studyOk;",
+							"tests[\"Params & Conditions conformity\"] = paramsOk;",
+							"",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}select?rows=1000&fl=*,[child parentFilter=type_s:study limit=10000]&fq={{f_field}}:{{f_value}}&wt=json&q={{p_study}}&echoParams=none&group.field=s_uuid_s&facets=false",
+					"host": [
+						"{{server}}select"
+					],
+					"query": [
+						{
+							"key": "rows",
+							"value": "1000",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "*,[child parentFilter=type_s:study limit=10000]",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fq",
+							"value": "{{f_field}}:{{f_value}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "q",
+							"value": "{{p_study}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "echoParams",
+							"value": "none",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "group.field",
+							"value": "s_uuid_s",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "facets",
+							"value": "false",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Study Results Export w/ deeper field",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody),",
+							"    dField = environment.deep_field.replace(\"\\\\ \", \" \");",
+							"    docs = jsonData.response.docs,",
+							"    studyOk = true,",
+							"    paramsOk = true;",
+							"    ",
+							"for (var i = 0, dl = docs.length; i < dl && studyOk && paramsOk; ++i) {",
+							"    var d = docs[i],",
+							"        did = d['document_uuid_s'];",
+							"    ",
+							"    studyOk = false;",
+							"    for (var j = 0, chl = d['_childDocuments_'].length; j < chl; ++j) {",
+							"        var ch = d['_childDocuments_'][j];",
+							"        if (ch['document_uuid_s'] != did) {",
+							"            console.log(\"Err on conformity: \" + did);",
+							"            paramsOk = false;",
+							"            break;",
+							"        }",
+							"        ",
+							"        if (ch[dField] != environment.deep_value) {",
+							"            studyOk = true;",
+							"        }",
+							"    }",
+							"}",
+							"",
+							"tests[\"Contains searched child\"] = studyOk;",
+							"tests[\"Params & Conditions conformity\"] = paramsOk;",
+							"",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{server}}select?fq={{p_study}}{{deep_field}}:{{deep_value}}&q={{p_study}}&facet=false&group.field=s_uuid_s&fl=*,[child parentFilter=type_s:study limit=10000]&rows=999999&wt=json&echoParams=none",
+					"host": [
+						"{{server}}select"
+					],
+					"query": [
+						{
+							"key": "fq",
+							"value": "{{p_study}}{{deep_field}}:{{deep_value}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "q",
+							"value": "{{p_study}}",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "facet",
+							"value": "false",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "group.field",
+							"value": "s_uuid_s",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "fl",
+							"value": "*,[child parentFilter=type_s:study limit=10000]",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "rows",
+							"value": "999999",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "wt",
+							"value": "json",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "echoParams",
+							"value": "none",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "Basic bmFub3JlZzE6UGwtTFBuX25JTXcwMUM3TQ==",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}

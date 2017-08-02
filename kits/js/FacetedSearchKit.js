@@ -360,32 +360,30 @@ jT.FacetedSearch.prototype = {
 		Manager.doRequest();
   },
   
+  updateButton: function (form) {
+		b = $("button", form);
+		
+		if (!$(form).find('input[name=export_dataset]').val()){
+			b.button("option", "label", "No target dataset selected...");
+		}else if( !this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
+			b.button("disable").button("option", "label", "No filters selected...");
+		}else if ( $(form).find('input[name=export_dataset]').val()  ){
+			b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(form.export_format).data('name').toUpperCase());
+		} 
+
+		return b;
+	},
+  
 	initExport: function () {
 		// Prepare the export tab
 		var self = this;
 		
-		// Arggghhhh....
-    updateButton = function (e) {
-			var form = this.form,
-			b = $("button", this.form);
-			
-			if (!$(form).find('input[name=export_dataset]').val()){
-				b.button("option", "label", "No target dataset selected...");
-			}else if( !self.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered" ){
-				b.button("disable").button("option", "label", "No filters selected...");
-			}else if ( $(form).find('input[name=export_dataset]').val()  ){
-				b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(this.form.export_format).data('name').toUpperCase());
-			} 
-
-			return b;
-		};
-
-		this.getFormats();
-		this.getTypes();
+		this.prepareFormats();
+		this.prepareTypes();
   
 		$("#export_dataset").buttonset();
 		$("#export_type").buttonset();
-		$("#export_dataset input").on("change", updateButton);
+		$("#export_dataset input").on("change", function(e) { self.updateButton(this.form); });
 		$("#export_tab button").button({ disabled: true });
   
 		$("#export_tab form").on("submit", function (e) {
@@ -394,10 +392,11 @@ jT.FacetedSearch.prototype = {
     			mime = mime.substr(mime.indexOf("/") + 1),
     			exFormat = self.exportFormats[$('.data_formats .selected').data('index')],
     			exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
-    			server = exFormat.server,
+    			server = exType.server || exFormat.server,
     			fq = self.manager.getParameter("json.filter"),
     			params = [],
     			inners = [],
+    			selectedIds = null,
     			makeParameter = function (par, name) {
     				var np = { value: par.value, name: name || par.name };
             
@@ -413,49 +412,63 @@ jT.FacetedSearch.prototype = {
             }
             
             return np;
+    			},
+    			prepareFilters = function () {
+      			for (var i = 0, vl = fq.length; i < vl; i++) {
+      				var par = fq[i];
+      				    
+              params.push(Solr.stringifyParameter(makeParameter(par, 'fq')));
+              inners.push(Solr.stringifyValue(par).replace("\\", "\\\\"));
+            }
+      
+        		params.push(Solr.stringifyParameter(makeParameter(self.manager.getParameter('q'))) || '*:*');
     			};
 
-      // Prepare the parameters list, as well as
-			for (var i = 0, vl = fq.length; i < vl; i++) {
-				var par = fq[i];
-				    
-        params.push(Solr.stringifyParameter(makeParameter(par, 'fq')));
-        inners.push(Solr.stringifyValue(par));
-      }
-
-  		params.push(Solr.stringifyParameter(makeParameter(self.manager.getParameter('q'))) || '*:*');
-
 			if (form.export_dataset.value != "filtered") {
-				var fqset = [];
+				selectedIds = [];
 
-				self.basket.enumerateItems(function (d) { fqset.push(d.s_uuid); });
-				params.push('fq=' + encodeURIComponent('s_uuid_hs:(' + fqset.join(" ") + ')'));
+				self.basket.enumerateItems(function (d) { selectedIds.push(d.s_uuid); });
 			}
 			
 			// Now we have all the filtering parameters in the `params`.
-			if( server == 'ambitUrl' || $(form).attr('data-ambit') !== undefined ) {
-  			params.push('wt=json');
-    		$.ajax({
-      		url: this.solrUrl + "select?fl=s_uuid_hs&wt=json&" + params.join('&'), 
-      		async: true,
-      		dataType: "json",
-      		success: function( data ) {
-            var ids = [];
-      			$.each(data.response.docs, function(index,value) {
-      				ids.push(value.s_uuid_hs);
-      			});
-      			
-      			form.search.value = ids.join(" ");
-      			form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
-      		}
-        });
+			if( server == 'ambitUrl' ) {
+  			// If we already have the selected Ids - we don't even need to bother calling Solr.
+  			if (!!selectedIds) {
+    			form.search.value = selectedIds.join(" ");
+    			form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
+    		} else {
+      		prepareFilters();
+    			params.push('wt=json', 'fl=s_uuid_hs');
+      		$.ajax({
+        		url: self.solrUrl + 'select?' + params.join('&'), 
+        		async: false,
+        		dataType: "json",
+        		success: function( data ) {
+              var ids = [];
+        			$.each(data.response.docs, function(index,value) {
+        				ids.push(value.s_uuid_hs);
+        			});
+        			
+        			form.search.value = ids.join(" ");
+        			form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
+        		}
+          });
+  			}
 			} else {
+  			// We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
+  			prepareFilters();
+  			if (!!selectedIds)
+  			  params.push('fq=' + encodeURIComponent((exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs') + ":(" + selectedIds.join(" ") + ")"));
+  			
   			// Fill the rest of the Solr parameters for the real Solr call.
         Array.prototype.push.apply(params, self.exportSolrDefaults);
         if (!!exType.extraParams)
           Array.prototype.push.apply(params, exType.extraParams);
 
-        params.push('fl=' + encodeURIComponent(exType.fields.replace("{{filter}}", inners.length > 0 ? inners.join(',') : exType.defaultFilter)));
+        params.push('fl=' + encodeURIComponent(exType.fields.replace(
+          "{{filter}}", 
+          inners.length > 1 ? '(' + inners.join(' AND ') + ')' : inners.length > 0 ? inners[0] : exType.defaultFilter
+        )));
         params.push('rows=' + self.exportMaxRows);
   			
   			if (mime == "tsv")
@@ -509,38 +522,39 @@ jT.FacetedSearch.prototype = {
 		});
   },
   
-	getFormats: function(){
+	prepareFormats: function(){
 		var exportEl = $("#export_tab div.data_formats");
+		    self = this;
+		    
 		for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
 			var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
 			el.data("index", i);
 			exportEl.append(el);
+			
 			$("a", exportEl[0]).on("click", function (e) {
-				if( $(this).hasClass('disabled')) return false;
-				var me = $(this);
-				if (!me.hasClass("selected")) {
-					var form = me.closest("form")[0],
-    					cont = me.closest("div.data_formats");
-
-					form.export_format.value = me.data("mime") ;
-
-					//save readable format name
-					$(form.export_format).data('name', me.data("name"));
-
-					updateButton.call(form.export_format, e);
-
-					$("div", cont[0]).removeClass("selected");
-					cont.addClass("selected");
-					me.closest(".jtox-fadable").addClass("selected");
-
-					$("#export_type").buttonset("refresh");
+				var me = $(this),
+				    form = me.closest("form")[0];
+				    
+				if (!me.hasClass('disabled') && !me.hasClass("selected")) {
+  				var cont = me.closest("div.data_formats");
+  
+  				form.export_format.value = me.data("mime") ;
+  
+  				//save readable format name
+  				$(form.export_format).data('name', me.data("name"));
+  
+  				self.updateButton(form);
+  
+  				$("div", cont[0]).removeClass("selected");
+  				cont.addClass("selected");
+  				me.closest(".jtox-fadable").addClass("selected");
 				}
-			return false;
+				return false;
 			});
 		}
 	},
 
-	getTypes: function(){
+	prepareTypes: function(){
 		var exportEl = $("#export_tab div#export_type"),
 			  self = this;
 			  
@@ -549,25 +563,21 @@ jT.FacetedSearch.prototype = {
 			var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
 			el.data("index", i);
 			exportEl.append(el);
+			
 			$("input[name=export_type]").on("change", function (e) {
-				var me = $(this),
-				formats = self.exportTypes[me.data("index")].formats;
-				$('.data_formats a').removeClass('disabled');
-				if( formats.indexOf('rdf') > -1 ){
-					$(this.form).attr('data-ambit', true);
-				}else{
-					$(this.form).removeAttr( "data-ambit" )
-				}
-				self.exportFormats.forEach(function (item) {
-					if( formats.indexOf(item.name) == -1 ){
-						$('.data_formats a[data-name=' + item.name + ']').addClass('disabled')
-					}
+				var me = $(this);
+				$('.data_formats a').addClass('disabled');
+
+				self.exportTypes[me.data("index")].formats.split(",").forEach(function (item) {
+					$('.data_formats a[data-name=' + item + ']').removeClass('disabled')
 				});
+				
 	    	$('.data_formats a:visible').not('.disabled').first().trigger('click');
 				return false;
 			});
 		}
 	}
+	
 };
 	
 })(Solr, asSys, jQuery, jToxKit);

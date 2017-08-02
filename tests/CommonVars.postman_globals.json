@@ -1,0 +1,57 @@
+{
+  "id": "1abf6c83-b634-e359-c0f0-9584fca920e6",
+  "name": "Postman Globals",
+  "values": [
+    {
+      "key": "q_all",
+      "value": "*:*",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "p_substance",
+      "value": "{!parent which=type_s:substance}",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "p_study",
+      "value": "{!parent which=type_s:study}",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "c_study",
+      "value": "{!child of=type_s:substance}",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "f_field",
+      "value": "endpointcategory_s",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "f_value",
+      "value": "TO_GENETIC_IN_VITRO_SECTION",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "f_substances",
+      "value": "31",
+      "enabled": true,
+      "type": "text"
+    },
+    {
+      "key": "f_studies",
+      "value": "4475",
+      "enabled": true,
+      "type": "text"
+    }
+  ],
+  "_postman_variable_scope": "globals",
+  "_postman_exported_at": "2017-08-02T08:11:22.556Z",
+  "_postman_exported_using": "Postman/5.1.2"
+}
