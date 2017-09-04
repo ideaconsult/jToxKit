@@ -418,7 +418,7 @@ jT.FacetedSearch.prototype = {
       				var par = fq[i];
       				    
               params.push(Solr.stringifyParameter(makeParameter(par, 'fq')));
-              inners.push(Solr.stringifyValue(par).replace("\\", "\\\\"));
+              inners.push(Solr.stringifyValue(par).replace(/"|\\/g, "\\$&"));
             }
       
         		params.push(Solr.stringifyParameter(makeParameter(self.manager.getParameter('q'))) || '*:*');
