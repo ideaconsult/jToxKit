@@ -151,9 +151,9 @@ var mainLookupMap = {},
 		);
 
 	  if (typeof tag.onMain === 'function')
-		el$.click(tag.onMain);
+		  el$.click(tag.onMain);
 	  if (tag.color)
-		el$.addClass(tag.color);
+		  el$.addClass(tag.color);
 		
 	  return el$;
 	},
@@ -1214,12 +1214,11 @@ jT.ItemListWidget.prototype = {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
         baseUrl = this.getBaseUrl(doc),
-        logoURL = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png";
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
        var item = { 
-          logo: logoURL,
+          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
           link: "#",
           href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
@@ -1245,7 +1244,7 @@ jT.ItemListWidget.prototype = {
     
     // Check if external references are provided and prepare and show them.
     if (doc.content == null) {
-      item.link = this.baseUrl + doc.s_uuid;
+      item.link = baseUrl + doc.s_uuid;
       item.href = item.link + "/study";
       item.href_title = "Study";
       item.href_target = doc.s_uuid;
@@ -1275,16 +1274,13 @@ jT.ItemListWidget.prototype = {
     
     return jT.ui.fillTemplate("#result-item", item);
   },
+  
   getBaseUrl: function(doc){
     if(this.tagDbs[doc.dbtag_hss] !== undefined){
       var url = this.tagDbs[doc.dbtag_hss].server,
-        lastChar = url.substr(-1);
-    if (lastChar != '/') {         
-        return url+"/substance/";
-      }else{
-        return url+"substance/";
-      }
-    }else{
+          lastChar = url.substr(-1);
+      return url + (lastChar != "/" ? "/substance/" : "substance/")
+    } else {
       return this.baseUrl;
     }
   },

@@ -54,9 +54,9 @@ var mainLookupMap = {},
 		);
 
 	  if (typeof tag.onMain === 'function')
-		el$.click(tag.onMain);
+		  el$.click(tag.onMain);
 	  if (tag.color)
-		el$.addClass(tag.color);
+		  el$.addClass(tag.color);
 		
 	  return el$;
 	},
