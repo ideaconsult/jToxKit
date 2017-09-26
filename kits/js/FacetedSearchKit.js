@@ -1,3 +1,10 @@
+/** jToxKit - chem-informatics multi-tool-kit.
+  * The combined, begamoth kit providing full faceted search capabilites.
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+  */
+
 (function(Solr, a$, $, jT) {
 
 var mainLookupMap = {},
@@ -72,7 +79,7 @@ var mainLookupMap = {},
 		};
 	
 
-jT.FacetedSearch = function (settings) {
+jT.ui.FacetedSearch = function (settings) {
   this.id = null;
   a$.extend(true, this, defaultSettings, settings);
   
@@ -91,7 +98,7 @@ jT.FacetedSearch = function (settings) {
   this.initExport();
 };  
 
-jT.FacetedSearch.prototype = {
+jT.ui.FacetedSearch.prototype = {
   initDom: function () {
   	// Now instantiate and things around it.
   	this.accordion = $("#accordion");
@@ -226,7 +233,7 @@ jT.FacetedSearch.prototype = {
         TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
   
   	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
-  
+    
   	Manager.addListeners(new jT.ResultWidget($.extend(true, {
 			id : 'result',
 			target : $('#docs'),

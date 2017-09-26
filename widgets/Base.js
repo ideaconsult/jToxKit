@@ -16,6 +16,10 @@
   		return $(jT.ui.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\""));
   	},
   	
+  	fillTree: function (root, info) {
+    	$('.data-field', root).each(function () { var me$ = $(this); me$.html(a$.path(info, me$.data('field'))); });
+  	},
+  	
     updateCounter: function (str, count, total) {
       var re = null;
       var add = '';
