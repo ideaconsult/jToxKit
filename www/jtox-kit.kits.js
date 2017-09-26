@@ -378,6 +378,8 @@ jT.ui.FacetedSearch.prototype = {
 					target : this.accordion,
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
+					switchField: "aggregate",
+					switchOnHeader: true,
 					multivalue: this.multipleSelection,
 					aggregate: this.aggregateFacets,
 					exclusion: this.multipleSelection || this.keepAllFacets,
