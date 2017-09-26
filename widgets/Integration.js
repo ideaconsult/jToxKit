@@ -46,7 +46,7 @@ jT.ui = a$.extend(jT.ui, {
     	var fn = window[kit];
     	if (typeof fn !== 'function') {
   	  	kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-  	  	fn = jT[kit];
+  	  	fn = jT.ui[kit] || jT[kit];
   	  }
 
     	var obj = null;

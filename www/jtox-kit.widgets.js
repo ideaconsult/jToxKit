@@ -16,6 +16,15 @@
   		return $(jT.ui.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\""));
   	},
   	
+  	fillTree: function (root, info) {
+    	$('.data-field', root).each(function () { 
+      	var me$ = $(this),
+      	    val = a$.path(info, me$.data('field'));
+        if (val !== undefined)
+      	  me$.html(val); 
+      });
+  	},
+  	
     updateCounter: function (str, count, total) {
       var re = null;
       var add = '';
@@ -133,7 +142,7 @@ jT.ui = a$.extend(jT.ui, {
     	var fn = window[kit];
     	if (typeof fn !== 'function') {
   	  	kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-  	  	fn = jT[kit];
+  	  	fn = jT.ui[kit] || jT[kit];
   	  }
 
     	var obj = null;

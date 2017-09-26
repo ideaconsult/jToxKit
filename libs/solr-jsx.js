@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.15.1" };
+  Solr = { version: "0.15.3" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -46,15 +46,8 @@ Solr.Management.prototype = {
   solrUrl: "",          // The bas Solr Url to be used, excluding the servlet.
   servlet: "select",    // Default servlet to be used is "select".
   
-  onError: function (message) { 
-    window.console && console.log && console.log(message); 
-    if( message.status == 401 ){
-      $("<div>HTTP Error"+message.statusCode+" - Unauthorized: Access is denied due to invalid credentials.</div>").dialog();
-    }else{
-      $("<div>HTTP Error: Unable to recieve content</div>").dialog();
-    }
-  },
-  onPrepare: function (ajaxSettings) { },
+  onPrepare: null,
+  onError: null,
   onSuccess: null,
   ajaxSettings: {        // Default settings for the ajax call to the `connector`
     async: true,
@@ -87,27 +80,30 @@ Solr.Management.prototype = {
       servlet = self.servlet;
     }
 
+    // Let the Querying skill build the settings.url / data
+    settings = a$.extend(settings, self.ajaxSettings, self.prepareQuery());
+    settings.url = self.solrUrl + (servlet || self.servlet) + (settings.url || "");
+
     // We don't make these calls on private requests    
     if (typeof callback !== "function") {
       // Now go to inform the listeners that a request is going to happen and
       // give them a change to cancel it.
       a$.each(self.listeners, function (l) {
-        if (a$.act(l, l.beforeRequest, self) === false)
+        if (a$.act(l, l.beforeRequest, self, settings) === false)
           cancel = l;
       })
   
       if (cancel !== null) {
-        a$.act(cancel, self.onError, "Request cancelled", cancel);
+        a$.act(cancel, self.onError, null, "Request cancelled", cancel);
         return; 
       }
     }
-    
-    // Now let the Querying skill build the settings.url / data
-    settings = a$.extend(settings, self.ajaxSettings, self.prepareQuery());
-    settings.url = self.solrUrl + (servlet || self.servlet) + (settings.url || "");
-    
+        
     // Prepare the handlers for both error and success.
-    settings.error = self.onError;
+    settings.error = function (jqXHR, status, message) {
+      a$.each(self.listeners, function (l) { a$.act(l, l.afterFailure, settings, status, message); });
+      a$.act(self, self.onError, jqXHR, status, message);
+    };
     settings.success = function (data) {
       self.response = self.parseQuery(data);
 
@@ -121,7 +117,7 @@ Solr.Management.prototype = {
         a$.act(self, self.parseResponse, self.response, servlet);  
       
         // Time to call the passed on success handler.
-        a$.act(self, self.onSuccess);
+        a$.act(self, self.onSuccess, self.response);
       }
     };
     
@@ -240,6 +236,10 @@ Solr.escapeValue = function (value) {
     return '"' + value.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
   }
   return value;
+};
+
+Solr.escapeField = function (field) {
+  return field.replace(/\s/g, "\\$&");  
 };
 
 /**
@@ -494,37 +494,40 @@ Solr.stringifyDomain = function (param) {
   return prefix.length > 0 ? "{!" + prefix.join(" ") + "}" : "";
 };
 
-Solr.QueryingURL = function (settings) {
-};
-
-var paramValue = function (value) {
+Solr.stringifyValue = function (param) {
+  var value = param.value || "";
+    
   if (Array.isArray(value))
     return value.join(",");
   else if (typeof value !== 'object')
     return value.toString(); 
   else {
     var str = [];
-    a$.each(value, function (v, k) { str.push(k + ":" + Solr.escapeValue(v)); });
+    a$.each(value, function (v, k) { str.push(Solr.escapeField(k) + ":" + Solr.escapeValue(v)); });
     return str.join(" ");
   }
-}
+};
 
-Solr.QueryingURL.prototype = {
-  __expects: [ "enumerateParameters" ],
-  prepareParameter: function (param) {
+Solr.stringifyParameter = function (param) { 
     var prefix = Solr.stringifyDomain(param);
     
     // For dismax request handlers, if the q parameter has local params, the
     // q parameter must be set to a non-empty value.
-    return param.value || prefix ? param.name + "=" + encodeURIComponent(prefix + paramValue(param.value || "")) : null;
-  },
+    return param.value || prefix ? param.name + "=" + encodeURIComponent(prefix + Solr.stringifyValue(param)) : null;
+}
+
+Solr.QueryingURL = function (settings) {
+};
+
+Solr.QueryingURL.prototype = {
+  __expects: [ "enumerateParameters" ],
   
   prepareQuery: function () {
     var query = [],
         self = this;
         
     this.enumerateParameters(function (param) {
-      var p = self.prepareParameter(param);
+      var p = Solr.stringifyParameter(param);
       if (p != null)
         query.push(p);
     });
@@ -568,7 +571,7 @@ Solr.QueryingJson.prototype = {
         json = { 'params': {} },
         paramValue = function (param) {
           if (paramIsUrlOnly(param.name)) {
-            url.push(Solr.QueryingURL.prototype.prepareParameter(param));
+            url.push(Solr.stringifyParameter(param));
             return;
           }
           
@@ -1131,7 +1134,7 @@ Solr.Faceting = function (settings) {
     
   this.facet = settings && settings.facet || {};
 
-  this.fqRegExp = new RegExp('^-?' + this.field + ':([^]+)$');
+  this.fqRegExp = new RegExp('^-?' + Solr.escapeField(this.field).replace("\\", "\\\\") + ':([^]+)$');
 };
 
 Solr.Faceting.prototype = {
@@ -1154,7 +1157,7 @@ Solr.Faceting.prototype = {
     var exTag = null;
 
     if (!!this.nesting)
-      this.facet.domain = a$.extend(this.facet.domain, { blockChildren: this.nesting } );
+      this.facet.domain = a$.extend({ blockChildren: this.nesting }, this.facet.domain);
 
     if (this.exclusion) {
       this.domain = a$.extend(this.domain, { tag: this.id + "_tag" });
@@ -1220,7 +1223,7 @@ Solr.Faceting.prototype = {
       
       fpars = a$.common(this.facet, fpars);
       a$.each(fpars, function (p, k) { 
-        self.manager.addParameter('f.' + self.field + '.facet.' + k, p); 
+        self.manager.addParameter('f.' + Solr.escapeField(self.field) + '.facet.' + k, p); 
       });
       
     }
@@ -1445,7 +1448,7 @@ Solr.Faceting.prototype = {
    * @returns {String} An fq parameter value.
    */
   fqValue: function (value, exclude) {
-    return (exclude ? '-' : '') + this.field + ':' + Solr.facetValue(value);
+    return (exclude ? '-' : '') + Solr.escapeField(this.field) + ':' + Solr.facetValue(value);
   },
 
    /**
@@ -1490,7 +1493,7 @@ Solr.Ranging = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.manager = null;
   
-  this.fqRegExp = new RegExp("^-?" + this.field + ":\\s*\\[\\s*([^\\s])+\\s+TO\\s+([^\\s])+\\s*\\]");
+  this.fqRegExp = new RegExp("^-?" + Solr.escapeField(this.field).replace("\\", "\\\\") + ":\\s*\\[\\s*([^\\s])+\\s+TO\\s+([^\\s])+\\s*\\]");
   this.fqName = this.useJson ? "json.filter" : "fq";
   if (this.exclusion)
     this.domain = a$.extend(true, this.domain, { tag: this.id + "_tag" });
@@ -1557,7 +1560,7 @@ Solr.Ranging.prototype = {
    * @returns {String} An fq parameter value.
    */
   fqValue: function (value, exclude) {
-    return (exclude ? '-' : '') + this.field + ':' + Solr.rangeValue(value);
+    return (exclude ? '-' : '') + Solr.escapeField(this.field) + ':' + Solr.rangeValue(value);
   },
   
    /**
@@ -1744,6 +1747,8 @@ Solr.Listing = function (settings) {
 
 Solr.Listing.prototype = {
   nestingRules: null,         // If document nesting is present - here are the rules for it.
+  nestingField: null,         // The default nesting field.
+  nestLevel: null,            // Inform which level needs to be nested into the listing.
   listingFields: [ "*" ],     // The fields that need to be present in the result list.
   
   /** Make the initial setup of the manager.
@@ -1751,12 +1756,16 @@ Solr.Listing.prototype = {
   init: function (manager) {
     a$.pass(this, Solr.Listing, 'init', manager);
     
-    a$.each(this.nestingRules, function (r, i) {
+    if (this.nestLevel != null) {
+      var level = this.nestingRules[this.nestLevel],
+          chF = level.field || this.nestingField,
+          parF = this.nestingRules[level.parent] && this.nestingRules[level.parent].field || this.nestingField;
+      
       manager.addParameter('fl', 
-        "[child parentFilter=" + r.field + ":" + r.parent 
-        + " childFilter=" + r.field + ":" + i 
-        + " limit=" + r.limit + "]");
-    });
+        "[child parentFilter=" + parF + ":" + level.parent 
+        + " childFilter=" + chF + ":" + this.nestLevel 
+        + " limit=" + level.limit + "]");
+    }
 
     a$.each(this.listingFields, function (f) { manager.addParameter('fl', f)});    
   }

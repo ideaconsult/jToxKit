@@ -267,6 +267,10 @@ jT.ResultWidgeting.prototype = {
 		$(this.target).html(
 				$('<img>').attr('src', 'images/ajax-loader.gif'));
 	},
+	
+	afterFailure: function(jhr, params) {
+    $(this.target).html("Error retrieving data!");  	
+	},
 
 	afterTranslation : function(data) {
 		$(this.target).empty();
