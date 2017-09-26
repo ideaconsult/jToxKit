@@ -101,5 +101,6 @@ import "AutocompleteWidget";
 import "SimpleItemWidget";
 import "AccordionExpansion";
 import "SliderWidget";
+import "Switching";
 
 })(jToxKit, asSys, jQuery);

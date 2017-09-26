@@ -327,7 +327,7 @@ jT.ui.FacetedSearch.prototype = {
   initComm: function () {
   	var Manager, Basket,
   		  PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-        TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget);
+        TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Switching);
   
   	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
     
@@ -1701,7 +1701,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "</div>" +
 "" +
 "<div id=\"tab-topcategory\">" +
-"<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}</h3>" +
+"<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}<input class=\"switcher\" type=\"checkbox\"/></h3>" +
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
 "<input type=\"text\" placeholder=\"Filter_\" class=\"widget-filter\"/>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
