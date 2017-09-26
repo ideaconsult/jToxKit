@@ -379,6 +379,7 @@ jT.ui.FacetedSearch.prototype = {
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
 					switchField: "aggregate",
+					onSwitching: function (e) { this.clearValues(); this.doRequest(); },
 					switchOnHeader: true,
 					multivalue: this.multipleSelection,
 					aggregate: this.aggregateFacets,
@@ -1703,9 +1704,12 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "</div>" +
 "" +
 "<div id=\"tab-topcategory\">" +
-"<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}<input class=\"switcher\" type=\"checkbox\" style=\"float: right\"/></h3>" +
+"<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}</h3>" +
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
+"<div>" +
 "<input type=\"text\" placeholder=\"Filter_\" class=\"widget-filter\"/>" +
+"<input class=\"switcher\" type=\"checkbox\" style=\"float: right\"/>" +
+"</div>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
 "</div>" +
 "</div>" +

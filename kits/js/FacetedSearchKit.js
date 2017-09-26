@@ -282,6 +282,7 @@ jT.ui.FacetedSearch.prototype = {
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
 					switchField: "aggregate",
+					onSwitching: function (e) { this.clearValues(); this.doRequest(); },
 					switchOnHeader: true,
 					multivalue: this.multipleSelection,
 					aggregate: this.aggregateFacets,

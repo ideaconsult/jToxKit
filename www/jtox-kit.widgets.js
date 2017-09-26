@@ -753,30 +753,29 @@ jT.SliderWidget.prototype = {
 jT.Switching = function (settings) {
   a$.extend(true, this, a$.common(settings, jT.Switching.prototype));
   var self = this,
-      target$ = $(self.switchSelector, $(self.switchOnHeader ? self.header : self.target)[0]),
-      type = self.switchType || target$[0].type,
+      target$ = $(self.switchSelector, $(settings.target)[0]),
       initial = a$.path(self, self.switchField);
-  
+
   // Initialize the switcher according to the field.
-  if (type === 'checkbox')
+  if (typeof initial === 'boolean')
     target$[0].checked = initial;
+  else
+    target$.val(initial);
         
   // Now, install the handler to change the field with the UI element.
   target$.on('change', function (e) {
     var val = $(this).val();
     
-    if (type === 'checkbox')
-      a$.path(self, self.switchField, this.checked);
-      
+    a$.path(self, self.switchField, typeof initial === 'boolean' ? this.checked || val === 'on' : val);
+    a$.act(self, self.onSwitching, e);
     e.stopPropagation();
   });
 };
 
 jT.Switching.prototype = {
-  switchOnHeader: false,        // Whether the switcher is on the header el, not target
-  switchType: null,             // The switch type to be used instead of deduced one.
   switchSelector: ".switcher",  // A CSS selector to find the switching element.
-  switchField: null             // The field to be modified.
+  switchField: null,            // The field to be modified.
+  onSwitching: null             // The function to be invoked, on change.
 };
 
 })(jToxKit, asSys, jQuery);
