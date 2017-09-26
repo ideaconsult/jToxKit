@@ -747,8 +747,8 @@ jT.ui.FacetedSearch.prototype = {
     hasDetails: true,       // whether to have the ability to open each line, to show it's details
     autoHide: true,         // whether to install handlers for showing and hiding of the logger
     
-    // line formatting function - function (service, state, params, jhr) -> { header: "", details: "" }
-    formatEvent: function (service, params, jhr) {
+    // line formatting function - function (params, jhr) -> { header: "", details: "" }
+    formatEvent: function (params, jhr) {
       if (jhr != null)
         // by returning only the details part, we leave the header as it is.
         return {
@@ -756,7 +756,7 @@ jT.ui.FacetedSearch.prototype = {
         };
       else if (params != null)
         return {
-          header: params.method.toUpperCase() + ": " + service,
+          header: params.method.toUpperCase() + ": " + params.service,
           details: "..."
         };
       else
@@ -833,10 +833,11 @@ jT.ui.FacetedSearch.prototype = {
     },
     
     beforeRequest: function (params) {
-      var service = params.servlet,
-          info = this.formatEvent(service, params, null),
+      var url = jT.ui.parseURL(params.url),
+          service = params.service = url.protocol + "://" + url.host + url.path,
+          info = this.formatEvent(params),
           line$ = this.addLine(info);
-
+          
       this.setStatus("connecting");
       this.events[params.logId = Date.now()] = line$;
       this.setIcon(line$, 'connecting');
@@ -844,13 +845,12 @@ jT.ui.FacetedSearch.prototype = {
     },
     
     afterRequest: function (response, params, jhr) {
-      var service = params.servlet,
-          info = this.formatEvent(service, params, jhr),
+      var info = this.formatEvent(params, jhr),
           line$ = this.events[params.logId];
 
       this.setStatus("success");
       if (!line$) {
-        console.log("jToxLog: missing line for:" + service);
+        console.log("jToxLog: missing line for:" + params.service);
         return;
       }
       delete this.events[params.logId];
@@ -859,20 +859,19 @@ jT.ui.FacetedSearch.prototype = {
     },
     
     afterFailure: function (jhr, params) {
-      var service = params.servlet,
-          info = this.formatEvent(service, params, jhr),
+      var info = this.formatEvent(params, jhr),
           line$ = this.events[params.logId];
 
       this.setStatus("error");
       if (!line$) {
-        console.log("jToxLog: missing line for:" + service + "(" + jhr.statusText + ")");
+        console.log("jToxLog: missing line for:" + params.service + "(" + jhr.statusText + ")");
         return;
       }
       delete this.events[params.logId];
       this.setIcon(line$, 'error');
       jT.ui.fillTree(line$[0], info);
 
-      console && console.log("Error [" + params.id + "]: " + service);
+      console && console.log("Error [" + params.service + "]: " + jhr.statusText);
     }
   };
 })(asSys, jQuery, jToxKit);
@@ -1591,6 +1590,10 @@ jT.ResultWidgeting.prototype = {
 	beforeRequest : function() {
 		$(this.target).html(
 				$('<img>').attr('src', 'images/ajax-loader.gif'));
+	},
+	
+	afterFailure: function(jhr, params) {
+    $(this.target).html("Error retrieving data!");  	
 	},
 
 	afterTranslation : function(data) {
