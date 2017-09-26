@@ -17,7 +17,12 @@
   	},
   	
   	fillTree: function (root, info) {
-    	$('.data-field', root).each(function () { var me$ = $(this); me$.html(a$.path(info, me$.data('field'))); });
+    	$('.data-field', root).each(function () { 
+      	var me$ = $(this),
+      	    val = a$.path(info, me$.data('field'));
+        if (val !== undefined)
+      	  me$.html(val); 
+      });
   	},
   	
     updateCounter: function (str, count, total) {

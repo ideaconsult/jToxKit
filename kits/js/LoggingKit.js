@@ -45,9 +45,9 @@
     if (!!this.mountDestination) {
       var dest = typeof this.mountDestination === 'object' ? this.mountDestination : a$.path(window, this.mountDestination),
           self = this;
-      dest.onPrepare = function (params) { }; //return self.beforeRequest(params); };
-      dest.onSuccess = function (response, jqXHR, params) { }; // return self.afterRequest(response, params, jqXHR); };
-      dest.onError = function (jqXHR, params) { }; // return self.afterFailure(jqXHR, params); };
+      dest.onPrepare = function (params) { return self.beforeRequest(params); };
+      dest.onSuccess = function (response, jqXHR, params) { return self.afterRequest(response, params, jqXHR); };
+      dest.onError = function (jqXHR, params) { return self.afterFailure(jqXHR, params); };
     }
   };
   
@@ -62,15 +62,15 @@
     
     // line formatting function - function (service, state, params, jhr) -> { header: "", details: "" }
     formatEvent: function (service, params, jhr) {
-      if (params != null)
-        return {
-          header: params.method.toUpperCase() + ": " + service,
-          details: "..."
-        };
-      else if (jhr != null)
+      if (jhr != null)
         // by returning only the details part, we leave the header as it is.
         return {
           details: jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders()
+        };
+      else if (params != null)
+        return {
+          header: params.method.toUpperCase() + ": " + service,
+          details: "..."
         };
       else
         return null;

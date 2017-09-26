@@ -732,9 +732,9 @@ jT.ui.FacetedSearch.prototype = {
     if (!!this.mountDestination) {
       var dest = typeof this.mountDestination === 'object' ? this.mountDestination : a$.path(window, this.mountDestination),
           self = this;
-      dest.onPrepare = function (params) { }; //return self.beforeRequest(params); };
-      dest.onSuccess = function (response, jqXHR, params) { }; // return self.afterRequest(response, params, jqXHR); };
-      dest.onError = function (jqXHR, params) { }; // return self.afterFailure(jqXHR, params); };
+      dest.onPrepare = function (params) { return self.beforeRequest(params); };
+      dest.onSuccess = function (response, jqXHR, params) { return self.afterRequest(response, params, jqXHR); };
+      dest.onError = function (jqXHR, params) { return self.afterFailure(jqXHR, params); };
     }
   };
   
@@ -749,15 +749,15 @@ jT.ui.FacetedSearch.prototype = {
     
     // line formatting function - function (service, state, params, jhr) -> { header: "", details: "" }
     formatEvent: function (service, params, jhr) {
-      if (params != null)
-        return {
-          header: params.method.toUpperCase() + ": " + service,
-          details: "..."
-        };
-      else if (jhr != null)
+      if (jhr != null)
         // by returning only the details part, we leave the header as it is.
         return {
           details: jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders()
+        };
+      else if (params != null)
+        return {
+          header: params.method.toUpperCase() + ": " + service,
+          details: "..."
         };
       else
         return null;
@@ -1736,8 +1736,8 @@ jT.ui.templates['logger-line']  =
 "<div id=\"jtox-logline\">" +
 "<div class=\"logline\">" +
 "<div class=\"icon\"></div>" +
-"<span class=\"content data-field\" data-field=\"header\"></span>" +
-"<div class=\"details data-field\" data-field=\"details\"></div>" +
+"<span class=\"content data-field\" data-field=\"header\">{{header}}</span>" +
+"<div class=\"details data-field\" data-field=\"details\">{{details}}</div>" +
 "</div>" +
 "</div>" +
 ""; // end of #jtox-logline 
