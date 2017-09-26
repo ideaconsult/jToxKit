@@ -25,7 +25,6 @@ jT.Switching = function (settings) {
       a$.path(self, self.switchField, this.checked);
       
     e.stopPropagation();
-    return false;
   });
 };
 

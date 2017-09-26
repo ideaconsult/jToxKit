@@ -1703,7 +1703,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "</div>" +
 "" +
 "<div id=\"tab-topcategory\">" +
-"<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}<input class=\"switcher\" type=\"checkbox\"/></h3>" +
+"<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}<input class=\"switcher\" type=\"checkbox\" style=\"float: right\"/></h3>" +
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
 "<input type=\"text\" placeholder=\"Filter_\" class=\"widget-filter\"/>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
