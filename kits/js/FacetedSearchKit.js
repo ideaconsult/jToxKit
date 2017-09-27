@@ -47,11 +47,17 @@ var
 		summaryRenderers: {}
 	},
 	
+	uiUpdateTimer = null,
 	uiUpdate = function () {
-    var state = jT.ui.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
-
-		if (!!state)
-			window.history.pushState({ query : window.location.search }, document.title, state);
+  	if (uiUpdateTimer != null)
+  	  clearTimeout(uiUpdateTimer);
+    uiUpdateTimer = setTimeout(function () {
+      var state = jT.ui.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
+  
+  		if (!!state)
+  			window.history.pushState({ query : window.location.search }, document.title, state);
+  		uiUpdateTimer = null;
+    }, 1000);
 	},
 	
 	tagRender = function (tag) {
@@ -113,6 +119,7 @@ var
 jT.ui.FacetedSearch = function (settings) {
   this.id = null;
   a$.extend(true, this, defaultSettings, settings);
+  this.serverUrl = this.solrUrl;
   
   if (typeof this.lookupMap === "string")
 	this.lookupMap = window[this.lookupMap];
@@ -493,7 +500,7 @@ jT.ui.FacetedSearch.prototype = {
       		prepareFilters();
     			params.push('wt=json', 'fl=s_uuid_hs');
       		$.ajax({
-        		url: self.solrUrl + 'select?' + params.join('&'), 
+        		url: self.serverUrl + 'select?' + params.join('&'), 
         		async: false,
         		dataType: "json",
         		success: function( data ) {
