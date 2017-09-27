@@ -7,7 +7,9 @@
 
 (function(Solr, a$, $, jT) {
 
-var mainLookupMap = {},
+var 
+  mainLookupMap = {},
+  uiConfiguration = {},
 	defaultSettings = {
 		servlet: "autophrase",
 		multipleSelection: true,
@@ -45,6 +47,13 @@ var mainLookupMap = {},
 		summaryRenderers: {}
 	},
 	
+	uiUpdate = function () {
+    var state = jT.ui.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
+
+		if (!!state)
+			window.history.pushState({ query : window.location.search }, document.title, state);
+	},
+	
 	tagRender = function (tag) {
 	  var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
 		  
@@ -72,10 +81,16 @@ var mainLookupMap = {},
 		jT.TagWidget.prototype.init.call(this, manager);
 	  manager.getListener("current").registerWidget(this);
   },
+  
   tagsUpdated = function (total) {
 		var hdr = this.getHeaderText();
 	  hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
 	  a$.act(this, this.header.data("refreshPanel"));
+	  
+    var ui = uiConfiguration[this.id] || {};
+    ui.values = this.getValues();
+    uiConfiguration[this.id] = ui;
+    uiUpdate();
   },
 
   toggleAggregate = function (el) {
@@ -88,6 +103,11 @@ var mainLookupMap = {},
     for (var i = 0;i < pars.length; ++i)
       this.addValue(pars[i]);
     this.doRequest();
+    
+    var ui = uiConfiguration[this.id] || {};
+    ui.aggregate = !option;
+    uiConfiguration[this.id] = ui;
+    uiUpdate();
   };
 
 jT.ui.FacetedSearch = function (settings) {
@@ -103,6 +123,10 @@ jT.ui.FacetedSearch = function (settings) {
 	
   $(settings.target).html(jT.ui.templates['faceted-search-kit']);
   delete this.target;
+  
+  var uiConf = jT.ui.parseURL(window.location.href).params['ui'];
+  if (uiConf != null)
+    uiConfiguration = JSON.parse(decodeURIComponent(uiConf));
   
   this.initDom();
   this.initComm();
@@ -288,13 +312,14 @@ jT.ui.FacetedSearch.prototype = {
 		// Now the actual initialization of facet widgets
 		for (var i = 0, fl = this.facets.length; i < fl; ++i) {
 			var f = this.facets[i],
+			  ui = uiConfiguration[f.id],
 				w = new TagWidget($.extend({
 					target : this.accordion,
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
 					runMethod: toggleAggregate,
 					multivalue: this.multipleSelection,
-					aggregate: this.aggregateFacets,
+					aggregate:  ui === undefined || ui.aggregate === undefined ? this.aggregateFacets : ui.aggregate,
 					exclusion: this.multipleSelection || this.keepAllFacets,
 					useJson: true,
 					renderItem: tagRender,
@@ -309,11 +334,11 @@ jT.ui.FacetedSearch.prototype = {
   		  this.populate(this.getFacetCounts(data.facets)); 
   	  };
   	  
+      $(w.target).closest('div.widget-content').find('input.switcher').val(w.aggregate ? "OR" : "AND");
+  	  
 			Manager.addListeners(w);
 		};
 		
-	  $("input.switcher").val(this.aggregateFacets ? "OR" : "AND");
-				
 		// ... add the mighty pivot widget.
 		Manager.addListeners(new PivotWidget({
 			id : "studies",
@@ -376,6 +401,13 @@ jT.ui.FacetedSearch.prototype = {
 
     a$.act(this, this.onPreInit, Manager);
 		Manager.init();
+		
+		// Scan the ui-persistency values
+		for (var fid in uiConfiguration) {
+  		var vals = uiConfiguration[fid].values,
+  		    w = Manager.getListener(fid);
+  		a$.each(vals, function (v) { w.addValue(v)});
+		}
 		
 		// now get the search parameters passed via URL
 		Manager.doRequest();
