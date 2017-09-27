@@ -166,15 +166,23 @@ var mainLookupMap = {},
 	},
 	
 	tagInit = function (manager) {
-			jT.TagWidget.prototype.init.call(this, manager);
+		jT.TagWidget.prototype.init.call(this, manager);
 	  manager.getListener("current").registerWidget(this);
-		},
-		tagsUpdated = function (total) {
-			var hdr = this.getHeaderText();
+  },
+  tagsUpdated = function (total) {
+		var hdr = this.getHeaderText();
 	  hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
 	  a$.act(this, this.header.data("refreshPanel"));
-		};
-	
+  },
+
+  toggleAggregate = function (el) {
+    var val = el.value.toUpperCase() == "OR";
+    
+    this.aggregate = !val;
+    el.value = val ? "AND" : "OR";
+    this.clearValues(); 
+    this.doRequest();
+  };
 
 jT.ui.FacetedSearch = function (settings) {
   this.id = null;
@@ -327,7 +335,7 @@ jT.ui.FacetedSearch.prototype = {
   initComm: function () {
   	var Manager, Basket,
   		  PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-        TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Switching);
+        TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
   
   	this.manager = Manager = new (a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
     
@@ -378,9 +386,7 @@ jT.ui.FacetedSearch.prototype = {
 					target : this.accordion,
 					expansionTemplate: "#tab-topcategory",
 					subtarget: "ul",
-					switchField: "aggregate",
-					onSwitching: function (e) { this.clearValues(); this.doRequest(); },
-					switchOnHeader: true,
+					runMethod: toggleAggregate,
 					multivalue: this.multipleSelection,
 					aggregate: this.aggregateFacets,
 					exclusion: this.multipleSelection || this.keepAllFacets,
@@ -1708,7 +1714,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
 "<div>" +
 "<input type=\"text\" placeholder=\"Filter_\" class=\"widget-filter\"/>" +
-"<input class=\"switcher\" type=\"checkbox\" style=\"float: right\"/>" +
+"<input type=\"button\" class=\"switcher\" value=\"OR\"/>" +
 "</div>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
 "</div>" +

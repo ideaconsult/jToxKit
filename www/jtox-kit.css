@@ -859,19 +859,6 @@ div.jtox-study-tab .dataTables_wrapper {
   margin-left: 18px;
   vertical-align: top;
 }
-html, body {
-  width: 100%;
-}
-
-* {
-  padding: 0;
-  margin: 0;
-}
-
-img {
-  border: none;
-}
-
 a,
 section.item-list article.item a,
 #sliders-controls a {
@@ -1315,8 +1302,15 @@ div.ui-accordion-content.ui-widget-content {
 	margin:1px;	
 }
 
+div.widget-content.widget-root input.switcher {
+  float: right;
+  font-size: .7em;
+  font-weight: 100;
+  padding: 3px;
+}
+
 input.widget-filter {
-  width: 100%;
+  display: inline-flex;
   border-radius: 5px;
   padding-left: 12px;
   margin-bottom: 5px;

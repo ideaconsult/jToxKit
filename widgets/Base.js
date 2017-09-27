@@ -102,5 +102,6 @@ import "SimpleItemWidget";
 import "AccordionExpansion";
 import "SliderWidget";
 import "Switching";
+import "Running";
 
 })(jToxKit, asSys, jQuery);

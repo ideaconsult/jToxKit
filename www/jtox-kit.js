@@ -346,6 +346,7 @@ jT.NestedSolrTranslation.prototype = {
 };
 
 // TODO: Potentially add other, higher level methods for constructing a query.
+// import "ModelRunning";
 
   /** ... and finish with some module / export definition for according platforms
     */
