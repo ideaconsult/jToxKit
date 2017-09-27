@@ -41,6 +41,7 @@ jT.TagWidget.prototype = {
         this.target.html("No items found in this selection").addClass("jt-no-tags");
     }
     else {
+      this.target.removeClass("jt-no-tags");
       objectedItems.sort(function (a, b) {
         return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
       });

@@ -79,11 +79,14 @@ var mainLookupMap = {},
   },
 
   toggleAggregate = function (el) {
-    var val = el.value.toUpperCase() == "OR";
+    var option = el.value.toUpperCase() == "OR",
+        pars = this.getValues();
     
-    this.aggregate = !val;
-    el.value = val ? "AND" : "OR";
     this.clearValues(); 
+    this.aggregate = !option;
+    el.value = option ? "AND" : "OR";
+    for (var i = 0;i < pars.length; ++i)
+      this.addValue(pars[i]);
     this.doRequest();
   };
 
@@ -305,10 +308,12 @@ jT.ui.FacetedSearch.prototype = {
   	  w.afterTranslation = function (data) { 
   		  this.populate(this.getFacetCounts(data.facets)); 
   	  };
-				
+  	  
 			Manager.addListeners(w);
 		};
 		
+	  $("input.switcher").val(this.aggregateFacets ? "OR" : "AND");
+				
 		// ... add the mighty pivot widget.
 		Manager.addListeners(new PivotWidget({
 			id : "studies",

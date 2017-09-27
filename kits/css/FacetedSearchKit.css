@@ -448,6 +448,10 @@ div.widget-content.widget-root input.switcher {
   padding: 3px;
 }
 
+div.widget-content.widget-root.dynamic-tab input.switcher {
+  display: none;
+}
+
 input.widget-filter {
   display: inline-flex;
   border-radius: 5px;

@@ -59,8 +59,8 @@
   
   jT.PivotWidgeting.prototype = {
     __expects: [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ],
-    automatic: false,   // Whether to build the list dynamically.
-    renderTag: null,    // A function for rendering the tags.
+    automatic: false,       // Whether to build the list dynamically.
+    renderTag: null,        // A function for rendering the tags.
     multivalue: false,      // If this filter allows multiple values. Values can be arrays.
     aggregate: false,       // If additional values are aggregated in one filter.
     exclusion: false,       // Whether to exclude THIS field from filtering from itself.

@@ -176,11 +176,14 @@ var mainLookupMap = {},
   },
 
   toggleAggregate = function (el) {
-    var val = el.value.toUpperCase() == "OR";
+    var option = el.value.toUpperCase() == "OR",
+        pars = this.getValues();
     
-    this.aggregate = !val;
-    el.value = val ? "AND" : "OR";
     this.clearValues(); 
+    this.aggregate = !option;
+    el.value = option ? "AND" : "OR";
+    for (var i = 0;i < pars.length; ++i)
+      this.addValue(pars[i]);
     this.doRequest();
   };
 
@@ -402,10 +405,12 @@ jT.ui.FacetedSearch.prototype = {
   	  w.afterTranslation = function (data) { 
   		  this.populate(this.getFacetCounts(data.facets)); 
   	  };
-				
+  	  
 			Manager.addListeners(w);
 		};
 		
+	  $("input.switcher").val(this.aggregateFacets ? "OR" : "AND");
+				
 		// ... add the mighty pivot widget.
 		Manager.addListeners(new PivotWidget({
 			id : "studies",
@@ -945,8 +950,8 @@ jT.ui.FacetedSearch.prototype = {
   
   jT.PivotWidgeting.prototype = {
     __expects: [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ],
-    automatic: false,   // Whether to build the list dynamically.
-    renderTag: null,    // A function for rendering the tags.
+    automatic: false,       // Whether to build the list dynamically.
+    renderTag: null,        // A function for rendering the tags.
     multivalue: false,      // If this filter allows multiple values. Values can be arrays.
     aggregate: false,       // If additional values are aggregated in one filter.
     exclusion: false,       // Whether to exclude THIS field from filtering from itself.
