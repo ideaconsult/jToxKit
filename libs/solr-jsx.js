@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.15.3" };
+  Solr = { version: "0.15.8" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -32,8 +32,8 @@ Solr.Management = function (settings) {
   
   // If username and password are given, a basic authentication is assumed
   // and proper headers added.
-  if (!!settings && !!settings.solrUsername && !!settings.solrPassword) {
-    var token = btoa(settings.solrUsername + ':' + settings.solrPassword);
+  if (!!settings && !!settings.username && !!settings.password) {
+    var token = btoa(settings.username + ':' + settings.password);
     this.ajaxSettings.headers = { 'Authorization': "Basic " + token };
   }
 };
@@ -43,7 +43,7 @@ Solr.Management.prototype = {
   /** Parameters that can and are expected to be overriden during initialization
     */
   connector: null,      // The object for making the actual requests - jQuery object works pretty fine.
-  solrUrl: "",          // The bas Solr Url to be used, excluding the servlet.
+  serverUrl: "",        // The bas Solr Url to be used, excluding the servlet.
   servlet: "select",    // Default servlet to be used is "select".
   
   onPrepare: null,
@@ -81,43 +81,51 @@ Solr.Management.prototype = {
     }
 
     // Let the Querying skill build the settings.url / data
+    var urlPrefix = self.serverUrl + (servlet || self.servlet);
     settings = a$.extend(settings, self.ajaxSettings, self.prepareQuery());
-    settings.url = self.solrUrl + (servlet || self.servlet) + (settings.url || "");
+    if (urlPrefix.indexOf('?') > 0 && settings.url && settings.url.startsWith('?'))
+      settings.url = '&' + settings.url.substr(1);
+    settings.url =  urlPrefix + (settings.url || "");
 
     // We don't make these calls on private requests    
     if (typeof callback !== "function") {
       // Now go to inform the listeners that a request is going to happen and
       // give them a change to cancel it.
       a$.each(self.listeners, function (l) {
-        if (a$.act(l, l.beforeRequest, self, settings) === false)
+        if (a$.act(l, l.beforeRequest, settings, self) === false)
           cancel = l;
       })
   
       if (cancel !== null) {
-        a$.act(cancel, self.onError, null, "Request cancelled", cancel);
+        a$.act(cancel, self.onError, null, "Request cancelled", cancel, self);
         return; 
       }
     }
         
     // Prepare the handlers for both error and success.
     settings.error = function (jqXHR, status, message) {
-      a$.each(self.listeners, function (l) { a$.act(l, l.afterFailure, settings, status, message); });
-      a$.act(self, self.onError, jqXHR, status, message);
+      if (typeof callback === "function")
+        callback(null, jqXHR);
+      else {
+        a$.each(self.listeners, function (l) { a$.act(l, l.afterFailure, jqXHR, settings, self); });
+        a$.act(self, self.onError, jqXHR, settings);
+      }
     };
-    settings.success = function (data) {
+    
+    settings.success = function (data, status, jqXHR) {
       self.response = self.parseQuery(data);
 
       if (typeof callback === "function")
-        callback(self.response);
+        callback(self.response, jqXHR);
       else {
         // Now inform all the listeners
-        a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, self.response, servlet); });
+        a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, self.response, settings, jqXHR, self); });
   
         // Call this for Querying skills, if it is defined.
         a$.act(self, self.parseResponse, self.response, servlet);  
       
         // Time to call the passed on success handler.
-        a$.act(self, self.onSuccess, self.response);
+        a$.act(self, self.onSuccess, self.response, jqXHR, settings);
       }
     };
     
@@ -1338,6 +1346,25 @@ Solr.Faceting.prototype = {
     }
     
     return false;
+  },
+  
+  /**
+   * Returns all the values - the very same way they were added to the agent.
+   */
+  getValues: function () {
+    var indices = this.manager.findParameters(this.fqName, this.fqRegExp),
+        vals = [];
+        
+    for (var v, p, i = 0, il = indices.length; i < il; ++i) {
+      p = this.manager.getParameter(this.fqName, indices[i]);
+      v = this.fqParse(p.value);
+      if (Array.isArray(v))
+        Array.prototype.push.apply(vals, v);
+      else
+        vals.push(v);
+    }
+    
+    return vals;
   },
   
   /**

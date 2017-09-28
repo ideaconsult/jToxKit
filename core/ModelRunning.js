@@ -12,6 +12,8 @@ jT.ModelRunning = function (settings) {
 }
 
 jT.ModelRunning.prototype = {
+  __expects: [ 'pollTask' ],
+  
   algorithms: false,        // ask for algorithms, not models.
   forceCreate: false,       // upon creating a model from algorithm - whether to attempt getting a prepared one, or always create it new.
   loadOnInit: false,        // whether to make a (blank) request upon loading.
@@ -23,102 +25,126 @@ jT.ModelRunning.prototype = {
     a$.pass(this, jT.ModelRunning, "init", manager);
     
     this.manager = manager;
-    if (this.modelUri != null || this.listFilter != null || this.loadOnInit)
-      self.queryList();
+    if (this.loadOnInit)
+      this.queryList();
   },
   
-  listModels: function (uri) {
+  /* List all models provided from the server
+  */
+  listModels: function () {
     var self = this;
 
     self.manager.doRequest('model', function (result, jhr) {
-      if (!result && jhr.status == 200)
-        result = { model: [] }; // empty one
-
-      if (!!result)
+      if (result && result.model)
         self.models = result.model;
+      else if (jhr.status == 200)
+        result = { model: [] }; // empty one. The self.model is already in this state.
 
-      a$.act(self, self.onLoaded, self, result);
+      a$.act(self, self.onLoaded, result);
     });
   },
 
   /* List algorithms that contain given 'needle' in their name
   */
   listAlgorithms: function (needle) {
-    var self = this;
-    var uri = manager.baseUrl + '/algorithm';
+    var self = this,
+        servlet = 'algorithm';
+
     if (!!needle)
-      uri = jT.ui.addParameter(uri, 'search=' + needle);
-    jT.call(self, uri, function (result, jhr) {
-      if (!result && jhr.status != 200)
-        result = { algorithm: [] }; // empty one
-      if (!!result) {
+      servlet += '?search=' + needle;
+      
+    self.manager.doRequest(servlet, function (result, jhr) {
+      if (result && result.algorithm)
         self.algorithm = result.algorithm;
-        ccLib.fireCallback(self.settings.onLoaded, self, result);
-      }
-      else
-        ccLib.fireCallback(self.settings.onLoaded, self, result);
+      else if (jhr.status == 200)
+        result = { algorithm: [] }; // empty one
+
+      a$.act(self, self.onLoaded, result, jhr);
     });
   },
 
+  /**
+    * Get a runnable model for the given algorithm
+    */
   getModel: function (algoUri, callback) {
-    var self = this;
-    var createIt = function () {
-      jT.service(self, algoUri, { method: 'POST' }, function (result, jhr) {
-        ccLib.fireCallback(callback, self, result, jhr);
-      });
-    };
+    var self = this,
+        reportIt = function (task, jhr) {  return callback(task && task.completed > -1 ? task.result : null, jhr); };
 
-    if (self.settings.forceCreate)
-      createIt();
+    if (self.forceCreate)
+      self.pollTask({url: algoUri, method: 'POST'}, reportIt);
     else
-      jT.call(self, self.settings.baseUrl + '/model?algorithm=' + encodeURIComponent(algoUri), function (result, jhr) {
-        if (!result && jhr.status != 404)
-          ccLib.fireCallback(callback, self, null, jhr);
-        else if (!result || result.model.length == 0)
-          createIt();
-        else // we have it!
-          ccLib.fireCallback(callback, self, result.model[0].URI, jhr);
+      self.manager.doRequest('model?algorithm=' + encodeURIComponent(algoUri), function (result, jhr) {
+        if (!result && jhr.status != 404) // Some kind of error.
+          callback(null, jhr);
+        else if (!result || result.model.length == 0) // Ok, we need to create it.
+          self.pollTask({ url: algoUri, method: 'POST' }, reportIt);
+        else // Bingo - we've got it!
+          callback(result.model[0].URI, jhr);
       });
   },
 
+  /**
+    * Run a prediction on a created/obtained model
+    */
   runPrediction: function (datasetUri, modelUri, callback) {
-    var self = this;
-    var q = ccLib.addParameter(datasetUri, 'feature_uris[]=' + encodeURIComponent(modelUri + '/predicted'));
-
-    var createIt = function () {
-      jT.service(self, modelUri, { method: "POST", data: { dataset_uri: datasetUri } }, function (result, jhr) {
-        if (!result)
-          ccLib.fireCallback(callback, self, null, jhr);
-        else
-          jT.call(self, result, callback);
+    var self = this,
+        createAttempted = false,
+        obtainResults = null,
+        createIt = function (jhr) {
+          if (createAttempted) {
+            callback(null, jhr);
+            return;
+          }
+          self.pollTask({
+            url: modelUri,
+            method: "POST", 
+            data: { dataset_uri: datasetUri },
+          }, function (task, jhr) {
+            createAttempted = true;
+            if (task && task.completed > -1)
+              obtainResults(task.result);
+          });
+        };
+    
+    obtainResults = function (uri) {
+      self.manager.connector.ajax({
+        url: uri,
+        method: 'GET',
+        dataType: 'json',
+        error: function (jhr) { callback(null, jhr); },
+        success: function (result, jhr) {
+          if (result && result.dataEntry && result.dataEntry.length > 0) {
+            var empty = true;
+            for (var i = 0, rl = result.dataEntry.length; i < rl; ++i)
+              if (a$.weight(result.dataEntry[i].values) > 0) {
+                empty = false;
+                break;
+              }
+            if (empty)
+              createIt(jhr);
+            else
+              callback(result, jhr);
+          }
+          else
+            createIt(jhr);
+        }
       });
     };
     
-    jT.call(self, q, function (result, jhr) {
-      if (!result)
-        ccLib.fireCallback(callback, self, null, jhr);
-      else if (!self.settings.forceCreate && result.dataEntry.length > 0) {
-        var empty = true;
-        for (var i = 0, rl = result.dataEntry.length; i < rl; ++i)
-          if (!jT.$.isEmptyObject(result.dataEntry[i].values)) {
-            empty = false;
-            break;
-          }
-        if (empty)
-          createIt();
-        else
-          ccLib.fireCallback(callback, self, result, jhr)
-      }
-      else
-        createIt();
-    });
+    if (self.forceCreate)
+      createIt();
+    else
+      obtainResults(jT.ui.addParameter(datasetUri, 'feature_uris[]=' + encodeURIComponent(modelUri + '/predicted')));
   },
 
+  /**
+    * Query the list of algorithms or models on the server
+    */
   queryList: function (needle) {
     if (this.algorithms)
       this.listAlgorithms(this.listFilter = (needle || this.listFilter));
     else
-      this.listModels(this.modelUri = (needle || this.modelUri));
+      this.listModels(this.modelUri);
   }
 };
 

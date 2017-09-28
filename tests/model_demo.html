@@ -1,0 +1,64 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en" xmlns="http://www.w3.org/1999/xhtml"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en" xmlns="http://www.w3.org/1999/xhtml"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en" xmlns="http://www.w3.org/1999/xhtml"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<!--<![endif]-->
+
+<head>
+</head>
+<body>
+  <input type="text" placeholder="Dataset URI_" id="dataset-uri" size="100"/><br/>
+  <input type="text" placeholder="Model URI_" id="model-uri" size="100"/><br/>
+  <input type="button" value="Run" id="run-prediction"/>&nbsp;<span id="algorithms-count">0</span><br/>
+  <textarea id="result-area" placeholder="Results_" cols="100" rows="20"></textarea>
+  
+  <script src="../libs/jquery.js"></script>
+  <script type="text/javascript" src="../libs/as-sys.js"></script>
+  <script type="text/javascript" src="../libs/solr-jsx.js"></script>
+  
+  <script type="text/javascript" src="../www/jtox-kit.js"></script>
+  <script type="text/javascript" src="../www/jtox-kit.widgets.js"></script>
+  <!--
+  <script type="text/javascript" src="../www/jtox-kit.kits.js"></script>
+  -->
+  <script type="text/javascript">
+    var datasetUri = "https://apps.ideaconsult.net/data/query/compound/search/all?type=auto&search=c1cccc1&page=0&pagesize=1",
+        Manager = new (a$(Solr.Management, Solr.QueryingURL, Solr.Configuring))({ 
+          serverUrl: "https://apps.ideaconsult.net/data/",
+          connector: $
+        }),
+        Runner = new (a$(jT.ModelRunning, jT.TaskPolling, jT.Running))({ 
+          /* Running skill settings */
+          runSelector: '#run-prediction',
+          runMethod: "onRun",
+          target: document,
+
+          /* ModelRunning settings */
+          algorithms: true, 
+          listFilter: "ToxTree", 
+          loadOnInit: true, id: 'toxtree',
+//           forceCreate: true,
+          onRun: function (e) {
+            this.runPrediction(datasetUri, $('#model-uri').val(), function (results) {
+              $('#result-area').html(JSON.stringify(results, null, 2));
+            });
+          },
+          onLoaded: function (result) {
+            var self = this;
+            
+            $('#algorithms-count').html(result.algorithm.length);
+            
+            self.getModel(result.algorithm[0].uri, function (modelUri) {
+              $('#model-uri').val(modelUri);
+            });
+          }
+        });
+    
+    Manager.addListeners(Runner);
+    Manager.init();
+  </script>
+</body>
+<html>
+</html>
