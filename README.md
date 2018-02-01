@@ -1,49 +1,261 @@
-# jToxKit - next generation
-## A JavaScript client library of chem-informatics related widgets, components, etc.
+# jToxKit
 
-(a replacement of https://github.com/ideaconsult/Toxtree.js)
+**JavaScript kit of of chem-informatics UI and data mangement tools**
 
-## TODO:
-- Move ketcher within our repository as sub-module
+*(a replacement of https://github.com/ideaconsult/Toxtree.js)*
 
-- History of searches in jToxSearch component (along with type of search and additional parameters)
-- make proper deleting process
-- improve data recording process
+[TOC]
 
-## DOCS:
-- new handling mechanism with 'handler' property in each kit
-- onRow universal handler
-- jToxComoluns column ordering via 'order' field in feature definition
-- jToxSearch slideInput property
-- jToxCompound fixedWidth
-- jToxKit.ui renderMulti
+## Ideology
+
+Since the toolkit strives to provide different _types_ of functionality - from automating the simple data querying machanism, to parsing and enriching received responses, to providing the whole complete web UI for searching, viewing and manipulating chem-informatics data. Therefore two basic principles can be found in organizing the it:
+
+* Functionality is spread among three layers: [**core**](./core/) (data communication & orchestration), [**widgets**](./widgets/) (isolated UI elements) and [**kits**](./kits/) (fullu functional, ready-to-be used bundles providing end user experience).
+
+- Utilize a LEGO-like principle, i.e. ability to combine different pieces of functionality together, e.g. - different translation types. Methodology also known as [Entity Component System](https://en.wikipedia.org/wiki/Entity–component–system).
+
+The later is provided by the small dedicated library [asSys](https://github.com/thejonan/asSys.js), which has deeper explanation on the paradigm. What it provides is the ability to develop certain functionality (wrapped in a "class", actually - `prototype`.) without even knowing what other functionality the instances will poses. For example one can have the functionality of `WalkingObject` wrapped in a prototype, then have `FlyingObject`, wrapped in another prototype and assign this functionality to different entities - _Human_ type entity could have only `WalkingObject` functionality, _Bird_ type entity could have both, and _Plane_ type - only the `FlyingObject`. We call this wrapped functionality a _skill_, and the instances - _agents_.
+
+The _skill-sets_ layering follows simple principles:
+
+* Skills in [**core**](./core/) know nothing about UI - they provide pure data translation and manipulation functionality, which can freely be used on a server-side application as well.
+* Skills in [**widgets**](./widgets/) a focused in self-contained, standalone UI elements, which can be combined in an arbitrary way to produce desired final UI.
+* Code in [**kits**](./kits/) is not skill-based, but rather provides full blown UIs, which can be easily configured and embedded in any web page.
+
+Skills from [core](./core/) and [widgets](./widgets/) are designed to work together quite easily. For example [`jT.Translation`](./core/Translation.js) skill expects the agent (i.e. instance) to have `translateResponse` method which comes from either [`jT.NesterSolrTranslation`](./core/NesterSolrTranslation.js) or from [`jT.RawSolrTranslation`](./core/RawSolrTranslation.js), and then expects to have method `afterTranslation` which could come from [`jT.ResultWidgeting`](./widgets/ResultWidget.js) skill, for example.
+
+## Dependencies
+
+There are several libraries that jToxKit depends upon:
+
+* [**asSys**](https://github.com/thejonan/asSys.js) - the Agent-Skill library
+* [**SolrJsX**](https://github.com/ideaconsult/SolrJsX) - a Solr communication provider
+* [purl](https://www.npmjs.com/package/purl) - url parsing package
+* [jQuery](https://jquery.com) - the well known web enhancer library
+* [jQueryUI](https://jqueryui.com/) framework with [jQuery Slider](https://jqueryui.com/slider/) extension.
 
 
-## FUTURE / IDEAS
-- deferred re-query (postpone)
-- Reduce network calls in ToxTree on run-all - postpone the call until the last model has ran.
 
-Assessment:
-- Ability to re-use the built tab/features structures? Additional setting?
- 
-## REFACTORING
+## Embedding & Configuring
 
-1. Entity-Component based structure:
-2. Architecture:
-	- `widgets`: All UI widgets, which define an atomic UI behavior on the HTML DOM. Data is expected to be there. (Currently kits). E.g.: **Large table**, **Foldable block**, **Distribution** (jToxFacet), **Range Selectors**  etc.
-	- `kits`: A bundles of widgets, which represent a complete UI experience. E.g. Study browser, Query (search UI), etc.
-	- `core`: The core engine, which combines the `$$` library, `kits` and `widgets`, provides the auto-insertion, etc.
-	- `libs`: All the libraries used:
-		- `asSys` (`a$`) - the Agent-Skills library - capable of being used server-side, client-side, etc. The engine for combining prototypes.
-		- `SolrJsX` (`Solr`) - the Solr query builder.
-		- `AmbitJsX` (`Ambit`) - the Ambit query builder.
-		- `jQuery`, `d3js`, `jQueryUI`, etc.
-	- `tests`: Tests for all the widgets and kits.
-	- `bin`: The scripts for building, packaging, testing, etc.
-	- `www`: The output folder.
- 
+Embedding a full kit, should be as easy as:
 
-- Data translators will report pools of entities that can be handled to the widgets. The browser will generally know about: entity pool, paging, filtering & searching.
-- The UI widgets can be given a rename map, so that each entity from the data translator can be passed through it to get a (shallow copy) of the object with proper names for rendering. I.e. utilizing the templates.
-- Building tool should be able to produce no-UI package. (parameter).
- 
+1. Referring proper `.css` and `.js` files;
+2. Adding a `<div>` element at the desired place, with proper attributes;
+3. Providing configuration.
+
+This is the most probable way to ensure [1] is this in the HTML's `<head>`:
+
+```html
+<link rel="stylesheet" href="lib/jToxKit/www/jtox-kit.css">
+<link rel="stylesheet" href="style/jquery-ui-1.10.4.custom.min.css">
+<link rel="stylesheet" href="style/jquery.ui.theme.css">
+<link rel="stylesheet" href="style/jquery.range.css" type="text/css">
+```
+
+and this, at the end, after `</html>`:
+
+```html
+<!-- these are pretty common -->
+<script src="lib/jquery-1.10.2.js"></script>
+<script src="lib/jquery-ui-1.10.4.custom.min.js"></script>
+<script src="lib/purl.js"></script>
+<script src="lib/jquery.range-min.js"></script>
+
+<!-- And here come the important ones -->
+<script src="lib/jToxKit/libs/as-sys.min.js"></script>
+<script src="lib/jToxKit/libs/solr-jsx.min.js"></script>
+<script src="lib/jToxKit/libs/solr-jsx.widgets.min.js"></script>
+<script src="lib/jToxKit/www/jtox-kit.min.js"></script>
+<script src="lib/jToxKit/www/jtox-kit.widgets.min.js"></script>
+<script src="lib/jToxKit/www/jtox-kit.kits.min.js"></script>
+```
+
+Of course, you can use non-minified versions as well. The paths are intentionally given in a way to give clues where the actual scripts can be found. Refer to [(Re)building](#rebuilding) section for more information on that topic.
+
+Adding a whole _jTox-Kit_ is no more difficult:
+
+```html
+<div id="search-ui" class="jtox-kit" data-kit="FacetedSearch" data-configuration="Settings" data-lookup-map="lookup"/>
+```
+
+Here's a small explanation to each property:
+
+* `class="jtox-kit"` marks an element for automatic processing upon jToxKit initialization, so it is critical to have this expanded at all.
+* `data-kit="<type-of-the-kit>"` - this property identifies which kit needs to be embedded. Refer to [kits](./kits/) folder.
+* `data-XXX="<property value>"` is how kit-dependent properties are passed to the instance during its initialization. In this case two things are provided - the variable to get the `configuration` from, and the variable to use for `lookup` map, which is `FacetedSearchKit`-dependent stuff.
+
+Finally, as can be deduces from above, the configuring is provided via variable name, passed with `data-configuration` property. There are other ways too:
+
+* If the provided variable is a function - it is called assumed to be:
+
+```javascript
+ function (dataParameters, kitInstance);
+```
+
+, and is called within kit's instance context (i.e. this parameter);
+
+* if `data-config-file` is provided, an attempt is made to retrieve a JSON object from there.
+
+
+
+The actual configuration heavily depends on the kit, being embedded. So, for the only (at the time of this writing) kit, an exemplary configuration looks like this:
+
+```javascript
+var Settings = {
+    ambitUrl: 'https://apps.ideaconsult.net/nanoreg1/',
+    solrUrl: 'https://solr.ideaconsult.net/solr/nanoreg_shard1_replica1/',
+    multipleSelection: true,
+    keepAllFacets: true,
+    aggregateFacets: true,
+
+    listingFields: [
+        "name:name_hs",
+        "publicname:publicname_hs",
+        "owner_name:owner_name_hs",
+        "substanceType:substanceType_hs",
+        "s_uuid:s_uuid_hs",
+        "content:content_hss",
+        "SUMMARY.*"
+      ],
+    summaryRenderers: {
+        "SIZE": function (val, topic) {
+            // ...
+            return {
+                'topic': topic.toLowerCase(),
+                'content': pattern.replace(re, min + "&nbsp;&hellip;&nbsp;" + max)
+            };
+        }
+    },
+    pivot: [
+        {
+            id: "topcategory",
+            field: "topcategory_s",
+            disabled: true,
+            facet: { domain: { blockChildren: "type_s:substance" } }
+        },
+        {
+            id: "endpointcategory",
+            field: "endpointcategory_s",
+            color: "blue"
+        },
+        {
+            id: "effectendpoint",
+            field: "effectendpoint_s",
+            color: "green",
+            ranging: true
+        },
+        {
+            id: "unit",
+            field: "unit_s",
+            disabled: true,
+            ranging: true
+        }
+  	  ],
+    facets: [
+        {
+            id: 'owner_name',
+            field: "reference_owner_s",
+            title: "Data sources",
+            color: "green",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'substanceType',
+            field: "substanceType_s",
+            title: "Nanomaterial type",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'cell',
+            field: "E.cell_type_s",
+            title: "Cell",
+            color: "green",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'species',
+            field: "Species_s",
+            title: "Species",
+            color: "blue",
+            facet: { mincount: 2 }
+        },
+        {
+            id: 'interpretation',
+            field: "MEDIUM_s",
+            title: "Medium",
+            color: "green",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'dprotocol',
+            field: "Dispersion protocol_s",
+            title: "Dispersion protocol",
+            color: "green",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'reference_year',
+            field: "reference_year_s",
+            title: "Experiment year",
+            color: "green",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'reference',
+            field: "reference_s",
+            title: "References",
+            facet: { mincount: 2 }
+        },
+        {
+            id: 'route',
+            field: "E.exposure_route_s",
+            title: "Exposure route",
+            color: "green",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'protocol',
+            field: "guidance_s",
+            title: "Protocols",
+            color: "blue",
+            facet: { mincount: 1 }
+        },
+        {
+            id: 'method',
+            field: "E.method_s",
+            title: "Method",
+            color: "green",
+            facet: { mincount: 1 }
+        }
+    	],
+  // many export-related stuff
+};
+```
+
+The idea is to have full capability of assembling kits from other kits and/or widgets, just based on this `<div>` embedding principle and proper configuration. It is still not quite operational, but it will be.
+
+## <a id="rebuilding">(Re)building</a>
+
+The whole library is organized as a [NPM package](https://github.com/npm/npm), although it is published in the public [NPM space](https://www.npmjs.com).. So, for building it, one needs [Node.js](https://nodejs.org/en/download/) installed. From then on, it is rather easy:
+
+```bash
+$ npm update
+$ npm install
+```
+
+
+
+The first commands makes sure that all dependent libraries are downloaded and up-to-date, and the later runs all the packaging, testing, bundling, etc. of jToxKit. The end result is put in [www](./www/) folder.
+
+Check the raw [ToDo List](./TODO.md).
+
+## License
+
+**Copyright © 2016-2018, IDEAConsult Ltd.**
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
