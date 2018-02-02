@@ -6,7 +6,7 @@
 
 [TOC]
 
-## Ideology
+## Background
 
 Since the toolkit strives to provide different _types_ of functionality - from automating the simple data querying machanism, to parsing and enriching received responses, to providing the whole complete web UI for searching, viewing and manipulating chem-informatics data. Therefore two basic principles can be found in organizing the it:
 
