@@ -627,13 +627,15 @@ jT.ui.FacetedSearch.prototype = {
           inners.length > 1 ? '(' + inners.join(' AND ') + ')' : inners.length > 0 ? inners[0] : exType.defaultFilter
         )));
         params.push('rows=' + self.exportMaxRows);
-  			
+  			//tsv is now handled via proxy , which reads the Solr json format as is
   			if (mime == "tsv")
-  				params.push("wt=csv", "csv.separator=%09");
+  				//params.push("wt=csv", "csv.separator=%09");
+				params.push("wt=json", "json2tsv=true");
   			else
   				params.push('wt=' + mime);
 
 				form.action = self[server] + "select?" + params.join('&');
+				//console.log(form.action);
 			}
 				
       return true;
