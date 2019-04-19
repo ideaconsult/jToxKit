@@ -298,16 +298,16 @@ jT.ui.FacetedSearch.prototype = {
   	// ... and prepare the actual filtering funtion.
   	$(document).on('keyup', "#accordion input.widget-filter", function (e) {
   		var needle = $(this).val().toLowerCase(),
-  				div = $(this).parent('div.widget-root'),
+  				div = $(this).parents('div.widget-root')[0],
   				cnt;
     
   		if ((e.keyCode || e.which) == 27)
   			$(this).val(needle = "");
   		
   		if (needle == "")
-  			$('li,ul', div[0]).show();
+  			$('li,ul', div).show();
   		else {
-  			$('li>a', div[0]).each( function () {
+  			$('li>a', div).each( function () {
   				var fold = $(this).closest("ul.tag-group"),
   					tag = $(this).parent();
   				cnt = fold.data("hidden") || 0;
@@ -326,7 +326,7 @@ jT.ui.FacetedSearch.prototype = {
   		}
   		
   		// now check if some of the boxes need to be hidden.
-  		$("ul.tag-group", div[0]).each(function () {
+  		$("ul.tag-group", div).each(function () {
   			var me = $(this);
   
   			cnt = parseInt(me.data("hidden")) || 0;
