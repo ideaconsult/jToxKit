@@ -1700,7 +1700,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<h6>Select dataset to export</h6>" +
 "<div id=\"export_dataset\">" +
 "<input type=\"radio\" value=\"filtered\" name=\"export_dataset\" id=\"filtered_data\" checked=\"checked\"/>" +
-"<label for=\"filtered_data\">Filtered entries</label>" +
+"<label for=\"filtered_data\">Matched hits</label>" +
 "<input type=\"radio\" value=\"selected\" name=\"export_dataset\" id=\"selected_data\"/>" +
 "<label for=\"selected_data\">Selected entries</label>" +
 "</div>" +
