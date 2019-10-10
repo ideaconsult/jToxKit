@@ -17,7 +17,7 @@ function Logging(settings) {
 	a$.setup(this, settings);
 
 	this.target = settings.target;
-	root$.html(jT.ui.templates['logger-main']);
+	root$.html(jT.templates['logger-main']);
 	root$.addClass('jtox-toolkit jtox-log'); // to make sure it is there even when manually initialized
 
 	if (typeof this.lineHeight == "number")
@@ -128,7 +128,7 @@ Logging.prototype = {
 
 	addLine: function (data) {
 		var self = this,
-			el$ = jT.ui.fillTemplate("#jtox-logline", data);
+			el$ = jT.fillTemplate("#jtox-logline", data);
 
 		el$.height('0px');
 		this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
@@ -160,7 +160,7 @@ Logging.prototype = {
 	},
 
 	beforeRequest: function (params) {
-		var url = jT.ui.parseURL(params.url),
+		var url = jT.parseURL(params.url),
 			// service = params.service = url.protocol + "://" + url.host + url.path,
 			info = this.formatEvent(params),
 			line$ = this.addLine(info);
@@ -183,7 +183,7 @@ Logging.prototype = {
 		}
 		delete this.events[params.logId];
 		this.setIcon(line$, status);
-		jT.ui.fillTree(line$[0], info);
+		jT.fillTree(line$[0], info);
 
 		if (status == 'error')
 			console && console.log("Error [" + params.service + "]: " + jhr.statusText);

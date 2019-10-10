@@ -118,7 +118,7 @@ ItemListing.prototype = {
 			baseUrl = this.getBaseUrl(doc),
 			summaryRender = function (summarylist) {
 				return summarylist.map(function (s) {
-					return jT.ui.formatString(summaryhtml, s)
+					return jT.formatString(summaryhtml, s)
 				}).join("");
 			}
 		var item = {
@@ -173,7 +173,7 @@ ItemListing.prototype = {
 			}
 		}
 
-		return jT.ui.fillTemplate("#result-item", item);
+		return jT.fillTemplate("#result-item", item);
 	},
 
 	getBaseUrl: function (doc) {
@@ -202,7 +202,7 @@ ItemListing.prototype = {
 					var m = k.match(/^(\w+)_[shd]+$/);
 					k = m && m[1] || k;
 					if (!k.match(/type|id|component/))
-						se.push(jT.ui.formatString(htmlLink, {
+						se.push(jT.formatString(htmlLink, {
 							href: "#",
 							hint: "Freetext search on '" + k + "'",
 							target: "_self",

@@ -152,7 +152,7 @@
                 var fn = window[kit];
                 if (typeof fn !== "function") {
                     kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-                    fn = jT.ui[kit] || jT[kit];
+                    fn = jT.kit[kit] || jT[kit];
                 }
                 var obj = null;
                 if (typeof fn == "function") obj = new fn(params); else if (typeof fn == "object" && typeof fn.init == "function") obj = fn.init(params);
@@ -254,7 +254,7 @@
                 var handler = null;
                 if (kit.settings.configuration != null && kit.settings.configuration.handlers != null) handler = kit.settings.configuration.handlers[name];
                 handler = handler || window[name];
-                if (!handler) console.log("jToxQuery: referring unknown handler: " + name); else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA") jT.$(this).on("change", handler).on("keydown", jT.ui.enterBlur); else jT.$(this).on("click", handler);
+                if (!handler) console.log("jToxQuery: referring unknown handler: " + name); else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA") jT.$(this).on("change", handler).on("keydown", jT.enterBlur); else jT.$(this).on("click", handler);
             }));
         }
     };
@@ -332,7 +332,7 @@
         expansionTemplate: null,
         before: null,
         renderExpansion: function(info) {
-            return jT$1.ui.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
+            return jT$1.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
         },
         makeExpansion: function(before, info) {
             if (!!this.header) return;
@@ -515,7 +515,7 @@
         template: null,
         classes: null,
         renderItem: function(info) {
-            return jT$1.ui.fillTemplate(template, info).addClass(this.classes);
+            return jT$1.fillTemplate(template, info).addClass(this.classes);
         }
     };
     var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
@@ -597,7 +597,7 @@
         renderSubstance: function(doc) {
             var summaryhtml = $$1("#summary-item").html(), summarylist = this.buildSummary(doc), baseUrl = this.getBaseUrl(doc), summaryRender = function(summarylist) {
                 return summarylist.map((function(s) {
-                    return jT$1.ui.formatString(summaryhtml, s);
+                    return jT$1.formatString(summaryhtml, s);
                 })).join("");
             };
             var item = {
@@ -633,7 +633,7 @@
                     for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + "</a>";
                 }
             }
-            return jT$1.ui.fillTemplate("#result-item", item);
+            return jT$1.fillTemplate("#result-item", item);
         },
         getBaseUrl: function(doc) {
             if (this.tagDbs[doc.dbtag_hss] !== undefined) {
@@ -653,7 +653,7 @@
                     _.each(c, (function(v, k) {
                         var m = k.match(/^(\w+)_[shd]+$/);
                         k = m && m[1] || k;
-                        if (!k.match(/type|id|component/)) se.push(jT$1.ui.formatString(htmlLink, {
+                        if (!k.match(/type|id|component/)) se.push(jT$1.formatString(htmlLink, {
                             href: "#",
                             hint: "Freetext search on '" + k + "'",
                             target: "_self",
@@ -701,7 +701,7 @@
         var root$ = $$1(settings.target);
         a$.setup(this, settings);
         this.target = settings.target;
-        root$.html(jT$1.ui.templates["logger-main"]);
+        root$.html(jT$1.templates["logger-main"]);
         root$.addClass("jtox-toolkit jtox-log");
         if (typeof this.lineHeight == "number") this.lineHeight = this.lineHeight.toString() + "px";
         if (typeof this.keepMessages != "number") this.keepMessages = parseInt(this.keepMessages);
@@ -773,7 +773,7 @@
             }
         },
         addLine: function(data) {
-            var self = this, el$ = jT$1.ui.fillTemplate("#jtox-logline", data);
+            var self = this, el$ = jT$1.fillTemplate("#jtox-logline", data);
             el$.height("0px");
             this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
             setTimeout((function() {
@@ -796,7 +796,7 @@
             return el$;
         },
         beforeRequest: function(params) {
-            var url = jT$1.ui.parseURL(params.url), info = this.formatEvent(params), line$ = this.addLine(info);
+            var url = jT$1.parseURL(params.url), info = this.formatEvent(params), line$ = this.addLine(info);
             this.setStatus("connecting");
             this.events[params.logId = Date.now()] = line$;
             this.setIcon(line$, "connecting");
@@ -811,7 +811,7 @@
             }
             delete this.events[params.logId];
             this.setIcon(line$, status);
-            jT$1.ui.fillTree(line$[0], info);
+            jT$1.fillTree(line$[0], info);
             if (status == "error") console && console.log("Error [" + params.service + "]: " + jhr.statusText);
         }
     };
@@ -1292,7 +1292,7 @@
             this.lastPivotValue = value;
             this.slidersTarget.empty().parent().addClass("active");
             for (var i = 0, el = entry.length; i < el; ++i) {
-                var all = entry[i], ref = current[i], setup = {}, w, el$ = jT$1.ui.fillTemplate("#slider-one");
+                var all = entry[i], ref = current[i], setup = {}, w, el$ = jT$1.fillTemplate("#slider-one");
                 this.slidersTarget.append(el$);
                 setup.id = all.id;
                 setup.targetValue = value;
@@ -1306,7 +1306,7 @@
                 setup.automatic = true;
                 setup.width = parseInt(this.slidersTarget.width() - $$1("#sliders-controls").width() - 20) / (Math.min(el, 2) + .1);
                 setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-                setup.units = ref.id == "unit" ? jT$1.ui.formatUnits(ref.val) : "";
+                setup.units = ref.id == "unit" ? jT$1.formatUnits(ref.val) : "";
                 setup.useJson = this.useJson;
                 setup.domain = this.domain;
                 setup.sliderRoot = this;
@@ -1372,5 +1372,6 @@
     jT$1.Tagging = Tagging;
     jT$1.Texting = Texting;
     jT$1.SearchStatusShowing = SearchStatusShowing;
+    jT$1.kit = {};
     return jT$1;
 }));

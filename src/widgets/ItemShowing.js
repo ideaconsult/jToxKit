@@ -19,7 +19,7 @@ ItemShowing.prototype = {
 	classes: null,
 
 	renderItem: function (info) {
-		return jT.ui.fillTemplate(template, info).addClass(this.classes);
+		return jT.fillTemplate(template, info).addClass(this.classes);
 	}
 };
 

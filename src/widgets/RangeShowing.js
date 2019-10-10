@@ -226,7 +226,7 @@ RangeShowing.prototype = {
 				ref = current[i],
 				setup = {},
 				w,
-				el$ = jT.ui.fillTemplate("#slider-one");
+				el$ = jT.fillTemplate("#slider-one");
 
 			this.slidersTarget.append(el$);
 
@@ -242,7 +242,7 @@ RangeShowing.prototype = {
 			setup.automatic = true;
 			setup.width = parseInt(this.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(el, 2) + 0.1);
 			setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-			setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
+			setup.units = ref.id == "unit" ? jT.formatUnits(ref.val) : "";
 			setup.useJson = this.useJson;
 			setup.domain = this.domain;
 			setup.sliderRoot = this;

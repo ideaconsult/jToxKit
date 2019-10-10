@@ -124,14 +124,14 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "</div>" +
 ""; // end of #faceted-search-templates 
 
-jT.ui.templates['logger-main']  = 
+jT.templates['logger-main']  = 
 "<div class=\"list-wrap\">" +
 "<div class=\"list-root\"></div>" +
 "</div>" +
 "<div class=\"status\"><div class=\"icon jtox-fadable\"></div></div>" +
 ""; // end of #jtox-logger 
 
-jT.ui.templates['logger-line']  = 
+jT.templates['logger-line']  = 
 "<div id=\"jtox-logline\">" +
 "<div class=\"logline\">" +
 "<div class=\"icon\"></div>" +

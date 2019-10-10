@@ -54,8 +54,8 @@
 		"core": "rm -f www/$npm_package_name*.js && rollup -c && sed -E -e \"s/\\{\\{VERSION\\}\\}/$npm_package_version/\" $npm_package_main | terser -b --comments -o $npm_package_main",
 		"kits": "cat src/kits/*.html | bin/html2js.pl --trim > www/jtox-kit.kits.js && terser www/jtox-kit.kits.js -mc --ie8 --keep-fnames -o www/jtox-kit.kits.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
 		"build": "npm run core && npm run kits",
-		"test": "mocha test --require expectations",
-		"prepare": "npm run build && npm run test && terser $npm_package_main -mc --ie8 --keep-fnames -o www/${npm_package_name}.min.js && cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
+		"test": "npm run prepare && mocha test --require expectations",
+		"prepare": "npm run build && terser $npm_package_main -mc --ie8 --keep-fnames -o www/${npm_package_name}.min.js && cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
 		"postpublish": "git push && git tag -am \"Release $npm_package_version.\" ${npm_package_version} && git push --tags"
 	}
 }

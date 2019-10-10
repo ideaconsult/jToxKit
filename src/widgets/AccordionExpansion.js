@@ -29,7 +29,7 @@ AccordionExpansion.prototype = {
 	before: null,
 
 	renderExpansion: function (info) {
-		return jT.ui.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
+		return jT.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
 	},
 
 	makeExpansion: function (before, info) {

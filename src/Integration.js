@@ -50,7 +50,7 @@ export default {
 			var fn = window[kit];
 			if (typeof fn !== 'function') {
 				kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-				fn = jT.ui[kit] || jT[kit];
+				fn = jT.kit[kit] || jT[kit];
 			}
 
 			var obj = null;
@@ -210,7 +210,7 @@ export default {
 			if (!handler)
 				console.log("jToxQuery: referring unknown handler: " + name);
 			else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
-				jT.$(this).on('change', handler).on('keydown', jT.ui.enterBlur);
+				jT.$(this).on('change', handler).on('keydown', jT.enterBlur);
 			else // all the rest respond on click
 				jT.$(this).on('click', handler);
 		});

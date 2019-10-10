@@ -65,7 +65,7 @@
 			if (uiUpdateTimer != null)
 				clearTimeout(uiUpdateTimer);
 			uiUpdateTimer = setTimeout(function () {
-				var state = jT.ui.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
+				var state = jT.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
 
 				if (!!state)
 					window.history.pushState({
@@ -105,7 +105,7 @@
 
 		tagsUpdated = function (total) {
 			var hdr = this.getHeaderText();
-			hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
+			hdr.textContent = jT.updateCounter(hdr.textContent, total);
 			a$.act(this, this.header.data("refreshPanel"));
 
 			var ui = uiConfiguration[this.id] || {};
@@ -131,7 +131,7 @@
 			uiUpdate();
 		};
 
-	jT.ui.FacetedSearch = function (settings) {
+	jT.kit.FacetedSearch = function (settings) {
 		this.id = null;
 		a$.extend(true, this, defaultSettings, settings);
 		this.serverUrl = this.solrUrl;
@@ -143,10 +143,10 @@
 			this.lookupMap = {};
 		mainLookupMap = this.lookupMap;
 
-		$(settings.target).html(jT.ui.templates['faceted-search-kit']);
+		$(settings.target).html(jT.templates['faceted-search-kit']);
 		delete this.target;
 
-		var uiConf = jT.ui.parseURL(window.location.href).params['ui'];
+		var uiConf = jT.parseURL(window.location.href).params['ui'];
 		if (uiConf != null)
 			uiConfiguration = JSON.parse(decodeURIComponent(uiConf));
 
@@ -155,7 +155,7 @@
 		this.initExport();
 	};
 
-	jT.ui.FacetedSearch.prototype = {
+	jT.kit.FacetedSearch.prototype = {
 		initDom: function () {
 			// Now instantiate and things around it.
 			this.accordion = $("#accordion");
@@ -310,12 +310,12 @@
 						var s = "",
 							jel = $('a[href="#basket_tab"]');
 
-						jel.html(jT.ui.updateCounter(jel.html(), Basket.length));
+						jel.html(jT.updateCounter(jel.html(), Basket.length));
 
 						Basket.enumerateItems(function (d) {
 							s += d.s_uuid + ";";
 						});
-						if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
+						if (!!(s = jT.modifyURL(window.location.href, "basket", s)))
 							window.history.pushState({
 								query: window.location.search
 							}, document.title, s);
@@ -431,11 +431,11 @@
 						jel = $('a[href="#basket_tab"]'),
 						resItem = $("#result_" + doc.s_uuid);
 
-					jel.html(jT.ui.updateCounter(jel.html(), Basket.length));
+					jel.html(jT.updateCounter(jel.html(), Basket.length));
 					Basket.enumerateItems(function (d) {
 						s += d.s_uuid + ";";
 					});
-					if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
+					if (!!(s = jT.modifyURL(window.location.href, "basket", s)))
 						window.history.pushState({
 							query: window.location.search
 						}, document.title, s);
@@ -642,7 +642,7 @@
 			self = this;
 
 			for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-				var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
+				var el = jT.fillTemplate("#export-format", this.exportFormats[i]);
 				el.data("index", i);
 				exportEl.append(el);
 
@@ -675,7 +675,7 @@
 
 			for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
 				this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
-				var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
+				var el = jT.fillTemplate("#export-type", this.exportTypes[i]);
 				el.data("index", i);
 				exportEl.append(el);
 
@@ -692,7 +692,6 @@
 				});
 			}
 		}
-
 	};
 
-})(Solr, asSys, jQuery, jToxKit);
+})(Solr, asSys || a$, jQuery || $, jToxKit || jT);

@@ -50,7 +50,10 @@ jT.SearchStatusShowing = _Current;
 /** Wrapping all pre-defined widgets, from he skills here.
  */
 // jT.widget = {
-// 	SolrResult: a$(Solr.Listing, ItemList, _Load)
+// 	SolrResult: a$(Solr.Listing, _Item, _Load)
 // };
+
+// Finally make space for the kits to self-register.
+jT.kit = {};
 
 export default jT;
