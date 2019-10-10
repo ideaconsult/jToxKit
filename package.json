@@ -12,7 +12,8 @@
 	],
 	"homepage": "https://io.github.com/ideaconsult/jToxKit/wiki",
 	"license": "MIT",
-	"authors": [{
+	"authors": [
+		{
 			"name": "Ivan (Jonan) Georgiev",
 			"homepage": "http://jonan.info/"
 		},
@@ -27,45 +28,34 @@
 		"type": "git",
 		"url": "https://github.com/ideaconsult/jToxKit"
 	},
+	"module": "src/index.js",
 	"main": "www/jtox-kit.js",
-	"browser": "www/jtox-kit.full.js",
-	"jspm": {
-		"main": "www/jtox-kit.js",
-		"shim": {
-			"jtox-kit": {
-				"exports": "jToxKit"
-			}
-		},
-		"files": [
-			"core/*.js",
-			"widgets/*.js",
-			"kits/*.js"
-		],
-		"buildConfig": {
-			"uglify": true
-		}
-	},
-	"spm": {
-		"main": "www/jtox-kit.js"
-	},
+	"browser": [
+		"www/jtox-kit.js",
+		"www/jtox-kit.uis.js"
+	],
 	"dependencies": {
 		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-		"solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git",
-		"ambit-jsx": "git+ssh://git@github.com/ideaconsult/AmbitJsX.git"
+		"lodash": "^4.17.15",
+		"solr-jsx": "file:../SolrJsX",
+		"ambit-jsx": "file:../AmbitJsx",
+		"commbase-jsx": "file:../CommBaseJsX"
 	},
 	"devDependencies": {
-		"uglify-js": "latest",
-		"jasmine-node": "latest",
-		"jasmine-core": "latest",
-		"smash": "latest"
+		"concat": "^1.0.3",
+		"expectations": "^1.0.0",
+		"jquery": "^3.4.1",
+		"jsdom": "^15.1.1",
+		"mocha": "^6.2.1",
+		"rollup": "^1.23.1",
+		"terser": "^4.3.8"
 	},
 	"scripts": {
-		"pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js && rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/as-sys/*.js libs && rsync node_modules/solr-jsx/*.js libs",
-		"test": "jasmine-node tests && uglifyjs www/jtox-kit.js -mc --ie8 --keep-fnames -o www/jtox-kit.min.js && npm run-script widgets && npm run-script kits",
-
-		"widgets": "smash widgets/Base.js > www/jtox-kit.widgets.js && uglifyjs www/jtox-kit.widgets.js -mc --ie8 --keep-fnames -o www/jtox-kit.widgets.min.js",
-		"kits": "smash kits/js/*.js > www/jtox-kit.kits.js && cat kits/*.html | bin/html2js.pl --trim >> www/jtox-kit.kits.js && uglifyjs www/jtox-kit.kits.js -mc --ie8 --keep-fnames -o www/jtox-kit.kits.min.js && smash kits/css/*.css > www/jtox-kit.css",
-		"prepare": "npm test && pushd www && chmod a-w jtox-kit*.js && zip jtox-kit.zip ../LICENSE ../README.md jtox-kit*.js jtox-kit*.css && popd",
-		"postpublish": "VERSION=`node -e 'console.log(require(\"./package.json\").version)'`; git push && git tag -am \"Release $VERSION.\" ${VERSION} && git push --tags"
+		"core": "rm -f www/$npm_package_name*.js && rollup -c && sed -E -e \"s/\\{\\{VERSION\\}\\}/$npm_package_version/\" $npm_package_main | terser -b --comments -o $npm_package_main",
+		"kits": "cat src/kits/*.html | bin/html2js.pl --trim > www/jtox-kit.kits.js && terser www/jtox-kit.kits.js -mc --ie8 --keep-fnames -o www/jtox-kit.kits.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
+		"build": "npm run core && npm run kits",
+		"test": "mocha test --require expectations",
+		"prepare": "npm run build && terser $npm_package_main -mc --ie8 --keep-fnames -o www/${npm_package_name}.min.js && cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
+		"postpublish": "git push && git tag -am \"Release $npm_package_version.\" ${npm_package_version} && git push --tags"
 	}
 }

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Mocha Tests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
+</head>
+
+<body>
+  <div id="mocha"></div>
+
+  <script src="https://unpkg.com/chai/chai.js"></script>
+  <script src="https://unpkg.com/mocha/mocha.js"></script>
+  <script src="../node_modules/expectations/expectations.js"></script>
+
+  <script class="mocha-init">
+    var global = window;
+
+    function require(a) {
+      if (a == "lodash" || a == "_")
+        return _;
+      else if (a == "asSys" || a == "as-sys")
+        return asSys;
+      else if (a.match(/[.\/]/))
+        return window['jtox-kit'];
+      else
+        return window[a];
+    }
+
+    mocha.setup('bdd');
+    mocha.checkLeaks();
+  </script>
+  <script type="text/javascript" src="../node_modules/lodash/lodash.js"></script>
+  <script type="text/javascript" src="../node_modules/as-sys/as-sys.js"></script>
+  <script class="mocha-exec">
+    window.a$ = asSys;
+  </script>
+  <script type="text/javascript" src="../node_modules/commbase-jsx/commbase-jsx.js"></script>
+
+  <script type="text/javascript" src="../ambit-jsx.js"></script>
+  <script type="text/javascript" src="../solr-jsx.js"></script>
+  <script type="text/javascript" src="../www/jtox-kit.js"></script>
+  <script type="text/javascript" src="BasicSpec.js"></script>
+  <script class="mocha-exec">
+    mocha.run();
+  </script>
+</body>
+
+</html>
