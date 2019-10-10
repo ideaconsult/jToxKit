@@ -10,7 +10,7 @@ import _ from 'lodash';
 import $ from 'jQuery';
 
 
-function Tagging(settings) {
+function Tagger(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -23,7 +23,7 @@ function Tagging(settings) {
 		this.target.addClass(this.color);
 };
 
-Tagging.prototype = {
+Tagger.prototype = {
 	__expects: ["hasValue", "clickHandler"],
 	color: null,
 	renderItem: null,
@@ -31,7 +31,7 @@ Tagging.prototype = {
 	subtarget: null,
 
 	init: function (manager) {
-		a$.pass(this, Tagging, "init", manager);
+		a$.pass(this, Tagger, "init", manager);
 		this.manager = manager;
 	},
 
@@ -77,4 +77,4 @@ Tagging.prototype = {
 	}
 };
 
-export default Tagging;
+export default Tagger;

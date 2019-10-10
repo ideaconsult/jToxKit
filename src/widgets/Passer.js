@@ -9,7 +9,7 @@
 import a$ from 'as-sys';
 import $ from 'jQuery';
 
-function Passing(settings) {
+function Passer(settings) {
 	a$.setup(this, settings);
 
 	var self = this,
@@ -23,10 +23,10 @@ function Passing(settings) {
 	});
 };
 
-Passing.prototype = {
+Passer.prototype = {
 	runSelector: ".switcher", // A CSS selector to find the switching element.
 	runMethod: null, // The method to be invoked on the given target or on self.
 	runTarget: null, // The target to invoke the method to - this will be used if null.
 };
 
-export default Passing;
+export default Passer;

@@ -8,14 +8,14 @@
 import a$ from 'as-sys';
 import $ from 'jQuery';
 
-function Texting(settings) {
+function Texter(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target).find('input').on('change', this.clickHandler());
 	this.id = settings.id;
 };
 
-Texting.prototype = {
+Texter.prototype = {
 	__expects: ["clickHandler "],
 
 	afterResponse: function () {
@@ -23,4 +23,4 @@ Texting.prototype = {
 	}
 };
 
-export default Texting;
+export default Texter;

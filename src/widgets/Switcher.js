@@ -11,7 +11,7 @@ import _ from 'lodash';
 import $ from 'jQuery';
 
 
-function Switching(settings) {
+function Switcher(settings) {
 	a$.setup(this, settings);
 
 	var self = this,
@@ -34,10 +34,10 @@ function Switching(settings) {
 	});
 };
 
-Switching.prototype = {
+Switcher.prototype = {
 	switchSelector: ".switcher", // A CSS selector to find the switching element.
 	switchField: null, // The field to be modified.
 	onSwitching: null // The function to be invoked, on change.
 };
 
-export default Switching;
+export default Switcher;

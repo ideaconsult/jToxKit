@@ -11,7 +11,7 @@ import a$ from 'as-sys';
 import $ from 'jQuery';
 
 import jT from '../Core';
-import Tagging from './Tagging';
+import Tagger from './Tagger';
 
 
 function buildValueRange(stats, isUnits) {
@@ -30,14 +30,14 @@ function buildValueRange(stats, isUnits) {
 	return vals;
 };
 
-function InnerTagWidgeting(settings) {
+function InnterTagger(settings) {
 	this.id = settings.id;
 	this.pivotWidget = settings.pivotWidget;
 };
 
 var iDificationRegExp = /\W/g;
 
-InnerTagWidgeting.prototype = {
+InnterTagger.prototype = {
 	pivotWidget: null,
 
 	hasValue: function (value) {
@@ -60,11 +60,11 @@ InnerTagWidgeting.prototype = {
 	}
 };
 
-var InnerTagWidget = a$(Tagging, InnerTagWidgeting);
+var InnerTagWidget = a$(Tagger, InnterTagger);
 
 /** The general wrapper of all parts
  */
-function PivotShowing(settings) {
+function Pivoter(settings) {
 	a$.setup(this, settings);
 
 	this.target = settings.target;
@@ -73,7 +73,7 @@ function PivotShowing(settings) {
 	this.initialPivotCounts = null;
 };
 
-PivotShowing.prototype = {
+Pivoter.prototype = {
 	__expects: ["getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler"],
 	automatic: false, // Whether to build the list dynamically.
 	renderTag: null, // A function for rendering the tags.
@@ -82,14 +82,14 @@ PivotShowing.prototype = {
 	exclusion: false, // Whether to exclude THIS field from filtering from itself.
 
 	init: function (manager) {
-		a$.pass(this, PivotShowing, "init", manager);
+		a$.pass(this, Pivoter, "init", manager);
 		this.manager = manager;
 
 		this.manager.getListener("current").registerWidget(this, true);
 	},
 
 	addFaceter: function (info, idx) {
-		var f = a$.pass(this, PivotShowing, "addFaceter", info, idx);
+		var f = a$.pass(this, Pivoter, "addFaceter", info, idx);
 		if (typeof info === "object")
 			f.color = info.color;
 		if (idx > this.lastEnabled && !info.disabled)
@@ -101,7 +101,7 @@ PivotShowing.prototype = {
 	afterResponse: function (data) {
 		var pivot = this.getPivotCounts(data.facets);
 
-		a$.pass(this, PivotShowing, "afterResponse", data);
+		a$.pass(this, Pivoter, "afterResponse", data);
 
 		// Iterate on the main entries
 		for (i = 0; i < pivot.length; ++i) {
@@ -201,4 +201,4 @@ PivotShowing.prototype = {
 	}
 };
 
-export default PivotShowing;
+export default Pivoter;

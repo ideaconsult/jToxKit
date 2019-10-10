@@ -9,7 +9,7 @@
 
 import a$ from 'as-sys';
 
-function SearchStatusShowing(settings) {
+function SearchReporter(settings) {
 	a$.setup(this, settings);
 
 	this.target = settings.target;
@@ -20,12 +20,12 @@ function SearchStatusShowing(settings) {
 	this.fqName = this.useJson ? "json.filter" : "fq";
 };
 
-SearchStatusShowing.prototype = {
+SearchReporter.prototype = {
 	useJson: false,
 	renderItem: null,
 
 	init: function (manager) {
-		a$.pass(this, SearchStatusShowing, "init", manager);
+		a$.pass(this, SearchReporter, "init", manager);
 
 		this.manager = manager;
 	},
@@ -112,4 +112,4 @@ SearchStatusShowing.prototype = {
 
 };
 
-export default SearchStatusShowing;
+export default SearchReporter;

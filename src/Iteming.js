@@ -7,14 +7,14 @@
  */
 
 import a$ from 'as-sys';
-import jT from '../Core';
+import jT from './Core';
 
-function ItemShowing(settings) {
+function Iteming(settings) {
 	a$.setup(this, settings);
 	this.target = $(settings.target);
 };
 
-ItemShowing.prototype = {
+Iteming.prototype = {
 	template: null,
 	classes: null,
 
@@ -23,4 +23,4 @@ ItemShowing.prototype = {
 	}
 };
 
-export default ItemShowing;
+export default Iteming;

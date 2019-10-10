@@ -13,7 +13,7 @@ import Solr from 'solr-jsx';
 import CommBase from 'commbase-jsx';
 
 import jT from '../Core';
-import Slider from './SliderShowing';
+import Slider from './Slider';
 
 function SimpleRanger(settings) {
 	this.sliderRoot = settings.sliderRoot;
@@ -51,7 +51,7 @@ var defaultParameters = {
 	'echoParams': "none"
 };
 
-function RangeShowing(settings) {
+function Ranger(settings) {
 	a$.setup(this, settings);
 
 	this.slidersTarget = $(settings.slidersTarget);
@@ -62,13 +62,13 @@ function RangeShowing(settings) {
 		this.titleSkips = [this.titleSkips];
 };
 
-RangeShowing.prototype = {
+Ranger.prototype = {
 	__expects: ["getPivotEntry", "getPivotCounts"],
 	field: null,
 	titleSkips: null,
 
 	init: function (manager) {
-		a$.pass(this, RangeShowing, "init", manager);
+		a$.pass(this, Ranger, "init", manager);
 		this.manager = manager;
 
 		var self = this;
@@ -87,7 +87,7 @@ RangeShowing.prototype = {
 	afterResponse: function (data) {
 		var pivot = this.getPivotCounts(data.facets);
 
-		a$.pass(this, RangeShowing, "afterResponse", data);
+		a$.pass(this, Ranger, "afterResponse", data);
 
 		if (!this.pivotMap) {
 			var qval = this.manager.getParameter('q').value || "";
@@ -270,9 +270,9 @@ RangeShowing.prototype = {
 
 	clearValues: function () {
 		this.rangeRemove();
-		a$.pass(this, RangeShowing, "clearValues");
+		a$.pass(this, Ranger, "clearValues");
 	}
 
 };
 
-export default RangeShowing;
+export default Ranger;

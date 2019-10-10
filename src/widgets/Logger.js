@@ -11,7 +11,7 @@ import $ from 'jQuery';
 
 import jT from '../Core';
 
-function Logging(settings) {
+function Logger(settings) {
 	var root$ = $(settings.target);
 
 	a$.setup(this, settings);
@@ -64,7 +64,7 @@ function Logging(settings) {
 	}
 };
 
-Logging.prototype = {
+Logger.prototype = {
 	mountDestination: null, // mount onPrepare, onSuccess and onError handlers as properties of given variable.
 	statusDelay: 1500, // number of milliseconds to keep success / error messages before fading out
 	keepMessages: 50, // how many messages to keep in the queue
@@ -190,4 +190,4 @@ Logging.prototype = {
 	}
 };
 
-export default Logging;
+export default Logger;

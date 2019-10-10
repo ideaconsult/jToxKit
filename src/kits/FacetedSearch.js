@@ -294,10 +294,10 @@
 		 */
 		initComm: function () {
 			var Manager, Basket,
-				PivotWidget = a$(Solr.Acting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-				TagWidget = a$(Solr.Acting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
+				PivotWidget = a$(Solr.Eventing, Solr.Spying, Solr.Pivoting, jT.Pivoter, jT.Ranger),
+				TagWidget = a$(Solr.Eventing, Solr.Faceting, jT.AccordionExpander, jT.Tagger, jT.Switcher);
 
-			this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.NestedSolrAdapter))(this);
+			this.manager = Manager = new(a$(CommBase.Connecting, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
 
 			Manager.addListeners(new jT.ResultWidget($.extend(true, {
 				id: 'result',
@@ -328,7 +328,7 @@
 				}
 			}, this)));
 
-			Manager.addListeners(new(a$(Solr.Widgets.Pager))({
+			Manager.addListeners(new(a$(Solr.Paging))({
 				id: 'pager',
 				target: $('#pager'),
 				prevLabel: '&lt;',
@@ -415,7 +415,7 @@
 			}));
 
 			// Now add the basket.
-			this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {
+			this.basket = Basket = new(a$(jT.Listing, jT.Lister))($.extend(true, {
 				id: 'basket',
 				target: $('#basket-docs'),
 				summaryRenderers: this.summaryRenderers,

@@ -318,14 +318,25 @@
             }
         }
     };
-    function AccordionExpansion(settings) {
+    function Iteming(settings) {
+        a$.setup(this, settings);
+        this.target = $(settings.target);
+    }
+    Iteming.prototype = {
+        template: null,
+        classes: null,
+        renderItem: function(info) {
+            return jT$1.fillTemplate(template, info).addClass(this.classes);
+        }
+    };
+    function AccordionExpander(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target);
         this.header = null;
         this.id = settings.id;
         if (this.automatic) settings.target = this.makeExpansion();
     }
-    AccordionExpansion.prototype = {
+    AccordionExpander.prototype = {
         automatic: true,
         title: null,
         classes: null,
@@ -362,7 +373,7 @@
         "facet.mincount": 1,
         echoParams: "none"
     };
-    function Autocompletion(settings) {
+    function Autocompleter(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target);
         this.id = settings.id;
@@ -371,7 +382,7 @@
         this.facetPath = this.useJson ? "facets" : "facet_counts.facet_fields";
         if (!this.useJson) this.parameters["json.nl"] = "map";
     }
-    Autocompletion.prototype = {
+    Autocompleter.prototype = {
         __expects: [ "addValue", "doSpying" ],
         servlet: "select",
         urlFeed: null,
@@ -379,7 +390,7 @@
         maxResults: 30,
         activeFacets: null,
         init: function(manager) {
-            a$.pass(this, Autocompletion, "init", manager);
+            a$.pass(this, Autocompleter, "init", manager);
             this.manager = manager;
             var self = this;
             self.findBox = this.target.find("input").on("change", (function(e) {
@@ -442,91 +453,15 @@
             this.requestSent = false;
         }
     };
-    function SearchStatusShowing(settings) {
-        a$.setup(this, settings);
-        this.target = settings.target;
-        this.id = settings.id;
-        this.manager = null;
-        this.facetWidgets = {};
-        this.fqName = this.useJson ? "json.filter" : "fq";
-    }
-    SearchStatusShowing.prototype = {
-        useJson: false,
-        renderItem: null,
-        init: function(manager) {
-            a$.pass(this, SearchStatusShowing, "init", manager);
-            this.manager = manager;
-        },
-        registerWidget: function(widget, pivot) {
-            this.facetWidgets[widget.id] = pivot;
-        },
-        afterResponse: function(data) {
-            var self = this, links = [], q = this.manager.getParameter("q"), fq = this.manager.getAllValues(this.fqName);
-            if (!!q.value && !q.value.match(/^(\*:)?\*$/)) {
-                links.push(self.renderItem({
-                    title: q.value,
-                    count: "x",
-                    onMain: function() {
-                        q.value = "";
-                        self.manager.doRequest();
-                        return false;
-                    }
-                }).addClass("tag_fixed"));
-            }
-            for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
-                var f = fq[i], vals = null;
-                for (var wid in self.facetWidgets) {
-                    var w = self.manager.getListener(wid), vals = w.fqParse(f);
-                    if (!!vals) break;
-                }
-                if (vals == null) continue;
-                if (!Array.isArray(vals)) vals = [ vals ];
-                for (var j = 0, fvl = vals.length; j < fvl; ++j) {
-                    var v = vals[j], el, info = typeof w.prepareTag === "function" ? w.prepareTag(v) : {
-                        title: v,
-                        count: "x",
-                        color: w.color,
-                        onMain: w.unclickHandler(v)
-                    };
-                    links.push(el = self.renderItem(info).addClass("tag_selected " + (!!info.onAux ? "tag_open" : "tag_fixed")));
-                    if (fvl > 1) el.addClass("tag_combined");
-                }
-                if (fvl > 1) el.addClass("tag_last");
-            }
-            if (links.length) {
-                links.push(self.renderItem({
-                    title: "Clear",
-                    onMain: function() {
-                        q.value = "";
-                        for (var wid in self.facetWidgets) self.manager.getListener(wid).clearValues();
-                        self.manager.doRequest();
-                        return false;
-                    }
-                }).addClass("tag_selected tag_clear tag_fixed"));
-                this.target.empty().addClass("tags").append(links);
-            } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
-        }
-    };
-    function ItemShowing(settings) {
-        a$.setup(this, settings);
-        this.target = $(settings.target);
-    }
-    ItemShowing.prototype = {
-        template: null,
-        classes: null,
-        renderItem: function(info) {
-            return jT$1.fillTemplate(template, info).addClass(this.classes);
-        }
-    };
     var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
-    function ItemListing(settings) {
+    function Lister(settings) {
         settings.baseUrl = jT$1.fixBaseUrl(settings.baseUrl) + "/";
         a$.setup(this, settings);
         this.lookupMap = settings.lookupMap || {};
         this.target = settings.target;
         this.id = settings.id;
     }
-    ItemListing.prototype = {
+    Lister.prototype = {
         baseUrl: "",
         summaryPrimes: [ "RESULTS" ],
         tagDbs: {},
@@ -697,7 +632,7 @@
             return items;
         }
     };
-    function Logging(settings) {
+    function Logger(settings) {
         var root$ = $$1(settings.target);
         a$.setup(this, settings);
         this.target = settings.target;
@@ -733,7 +668,7 @@
             };
         }
     }
-    Logging.prototype = {
+    Logger.prototype = {
         mountDestination: null,
         statusDelay: 1500,
         keepMessages: 50,
@@ -815,13 +750,13 @@
             if (status == "error") console && console.log("Error [" + params.service + "]: " + jhr.statusText);
         }
     };
-    function PageShowing(settings) {
+    function Pager(settings) {
         a$.setup(this, settings);
         this.target = $(settings.target);
         this.id = settings.id;
         this.manager = null;
     }
-    PageShowing.prototype = {
+    Pager.prototype = {
         __expects: [ "nextPage", "previousPage" ],
         innerWindow: 4,
         outerWindow: 1,
@@ -912,13 +847,13 @@
             }
         },
         afterResponse: function() {
-            a$.pass(this, PageShowing, "afterResponse");
+            a$.pass(this, Pager, "afterResponse");
             $(this.target).empty();
             this.renderLinks(this.windowedLinks());
             this.renderHeader(this.pageSize, (this.currentPage - 1) * this.pageSize, this.totalEntries);
         }
     };
-    function Passing(settings) {
+    function Passer(settings) {
         a$.setup(this, settings);
         var self = this, target$ = $$1(self.runSelector, $$1(settings.target)[0]), runTarget = self.runTarget || self;
         target$.on("click", (function(e) {
@@ -926,12 +861,12 @@
             e.stopPropagation();
         }));
     }
-    Passing.prototype = {
+    Passer.prototype = {
         runSelector: ".switcher",
         runMethod: null,
         runTarget: null
     };
-    function Tagging(settings) {
+    function Tagger(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target);
         if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
@@ -939,14 +874,14 @@
         this.color = this.color || this.target.data("color");
         if (!!this.color) this.target.addClass(this.color);
     }
-    Tagging.prototype = {
+    Tagger.prototype = {
         __expects: [ "hasValue", "clickHandler" ],
         color: null,
         renderItem: null,
         onUpdated: null,
         subtarget: null,
         init: function(manager) {
-            a$.pass(this, Tagging, "init", manager);
+            a$.pass(this, Tagger, "init", manager);
             this.manager = manager;
         },
         populate: function(objectedItems, preserve) {
@@ -982,12 +917,12 @@
         if (isUnits) vals += " " + jT$1.formatUnits(stats.val).replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;").replace(/<sup>(\d)<\/sup>/g, "^$1");
         return vals;
     }
-    function InnerTagWidgeting(settings) {
+    function InnterTagger(settings) {
         this.id = settings.id;
         this.pivotWidget = settings.pivotWidget;
     }
     var iDificationRegExp = /\W/g;
-    InnerTagWidgeting.prototype = {
+    InnterTagger.prototype = {
         pivotWidget: null,
         hasValue: function(value) {
             return this.pivotWidget.hasValue(this.id + ":" + value);
@@ -1003,15 +938,15 @@
             return info;
         }
     };
-    var InnerTagWidget = a$(Tagging, InnerTagWidgeting);
-    function PivotShowing(settings) {
+    var InnerTagWidget = a$(Tagger, InnterTagger);
+    function Pivoter(settings) {
         a$.setup(this, settings);
         this.target = settings.target;
         this.targets = {};
         this.lastEnabled = 0;
         this.initialPivotCounts = null;
     }
-    PivotShowing.prototype = {
+    Pivoter.prototype = {
         __expects: [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ],
         automatic: false,
         renderTag: null,
@@ -1019,19 +954,19 @@
         aggregate: false,
         exclusion: false,
         init: function(manager) {
-            a$.pass(this, PivotShowing, "init", manager);
+            a$.pass(this, Pivoter, "init", manager);
             this.manager = manager;
             this.manager.getListener("current").registerWidget(this, true);
         },
         addFaceter: function(info, idx) {
-            var f = a$.pass(this, PivotShowing, "addFaceter", info, idx);
+            var f = a$.pass(this, Pivoter, "addFaceter", info, idx);
             if (typeof info === "object") f.color = info.color;
             if (idx > this.lastEnabled && !info.disabled) this.lastEnabled = idx;
             return f;
         },
         afterResponse: function(data) {
             var pivot = this.getPivotCounts(data.facets);
-            a$.pass(this, PivotShowing, "afterResponse", data);
+            a$.pass(this, Pivoter, "afterResponse", data);
             for (i = 0; i < pivot.length; ++i) {
                 var p = pivot[i], pid = p.val.replace(iDificationRegExp, "_"), target = this.targets[pid];
                 if (!target) {
@@ -1103,7 +1038,7 @@
             target.append(elements);
         }
     };
-    function SliderShowing(settings) {
+    function Slider(settings) {
         a$.setup(this, settings);
         this.target = $(settings.target);
         this.prepareLimits(settings.limits);
@@ -1111,7 +1046,7 @@
         this.target.val(Array.isArray(this.initial) ? this.initial.join(",") : this.initial);
         if (!!this.automatic) this.makeSlider();
     }
-    SliderShowing.prototype = {
+    Slider.prototype = {
         __expects: [ "updateHandler" ],
         limits: null,
         units: null,
@@ -1179,7 +1114,7 @@
             this.manager.doRequest();
         }
     };
-    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, SliderShowing, SimpleRanger, CommBase.Delaying);
+    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, CommBase.Delaying);
     var defaultParameters$1 = {
         facet: true,
         rows: 0,
@@ -1188,7 +1123,7 @@
         "facet.mincount": 1,
         echoParams: "none"
     };
-    function RangeShowing(settings) {
+    function Ranger(settings) {
         a$.setup(this, settings);
         this.slidersTarget = $$1(settings.slidersTarget);
         this.lookupMap = settings.lookupMap || {};
@@ -1196,12 +1131,12 @@
         this.rangeWidgets = [];
         if (!Array.isArray(this.titleSkips)) this.titleSkips = [ this.titleSkips ];
     }
-    RangeShowing.prototype = {
+    Ranger.prototype = {
         __expects: [ "getPivotEntry", "getPivotCounts" ],
         field: null,
         titleSkips: null,
         init: function(manager) {
-            a$.pass(this, RangeShowing, "init", manager);
+            a$.pass(this, Ranger, "init", manager);
             this.manager = manager;
             var self = this;
             self.applyCommand = $$1("#sliders-controls a.command.apply").on("click", (function(e) {
@@ -1216,7 +1151,7 @@
         },
         afterResponse: function(data) {
             var pivot = this.getPivotCounts(data.facets);
-            a$.pass(this, RangeShowing, "afterResponse", data);
+            a$.pass(this, Ranger, "afterResponse", data);
             if (!this.pivotMap) {
                 var qval = this.manager.getParameter("q").value || "";
                 if ((!qval || qval == "*:*") && !this.manager.getParameter(this.useJson ? "json.filter" : "fq").value) this.pivotMap = this.buildPivotMap(pivot);
@@ -1325,10 +1260,10 @@
         },
         clearValues: function() {
             this.rangeRemove();
-            a$.pass(this, RangeShowing, "clearValues");
+            a$.pass(this, Ranger, "clearValues");
         }
     };
-    function Switching(settings) {
+    function Switcher(settings) {
         a$.setup(this, settings);
         var self = this, target$ = $$1(self.switchSelector, $$1(settings.target)[0]), initial = _$1.get(self, self.switchField);
         if (typeof initial === "boolean") target$[0].checked = initial; else target$.val(initial);
@@ -1339,39 +1274,104 @@
             e.stopPropagation();
         }));
     }
-    Switching.prototype = {
+    Switcher.prototype = {
         switchSelector: ".switcher",
         switchField: null,
         onSwitching: null
     };
-    function Texting(settings) {
+    function Texter(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target).find("input").on("change", this.clickHandler());
         this.id = settings.id;
     }
-    Texting.prototype = {
+    Texter.prototype = {
         __expects: [ "clickHandler " ],
         afterResponse: function() {
             $$1(this.target).val("");
         }
     };
+    function SearchReporter(settings) {
+        a$.setup(this, settings);
+        this.target = settings.target;
+        this.id = settings.id;
+        this.manager = null;
+        this.facetWidgets = {};
+        this.fqName = this.useJson ? "json.filter" : "fq";
+    }
+    SearchReporter.prototype = {
+        useJson: false,
+        renderItem: null,
+        init: function(manager) {
+            a$.pass(this, SearchReporter, "init", manager);
+            this.manager = manager;
+        },
+        registerWidget: function(widget, pivot) {
+            this.facetWidgets[widget.id] = pivot;
+        },
+        afterResponse: function(data) {
+            var self = this, links = [], q = this.manager.getParameter("q"), fq = this.manager.getAllValues(this.fqName);
+            if (!!q.value && !q.value.match(/^(\*:)?\*$/)) {
+                links.push(self.renderItem({
+                    title: q.value,
+                    count: "x",
+                    onMain: function() {
+                        q.value = "";
+                        self.manager.doRequest();
+                        return false;
+                    }
+                }).addClass("tag_fixed"));
+            }
+            for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
+                var f = fq[i], vals = null;
+                for (var wid in self.facetWidgets) {
+                    var w = self.manager.getListener(wid), vals = w.fqParse(f);
+                    if (!!vals) break;
+                }
+                if (vals == null) continue;
+                if (!Array.isArray(vals)) vals = [ vals ];
+                for (var j = 0, fvl = vals.length; j < fvl; ++j) {
+                    var v = vals[j], el, info = typeof w.prepareTag === "function" ? w.prepareTag(v) : {
+                        title: v,
+                        count: "x",
+                        color: w.color,
+                        onMain: w.unclickHandler(v)
+                    };
+                    links.push(el = self.renderItem(info).addClass("tag_selected " + (!!info.onAux ? "tag_open" : "tag_fixed")));
+                    if (fvl > 1) el.addClass("tag_combined");
+                }
+                if (fvl > 1) el.addClass("tag_last");
+            }
+            if (links.length) {
+                links.push(self.renderItem({
+                    title: "Clear",
+                    onMain: function() {
+                        q.value = "";
+                        for (var wid in self.facetWidgets) self.manager.getListener(wid).clearValues();
+                        self.manager.doRequest();
+                        return false;
+                    }
+                }).addClass("tag_selected tag_clear tag_fixed"));
+                this.target.empty().addClass("tags").append(links);
+            } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
+        }
+    };
     _$1.assign(jT$1, _Tools);
     jT$1.Listing = Listing;
     jT$1.Loading = Loading;
-    jT$1.AccordionExpansion = AccordionExpansion;
-    jT$1.Autocompletion = Autocompletion;
-    jT$1.ItemShowing = ItemShowing;
-    jT$1.ItemListing = ItemListing;
-    jT$1.Logging = Logging;
-    jT$1.PageShowing = PageShowing;
-    jT$1.Passing = Passing;
-    jT$1.PivotShowing = PivotShowing;
-    jT$1.RangeShowing = RangeShowing;
-    jT$1.SliderShowing = SliderShowing;
-    jT$1.Switching = Switching;
-    jT$1.Tagging = Tagging;
-    jT$1.Texting = Texting;
-    jT$1.SearchStatusShowing = SearchStatusShowing;
+    jT$1.Iteming = Iteming;
+    jT$1.AccordionExpander = AccordionExpander;
+    jT$1.Autocompleter = Autocompleter;
+    jT$1.Lister = Lister;
+    jT$1.Logger = Logger;
+    jT$1.Pager = Pager;
+    jT$1.Passer = Passer;
+    jT$1.Pivoter = Pivoter;
+    jT$1.Ranger = Ranger;
+    jT$1.Slider = Slider;
+    jT$1.Switcher = Switcher;
+    jT$1.Tagger = Tagger;
+    jT$1.Texter = Texter;
+    jT$1.SearchReported = SearchReporter;
     jT$1.kit = {};
     return jT$1;
 }));

@@ -12,40 +12,40 @@ import jT from './Core';
 import _Tools from './Integration';
 import _List from './Listing';
 import _Load from './Loading';
+import _Item from './Iteming';
 
 _.assign(jT, _Tools);
 jT.Listing = _List;
 jT.Loading = _Load;
+jT.Iteming = _Item;
 
-import _Accord from './widgets/AccordionExpansion';
-import _Auto from './widgets/Autocompletion';
-import _Current from './widgets/SearchStatusShowing';
-import _Item from './widgets/ItemShowing';
-import _ListItem from './widgets/ItemListing';
-import _Log from './widgets/Logging';
-import _Page from './widgets/PageShowing';
-import _Pass from './widgets/Passing';
-import _Pivot from './widgets/PivotShowing';
-import _Range from './widgets/RangeShowing';
-import _Slide from './widgets/SliderShowing';
-import _Switch from './widgets/Switching';
-import _Tag from './widgets/Tagging';
-import _Text from './widgets/Texting';
+import _Accord from './widgets/AccordionExpander';
+import _Auto from './widgets/Autocompleter';
+import _Lister from './widgets/Lister';
+import _Log from './widgets/Logger';
+import _Page from './widgets/Pager';
+import _Pass from './widgets/Passer';
+import _Pivot from './widgets/Pivoter';
+import _Range from './widgets/Ranger';
+import _Slide from './widgets/Slider';
+import _Switch from './widgets/Switcher';
+import _Tag from './widgets/Tagger';
+import _Text from './widgets/Texter';
+import _Current from './widgets/SearchReporter';
 
-jT.AccordionExpansion = _Accord;
-jT.Autocompletion = _Auto;
-jT.ItemShowing = _Item;
-jT.ItemListing = _ListItem;
-jT.Logging = _Log;
-jT.PageShowing = _Page;
-jT.Passing = _Pass;
-jT.PivotShowing = _Pivot;
-jT.RangeShowing = _Range;
-jT.SliderShowing = _Slide;
-jT.Switching = _Switch;
-jT.Tagging = _Tag;
-jT.Texting = _Text;
-jT.SearchStatusShowing = _Current;
+jT.AccordionExpander = _Accord;
+jT.Autocompleter = _Auto;
+jT.Lister = _Lister;
+jT.Logger = _Log;
+jT.Pager = _Page;
+jT.Passer = _Pass;
+jT.Pivoter = _Pivot;
+jT.Ranger = _Range;
+jT.Slider = _Slide;
+jT.Switcher = _Switch;
+jT.Tagger = _Tag;
+jT.Texter = _Text;
+jT.SearchReported = _Current;
 
 /** Wrapping all pre-defined widgets, from he skills here.
  */

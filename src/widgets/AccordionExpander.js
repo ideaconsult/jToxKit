@@ -9,7 +9,7 @@ import a$ from 'as-sys';
 import $ from 'jQuery';
 import jT from "../Core";
 
- function AccordionExpansion(settings) {
+ function AccordionExpander(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -21,7 +21,7 @@ import jT from "../Core";
 		settings.target = this.makeExpansion();
 };
 
-AccordionExpansion.prototype = {
+AccordionExpander.prototype = {
 	automatic: true,
 	title: null,
 	classes: null,
@@ -71,4 +71,4 @@ AccordionExpansion.prototype = {
 	}
 };
 
-export default AccordionExpansion;
+export default AccordionExpander;

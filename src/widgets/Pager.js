@@ -19,7 +19,7 @@
 
 import a$ from 'as-sys';
 
-function PageShowing(settings) {
+function Pager(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -27,7 +27,7 @@ function PageShowing(settings) {
 	this.manager = null;
 }
 
-PageShowing.prototype = {
+Pager.prototype = {
 	__expects: ["nextPage", "previousPage"],
 
 	innerWindow: 4, // How many links are shown around the current page. Defaults to 4.
@@ -175,7 +175,7 @@ PageShowing.prototype = {
 	},
 
 	afterResponse: function () {
-		a$.pass(this, PageShowing, 'afterResponse');
+		a$.pass(this, Pager, 'afterResponse');
 
 		$(this.target).empty();
 
@@ -184,4 +184,4 @@ PageShowing.prototype = {
 	}
 };
 
-export default PageShowing;
+export default Pager;

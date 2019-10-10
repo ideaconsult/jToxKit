@@ -19,7 +19,7 @@ var defaultParameters = {
 	'echoParams': "none"
 };
 
- function Autocompletion(settings) {
+ function Autocompleter(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -32,7 +32,7 @@ var defaultParameters = {
 		this.parameters['json.nl'] = "map";
 };
 
-Autocompletion.prototype = {
+Autocompleter.prototype = {
 	__expects: ["addValue", "doSpying"],
 
 	servlet: "select",	// what phrase to use on the internal queries
@@ -42,7 +42,7 @@ Autocompletion.prototype = {
 	activeFacets: null, // a map of active / inactive facets. Default is ON.
 
 	init: function (manager) {
-		a$.pass(this, Autocompletion, "init", manager);
+		a$.pass(this, Autocompleter, "init", manager);
 		this.manager = manager;
 
 		var self = this;
@@ -136,4 +136,4 @@ Autocompletion.prototype = {
 	}
 };
 
-export default Autocompletion;
+export default Autocompleter;
