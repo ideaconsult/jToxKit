@@ -39,7 +39,7 @@ Solr.Management = function (settings) {
 };
 
 Solr.Management.prototype = {
-  __expects: [ "prepareQuery", "parseQuery" ],
+  __expects: [ "prepareQuery", "parseResponse" ],
   /** Parameters that can and are expected to be overriden during initialization
     */
   connector: null,      // The object for making the actual requests - jQuery object works pretty fine.
@@ -91,7 +91,7 @@ Solr.Management.prototype = {
     if (typeof callback !== "function") {
       // Now go to inform the listeners that a request is going to happen and
       // give them a change to cancel it.
-      a$.each(self.listeners, function (l) {
+      _.each(self.listeners, function (l) {
         if (a$.act(l, l.beforeRequest, settings, self) === false)
           cancel = l;
       })
@@ -107,19 +107,19 @@ Solr.Management.prototype = {
       if (typeof callback === "function")
         callback(null, jqXHR);
       else {
-        a$.each(self.listeners, function (l) { a$.act(l, l.afterFailure, jqXHR, settings, self); });
+        _.each(self.listeners, function (l) { a$.act(l, l.afterFailure, jqXHR, settings, self); });
         a$.act(self, self.onError, jqXHR, settings);
       }
     };
     
     settings.success = function (data, status, jqXHR) {
-      self.response = self.parseQuery(data);
+      self.response = self.parseResponse(data);
 
       if (typeof callback === "function")
         callback(self.response, jqXHR);
       else {
         // Now inform all the listeners
-        a$.each(self.listeners, function (l) { a$.act(l, l.afterRequest, self.response, settings, jqXHR, self); });
+        _.each(self.listeners, function (l) { a$.act(l, l.afterResponse, self.response, settings, jqXHR, self); });
   
         // Call this for Querying skills, if it is defined.
         a$.act(self, self.parseResponse, self.response, servlet);  
@@ -153,7 +153,7 @@ Solr.Management.prototype = {
   init: function () {
     var self = this;
     a$.pass(self, Solr.Management, "init");
-    a$.each(this.listeners, function (l) {
+    _.each(this.listeners, function (l) {
       // Inform the listener that it has been added.
       a$.act(l, l.init, self);
     })  
@@ -197,7 +197,7 @@ Solr.Management.prototype = {
       throw { name: "Enumeration error", message: "Attempt to select-remove listeners with non-function 'selector': " + selector };
       
     var self = this;
-    a$.each(self.listeners, function (l, id) {
+    _.each(self.listeners, function (l, id) {
       if (selector(l, id, self))
         delete self.listeners[id];
     });
@@ -211,7 +211,7 @@ Solr.Management.prototype = {
     if (typeof callback !== 'function')
       throw { name: "Enumeration error", message: "Attempt to enumerate listeners with non-function 'selector': " + callback };
       
-    a$.each(this.listeners, function (l, id) {
+    _.each(this.listeners, function (l, id) {
       callback.call(l, l, id, context);
     });
   },
@@ -314,7 +314,7 @@ Solr.Configuring.prototype = {
         this.parameterStore[name] = [ param ];
       else {
         var found = false;
-        a$.each(this.parameterStore[name], function (p) { found = found || a$.equal(true, param, p); });
+        _.each(this.parameterStore[name], function (p) { found = found || a$.equal(true, param, p); });
         if (!found)
           this.parameterStore[name].push(param);
         else
@@ -353,7 +353,7 @@ Solr.Configuring.prototype = {
         };
       } 
       
-      a$.each(paramIsMultiple(name) ? this.parameterStore[name] : [ this.parameterStore[name] ], filter);
+      _.each(paramIsMultiple(name) ? this.parameterStore[name] : [ this.parameterStore[name] ], filter);
     }
     return indices;
   },
@@ -408,7 +408,7 @@ Solr.Configuring.prototype = {
     */
   mergeParameters: function (parameters) {
     var self = this;
-    a$.each(parameters, function (p, name) {
+    _.each(parameters, function (p, name) {
       if (typeof p === 'string')
         self.addParameter(Solr.parseParameter(name + '=' + p));
       else
@@ -423,9 +423,9 @@ Solr.Configuring.prototype = {
       callback = deep;
       deep = true;
     }
-    a$.each(this.parameterStore, function (p) {
+    _.each(this.parameterStore, function (p) {
       if (deep && Array.isArray(p))
-        a$.each(p, callback);
+        _.each(p, callback);
       else if (p !== undefined)
         callback(p);
     });
@@ -498,7 +498,7 @@ Solr.Compatibility.prototype = {
 Solr.stringifyDomain = function (param) {
   var prefix = [];
 
-  a$.each(param.domain, function (l, k) {  prefix.push((k !== 'type' ? k + '=' : '') + l); });
+  _.each(param.domain, function (l, k) {  prefix.push((k !== 'type' ? k + '=' : '') + l); });
   return prefix.length > 0 ? "{!" + prefix.join(" ") + "}" : "";
 };
 
@@ -511,7 +511,7 @@ Solr.stringifyValue = function (param) {
     return value.toString(); 
   else {
     var str = [];
-    a$.each(value, function (v, k) { str.push(Solr.escapeField(k) + ":" + Solr.escapeValue(v)); });
+    _.each(value, function (v, k) { str.push(Solr.escapeField(k) + ":" + Solr.escapeValue(v)); });
     return str.join(" ");
   }
 };
@@ -543,7 +543,7 @@ Solr.QueryingURL.prototype = {
     return { url: '?' + query.join("&") };
   },
   
-  parseQuery: function (response) {
+  parseResponse: function (response) {
     return response;
   }
   
@@ -620,7 +620,7 @@ Solr.QueryingJson.prototype = {
       return { url: '?' + url.join("&"), data: json, contentType: "application/json", type: "POST", method:"POST" };
   },
   
-  parseQuery: function (response) {
+  parseResponse: function (response) {
     if (response.responseHeader.params && response.responseHeader.params.json != null) {
       var json = JSON.parse(response.responseHeader.params.json);
       a$.extend(response.responseHeader.params, json, json.params);
@@ -745,10 +745,10 @@ Solr.Paging.prototype = {
 
   /** We need to set all our internals.
     * NOTE: Don't forget to manually call this activity on the skill
-    * using {@code}a$.pass(this, <inheriting skill>, 'afterRequest');{@code}
+    * using {@code}a$.pass(this, <inheriting skill>, 'afterResponse');{@code}
     */
     
-  afterRequest: function () {
+  afterResponse: function () {
     var offset  = parseInt(this.manager.response.responseHeader && this.manager.response.responseHeader.params && this.manager.response.responseHeader.params.start || this.manager.getParameter('start').value || 0);
 
     this.pageSize = parseInt(this.manager.response.responseHeader && this.manager.response.responseHeader.params && this.manager.response.responseHeader.params.rows || this.manager.getParameter('rows').value || this.pageSize);
@@ -779,19 +779,19 @@ Solr.Paging.prototype = {
   * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
   */
     
-Solr.Requesting = function (settings) {
+Solr.Acting = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.manager = null;
 };
 
-Solr.Requesting.prototype = {
+Solr.Acting.prototype = {
   resetPage: true,      // Whether to reset to the first page on each requst.
   customResponse: null, // A custom response function, which if present invokes private doRequest.
   
   /** Make the initial setup of the manager.
     */
   init: function (manager) {
-    a$.pass(this, Solr.Requesting, "init", manager);
+    a$.pass(this, Solr.Acting, "init", manager);
     this.manager = manager;
   },
   
@@ -883,11 +883,11 @@ Solr.Spying.prototype = {
     man.pushParameters(true);
     if (typeof settings === "function")
       settings(man);
-    else a$.each(settings, function (v, k) {
+    else _.each(settings, function (v, k) {
       if (v == null)
         man.removeParameters(k);
       else if (Array.isArray(v))
-        a$.each(v, function (vv) { man.addParameter(k, vv); });
+        _.each(v, function (vv) { man.addParameter(k, vv); });
       else if (typeof v === "object")
         man.addParameter(v);
       else
@@ -1103,7 +1103,7 @@ Solr.facetStats = function (manager, tag, statistics) {
   var statLocs = {};
   
   // Scan to build the local (domain) parts for each stat    
-  a$.each(statistics, function (stats, key) {
+  _.each(statistics, function (stats, key) {
     var parts = stats.match(statsRegExp);
         
     if (!parts)
@@ -1123,7 +1123,7 @@ Solr.facetStats = function (manager, tag, statistics) {
   });
   
   // Finally add proper parameters
-  a$.each(statLocs, function (s, f) {
+  _.each(statLocs, function (s, f) {
     manager.addParameter('stats.field', f, s);
   });
 };
@@ -1230,7 +1230,7 @@ Solr.Faceting.prototype = {
       }
       
       fpars = a$.common(this.facet, fpars);
-      a$.each(fpars, function (p, k) { 
+      _.each(fpars, function (p, k) { 
         self.manager.addParameter('f.' + Solr.escapeField(self.field) + '.facet.' + k, p); 
       });
       
@@ -1720,7 +1720,7 @@ Solr.Pivoting.prototype = {
   },
   
   clearValues: function () {
-    a$.each(this.faceters, function (f) { f.clearValues(); });
+    _.each(this.faceters, function (f) { f.clearValues(); });
   },
   
   hasValue: function (value) {
@@ -1794,7 +1794,7 @@ Solr.Listing.prototype = {
         + " limit=" + level.limit + "]");
     }
 
-    a$.each(this.listingFields, function (f) { manager.addParameter('fl', f)});    
+    _.each(this.listingFields, function (f) { manager.addParameter('fl', f)});    
   }
   
 };

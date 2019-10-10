@@ -20,7 +20,7 @@ jT.ui = a$.extend(jT.ui, {
         parent = null;
 
   	// we need to traverse up, to collect some parent's settings...
-  	a$.each(element.parents('.jtox-kit,.jtox-widget').toArray().reverse(), function(el) {
+  	_.each(element.parents('.jtox-kit,.jtox-widget').toArray().reverse(), function(el) {
   	  parent = self.kit(el);
     	if (parent != null)
       	topSettings = $.extend(true, topSettings, parent);

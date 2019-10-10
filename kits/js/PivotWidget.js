@@ -82,10 +82,10 @@
       return f;
     },
     
-    afterTranslation: function (data) {
+    afterResponse: function (data) {
       var pivot = this.getPivotCounts(data.facets);
 
-      a$.pass(this, jT.PivotWidgeting, "afterTranslation", data);
+      a$.pass(this, jT.PivotWidgeting, "afterResponse", data);
         
       // Iterate on the main entries
       for (i = 0;i < pivot.length; ++i) {

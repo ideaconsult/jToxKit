@@ -19,7 +19,7 @@
     this.manager.doRequest();
   }
   
-  SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, jT.SliderWidget, SimpleRanger, Solr.Delaying);
+  SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, jT.SliderWidget, SimpleRanger, CommBase.Delaying);
   
 	/** The general wrapper of all parts
   	*/
@@ -66,10 +66,10 @@
       });
     },
     
-    afterTranslation: function (data) {
+    afterResponse: function (data) {
       var pivot = this.getPivotCounts(data.facets);
             
-      a$.pass(this, jT.RangeWidgeting, "afterTranslation", data);
+      a$.pass(this, jT.RangeWidgeting, "afterResponse", data);
             
       if (!this.pivotMap) {
         var qval = this.manager.getParameter('q').value || "";

@@ -1,71 +1,71 @@
 {
-  "name": "jtox-kit",
-  "version": "2.2.3",
-  "description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
-  "keywords": [
-    "chem-informatics",
-    "ambit",
-    "solr",
-    "toxicity",
-    "pharmaceutical",
-    "chemistry"
-  ],
-  "homepage": "https://io.github.com/ideaconsult/jToxKit/wiki",
-  "license": "MIT",
-  "author": [
-    {
-      "name": "Ivan (Jonan) Georgiev",
-      "homepage": "http://jonan.info/"
-    },
-    {
-      "name": "Nina Jeliazkova"
-    },
-    {
-      "name": "Tsvetan Manolov"
-    }
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ideaconsult/jToxKit"
-  },
-  "main": "www/jtox-kit.js",
-  "browser": "www/jtox-kit.full.js",
-  "jspm": {
-    "main": "www/jtox-kit.js",
-    "shim": {
-      "jtox-kit": {
-        "exports": "jToxKit"
-      }
-    },
-    "files": [
-      "core/*.js",
-      "widgets/*.js",
-      "kits/*.js"
-    ],
-    "buildConfig": {
-      "uglify": true
-    }
-  },
-  "spm": {
-    "main": "www/jtox-kit.js"
-  },
-  "dependencies": {
-  	"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-    "solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git"
-    },
-  "devDependencies": {
-    "uglify-js": "latest",
-    "jasmine-node": "latest",
-    "jasmine-core": "latest",
-    "smash": "latest"
-  },
-  "scripts": {    
-    "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js && rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/as-sys/*.js libs && rsync node_modules/solr-jsx/*.js libs",
-    "test": "jasmine-node tests && uglifyjs www/jtox-kit.js -mc --ie8 --keep-fnames -o www/jtox-kit.min.js && npm run-script widgets && npm run-script kits",
-    
+	"name": "jtox-kit",
+	"version": "3.0.0",
+	"description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
+	"keywords": [
+		"chem-informatics",
+		"ambit",
+		"solr",
+		"toxicity",
+		"pharmaceutical",
+		"chemistry"
+	],
+	"homepage": "https://io.github.com/ideaconsult/jToxKit/wiki",
+	"license": "MIT",
+	"authors": [{
+			"name": "Ivan (Jonan) Georgiev",
+			"homepage": "http://jonan.info/"
+		},
+		{
+			"name": "Nina Jeliazkova"
+		},
+		{
+			"name": "Tsvetan Manolov"
+		}
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ideaconsult/jToxKit"
+	},
+	"main": "www/jtox-kit.js",
+	"browser": "www/jtox-kit.full.js",
+	"jspm": {
+		"main": "www/jtox-kit.js",
+		"shim": {
+			"jtox-kit": {
+				"exports": "jToxKit"
+			}
+		},
+		"files": [
+			"core/*.js",
+			"widgets/*.js",
+			"kits/*.js"
+		],
+		"buildConfig": {
+			"uglify": true
+		}
+	},
+	"spm": {
+		"main": "www/jtox-kit.js"
+	},
+	"dependencies": {
+		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
+		"solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git",
+		"ambit-jsx": "git+ssh://git@github.com/ideaconsult/AmbitJsX.git"
+	},
+	"devDependencies": {
+		"uglify-js": "latest",
+		"jasmine-node": "latest",
+		"jasmine-core": "latest",
+		"smash": "latest"
+	},
+	"scripts": {
+		"pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js && rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/as-sys/*.js libs && rsync node_modules/solr-jsx/*.js libs",
+		"test": "jasmine-node tests && uglifyjs www/jtox-kit.js -mc --ie8 --keep-fnames -o www/jtox-kit.min.js && npm run-script widgets && npm run-script kits",
+
 		"widgets": "smash widgets/Base.js > www/jtox-kit.widgets.js && uglifyjs www/jtox-kit.widgets.js -mc --ie8 --keep-fnames -o www/jtox-kit.widgets.min.js",
 		"kits": "smash kits/js/*.js > www/jtox-kit.kits.js && cat kits/*.html | bin/html2js.pl --trim >> www/jtox-kit.kits.js && uglifyjs www/jtox-kit.kits.js -mc --ie8 --keep-fnames -o www/jtox-kit.kits.min.js && smash kits/css/*.css > www/jtox-kit.css",
-    "prepare": "npm test && pushd www && chmod a-w jtox-kit*.js && zip jtox-kit.zip ../LICENSE ../README.md jtox-kit*.js jtox-kit*.css && popd",
-    "postpublish": "VERSION=`node -e 'console.log(require(\"./package.json\").version)'`; git push && git tag -am \"Release $VERSION.\" ${VERSION} && git push --tags"
-  }
+		"prepare": "npm test && pushd www && chmod a-w jtox-kit*.js && zip jtox-kit.zip ../LICENSE ../README.md jtox-kit*.js jtox-kit*.css && popd",
+		"postpublish": "VERSION=`node -e 'console.log(require(\"./package.json\").version)'`; git push && git tag -am \"Release $VERSION.\" ${VERSION} && git push --tags"
+	}
 }

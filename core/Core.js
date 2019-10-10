@@ -13,9 +13,8 @@ var jToxKit = { version: "{{VERSION}}" };
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
   
 import "Tools";
-import "Translation";
-import "RawSolrTranslation";
-import "NestedSolrTranslation";
+import "RawSolrAdapter";
+import "NestedSolrAdapter";
 import "ModelRunning";
 import "TaskPolling";
 

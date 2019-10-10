@@ -25,7 +25,7 @@ CurrentSearchWidgeting.prototype = {
     this.facetWidgets[widget.id] = pivot;
   },
   
-  afterTranslation: function (data) {
+  afterResponse: function (data) {
     var self = this,
         links = [],
         q = this.manager.getParameter('q'),

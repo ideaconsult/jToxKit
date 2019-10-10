@@ -168,13 +168,13 @@ jT.ItemListWidget.prototype = {
   	    
     if (!!composition) {
       var cmap = {};
-      a$.each(composition, function(c) {
+      _.each(composition, function(c) {
         var ce = cmap[c.component_s],
             se = [];
         if (ce === undefined)
           cmap[c.component_s] = ce = [];
         
-        a$.each(c, function (v, k) {
+        _.each(c, function (v, k) {
           var m = k.match(/^(\w+)_[shd]+$/);
           k = m && m[1] || k;
           if (!k.match(/type|id|component/))
@@ -190,7 +190,7 @@ jT.ItemListWidget.prototype = {
         ce.push(se.join(", "));
     	});
     	
-    	a$.each(cmap, function (map, type) {
+    	_.each(cmap, function (map, type) {
         var entry = "";
         for (var i = 0;i < map.length; ++i) {
           if (map[i] == "")
@@ -218,7 +218,7 @@ jT.ItemListWidget.prototype = {
   	var self = this,
   	    items = [];
   	
-  	a$.each(doc, function (val, key) {
+  	_.each(doc, function (val, key) {
     	var name = key.match(/^SUMMARY\.([^_]+)_?[hsd]*$/);
     	if (!name)
     	  return;
@@ -268,13 +268,13 @@ jT.ResultWidgeting.prototype = {
 				$('<img>').attr('src', 'images/ajax-loader.gif'));
 	},
 	
-	afterFailure: function(jhr, params) {
-    $(this.target).html("Error retrieving data!");  	
-	},
-
-	afterTranslation : function(data) {
-		$(this.target).empty();
-		this.populate(data.entries);
+	afterResponse : function(data, jqXHR) {
+    if (!data) // i.e. error
+      $(this.target).html("Error retrieving data!");
+    else {
+      $(this.target).empty();
+      this.populate(data.entries);
+    }
 	}
 };
 

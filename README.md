@@ -22,7 +22,7 @@ The _skill-sets_ layering follows simple principles:
 * Skills in [**widgets**](./widgets/) a focused in self-contained, standalone UI elements, which can be combined in an arbitrary way to produce desired final UI.
 * Code in [**kits**](./kits/) is not skill-based, but rather provides full blown UIs, which can be easily configured and embedded in any web page.
 
-Skills from [core](./core/) and [widgets](./widgets/) are designed to work together quite easily. For example [`jT.Translation`](./core/Translation.js) skill expects the agent (i.e. instance) to have `translateResponse` method which comes from either [`jT.NesterSolrTranslation`](./core/NesterSolrTranslation.js) or from [`jT.RawSolrTranslation`](./core/RawSolrTranslation.js), and then expects to have method `afterTranslation` which could come from [`jT.ResultWidgeting`](./widgets/ResultWidget.js) skill, for example.
+Skills from [core](./core/) and [widgets](./widgets/) are designed to work together quite easily. For example [`jT.Translation`](./core/Translation.js) skill expects the agent (i.e. instance) to have `translateResponse` method which comes from either [`jT.NesterSolrTranslation`](./core/NesterSolrTranslation.js) or from [`jT.RawSolrAdapter`](./core/RawSolrAdapter.js), and then expects to have method `afterResponse` which could come from [`jT.ResultWidgeting`](./widgets/ResultWidget.js) skill, for example.
 
 ## Dependencies
 

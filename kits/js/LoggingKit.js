@@ -46,8 +46,8 @@
       var dest = typeof this.mountDestination === 'object' ? this.mountDestination : a$.path(window, this.mountDestination),
           self = this;
       dest.onPrepare = function (params) { return self.beforeRequest(params); };
-      dest.onSuccess = function (response, jqXHR, params) { return self.afterRequest(response, params, jqXHR); };
-      dest.onError = function (jqXHR, params) { return self.afterFailure(jqXHR, params); };
+      dest.onSuccess = function (response, jqXHR, params) { return self.afterResponse(response, params, jqXHR); };
+      dest.onError = function (jqXHR, params) { return self.afterResponse(null, jqXHR, params); };
     }
   };
   
@@ -157,34 +157,22 @@
       line$.data('status', "connecting");
     },
     
-    afterRequest: function (response, params, jhr) {
+    afterResponse: function (response, params, jhr) {
       var info = this.formatEvent(params, jhr),
-          line$ = this.events[params.logId];
+          line$ = this.events[params.logId],
+          status = !!response ? 'success' : 'error';
 
-      this.setStatus("success");
-      if (!line$) {
-        console.log("jToxLog: missing line for:" + params.service);
-        return;
-      }
-      delete this.events[params.logId];
-      this.setIcon(line$, 'success');
-      jT.ui.fillTree(line$[0], info);
-    },
-    
-    afterFailure: function (jhr, params) {
-      var info = this.formatEvent(params, jhr),
-          line$ = this.events[params.logId];
-
-      this.setStatus("error");
+      this.setStatus(status);
       if (!line$) {
         console.log("jToxLog: missing line for:" + params.service + "(" + jhr.statusText + ")");
         return;
       }
       delete this.events[params.logId];
-      this.setIcon(line$, 'error');
+      this.setIcon(line$, status);
       jT.ui.fillTree(line$[0], info);
 
-      console && console.log("Error [" + params.service + "]: " + jhr.statusText);
+      if (status == 'error')
+        console && console.log("Error [" + params.service + "]: " + jhr.statusText);
     }
   };
 })(asSys, jQuery, jToxKit);
