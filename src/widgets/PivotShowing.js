@@ -11,6 +11,7 @@ import a$ from 'as-sys';
 import $ from 'jQuery';
 
 import jT from '../Core';
+import Tagging from './Tagging';
 
 
 function buildValueRange(stats, isUnits) {
@@ -59,11 +60,11 @@ InnerTagWidgeting.prototype = {
 	}
 };
 
-var InnerTagWidget = a$(jT.Tag, InnerTagWidgeting);
+var InnerTagWidget = a$(Tagging, InnerTagWidgeting);
 
 /** The general wrapper of all parts
  */
-function Pivot(settings) {
+function PivotShowing(settings) {
 	a$.setup(this, settings);
 
 	this.target = settings.target;
@@ -72,7 +73,7 @@ function Pivot(settings) {
 	this.initialPivotCounts = null;
 };
 
-Pivot.prototype = {
+PivotShowing.prototype = {
 	__expects: ["getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler"],
 	automatic: false, // Whether to build the list dynamically.
 	renderTag: null, // A function for rendering the tags.
@@ -81,14 +82,14 @@ Pivot.prototype = {
 	exclusion: false, // Whether to exclude THIS field from filtering from itself.
 
 	init: function (manager) {
-		a$.pass(this, Pivot, "init", manager);
+		a$.pass(this, PivotShowing, "init", manager);
 		this.manager = manager;
 
 		this.manager.getListener("current").registerWidget(this, true);
 	},
 
 	addFaceter: function (info, idx) {
-		var f = a$.pass(this, Pivot, "addFaceter", info, idx);
+		var f = a$.pass(this, PivotShowing, "addFaceter", info, idx);
 		if (typeof info === "object")
 			f.color = info.color;
 		if (idx > this.lastEnabled && !info.disabled)
@@ -100,7 +101,7 @@ Pivot.prototype = {
 	afterResponse: function (data) {
 		var pivot = this.getPivotCounts(data.facets);
 
-		a$.pass(this, Pivot, "afterResponse", data);
+		a$.pass(this, PivotShowing, "afterResponse", data);
 
 		// Iterate on the main entries
 		for (i = 0; i < pivot.length; ++i) {
@@ -200,4 +201,4 @@ Pivot.prototype = {
 	}
 };
 
-export default Pivot;
+export default PivotShowing;

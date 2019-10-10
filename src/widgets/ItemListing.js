@@ -14,7 +14,7 @@ import jT from '../Core';
 var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>',
 	plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
 
-function ItemList(settings) {
+function ItemListing(settings) {
 	settings.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
 
 	a$.setup(this, settings);
@@ -24,7 +24,7 @@ function ItemList(settings) {
 	this.id = settings.id;
 };
 
-ItemList.prototype = {
+ItemListing.prototype = {
 	baseUrl: "",
 	summaryPrimes: ["RESULTS"],
 	tagDbs: {},
@@ -276,4 +276,4 @@ ItemList.prototype = {
 	}
 }; // prototype
 
-export default ItemList;
+export default ItemListing;

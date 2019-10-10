@@ -1,5 +1,5 @@
 /** jToxKit - chem-informatics multi-tool-kit.
- * A very simple, template rendering an Item Widget. Suitable for
+ * A very simple, template rendering an item widget. Suitable for
  * both ListWidget and TagWidgets
  *
  * Author: Ivan (Jonan) Georgiev
@@ -9,12 +9,12 @@
 import a$ from 'as-sys';
 import jT from '../Core';
 
-function v(settings) {
+function ItemShowing(settings) {
 	a$.setup(this, settings);
 	this.target = $(settings.target);
 };
 
-Item.prototype = {
+ItemShowing.prototype = {
 	template: null,
 	classes: null,
 
@@ -23,4 +23,4 @@ Item.prototype = {
 	}
 };
 
-export default Item;
+export default ItemShowing;

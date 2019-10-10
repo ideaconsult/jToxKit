@@ -9,7 +9,7 @@
 
 import a$ from 'as-sys';
 
-function CurrentSearch(settings) {
+function SearchStatusShowing(settings) {
 	a$.setup(this, settings);
 
 	this.target = settings.target;
@@ -20,12 +20,12 @@ function CurrentSearch(settings) {
 	this.fqName = this.useJson ? "json.filter" : "fq";
 };
 
-CurrentSearch.prototype = {
+SearchStatusShowing.prototype = {
 	useJson: false,
 	renderItem: null,
 
 	init: function (manager) {
-		a$.pass(this, CurrentSearch, "init", manager);
+		a$.pass(this, SearchStatusShowing, "init", manager);
 
 		this.manager = manager;
 	},
@@ -112,4 +112,4 @@ CurrentSearch.prototype = {
 
 };
 
-export default CurrentSearch;
+export default SearchStatusShowing;

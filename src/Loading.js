@@ -10,16 +10,16 @@ import a$ from 'as-sys';
 import $ from 'jQuery';
 
 // Keep in mind that the field should be the same in all entries.
-Loader = function (settings) {
+function Loading(settings) {
 	a$.setup(this, settings);
 };
 
-Loader.prototype = {
+Loading.prototype = {
 	__expects: ["populate"],
 	errorMessage: "Error retrieving data!",
 
 	init(manager) {
-		a$.pass(this, Loader, 'init', manager);
+		a$.pass(this, Loading, 'init', manager);
 		this.manager = manager;
 	},
 
@@ -39,4 +39,4 @@ Loader.prototype = {
 };
 
 
-export default Loader;
+export default Loading;

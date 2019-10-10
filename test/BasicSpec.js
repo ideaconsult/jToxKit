@@ -1,10 +1,12 @@
 asSys = require("as-sys");
 _ = require("lodash");
 CB = require("commbase-jsx");
-Ambit = require("..");
+Ambit = require("ambit-jsx");
+Solr = require("solr-jsx");
+jT = require("..");
 
 a$ = asSys;
 
-describe("AmbitJsX: Basic functionality", function () {
+describe("jT: Basic functionality", function () {
   
 });

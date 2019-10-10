@@ -1,5 +1,5 @@
 /** jToxKit - chem-informatics multi-tool-kit.
- * All-prepared, universal Paging widget.
+ * All-prepared, universal page showing widget.
  *
  * Author: Ivan Georgiev
  * Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved.
@@ -19,7 +19,7 @@
 
 import a$ from 'as-sys';
 
-function Pager(settings) {
+function PageShowing(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -27,7 +27,7 @@ function Pager(settings) {
 	this.manager = null;
 }
 
-Pager.prototype = {
+PageShowing.prototype = {
 	__expects: ["nextPage", "previousPage"],
 
 	innerWindow: 4, // How many links are shown around the current page. Defaults to 4.
@@ -175,7 +175,7 @@ Pager.prototype = {
 	},
 
 	afterResponse: function () {
-		a$.pass(this, Pager, 'afterResponse');
+		a$.pass(this, PageShowing, 'afterResponse');
 
 		$(this.target).empty();
 
@@ -184,4 +184,4 @@ Pager.prototype = {
 	}
 };
 
-export default Pager;
+export default PageShowing;

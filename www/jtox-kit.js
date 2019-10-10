@@ -1,8 +1,8 @@
 /** jToxKit - Chem-informatics UI tools, widgets and kits library. Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved. @license MIT.*/
 (function(global, factory) {
-    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("jQuery"), require("solr-jsx")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "jQuery", "solr-jsx" ], factory) : (global = global || self, 
-    global["jtox-kit"] = factory(global._, global.a$, global.$, global.Solr));
-})(this, (function(_$1, a$, $$1, Solr$1) {
+    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("jQuery"), require("solr-jsx"), require("commbase-jsx")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "jQuery", "solr-jsx", "commbase-jsx" ], factory) : (global = global || self, 
+    global["jtox-kit"] = factory(global._, global.a$, global.$, global.Solr, global["file:"][""]["/CommBaseJsX"]));
+})(this, (function(_$1, a$, $$1, Solr, CommBase) {
     "use strict";
     var jT$1 = {
         version: "3.0.0",
@@ -258,13 +258,73 @@
             }));
         }
     };
-    AccordionExpansion = function(settings) {
+    function Listing(settings) {
+        a$.setup(this, settings);
+        this.target = $(settings.target);
+        this.length = 0;
+        this.clearItems();
+    }
+    Listing.prototype = {
+        itemId: "id",
+        populate: function(docs, callback) {
+            this.items = docs;
+            this.length = docs.length;
+            this.target.empty();
+            for (var i = 0, l = docs.length; i < l; i++) this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
+        },
+        addItem: function(doc) {
+            this.items.push(doc);
+            ++this.length;
+            return this.renderItem(doc);
+        },
+        clearItems: function() {
+            this.target.empty();
+            this.items = [];
+            this.length = 0;
+        },
+        findItem: function(id) {
+            var self = this;
+            return _$1.findIndex(this.items, typeof id !== "string" ? id : function(doc) {
+                return doc[self.itemId] === id;
+            });
+        },
+        eraseItem: function(id) {
+            var i = this.findItem(id), r = i >= 0 ? this.items.splice(i, 1)[0] : false;
+            this.length = this.items.length;
+            return r;
+        },
+        enumerateItems: function(callback) {
+            var els = this.target.children();
+            for (var i = 0, l = this.items.length; i < l; ++i) callback.call(els[i], this.items[i]);
+        }
+    };
+    function Loading(settings) {
+        a$.setup(this, settings);
+    }
+    Loading.prototype = {
+        __expects: [ "populate" ],
+        errorMessage: "Error retrieving data!",
+        init(manager) {
+            a$.pass(this, Loading, "init", manager);
+            this.manager = manager;
+        },
+        beforeRequest() {
+            $$1(this.target).html($$1("<img>").attr("src", "images/ajax-loader.gif"));
+        },
+        afterResponse(data, jqXHR) {
+            if (!data) $$1(this.target).html(this.errorMessage); else {
+                $$1(this.target).empty();
+                this.populate(data.entries);
+            }
+        }
+    };
+    function AccordionExpansion(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target);
         this.header = null;
         this.id = settings.id;
         if (this.automatic) settings.target = this.makeExpansion();
-    };
+    }
     AccordionExpansion.prototype = {
         automatic: true,
         title: null,
@@ -302,7 +362,7 @@
         "facet.mincount": 1,
         echoParams: "none"
     };
-    Autocompletion = function(settings) {
+    function Autocompletion(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target);
         this.id = settings.id;
@@ -310,10 +370,10 @@
         this.parameters = _.assign({}, defaultParameters);
         this.facetPath = this.useJson ? "facets" : "facet_counts.facet_fields";
         if (!this.useJson) this.parameters["json.nl"] = "map";
-    };
+    }
     Autocompletion.prototype = {
         __expects: [ "addValue", "doSpying" ],
-        servlet: "autophrase",
+        servlet: "select",
         urlFeed: null,
         useJson: false,
         maxResults: 30,
@@ -382,7 +442,7 @@
             this.requestSent = false;
         }
     };
-    function CurrentSearch(settings) {
+    function SearchStatusShowing(settings) {
         a$.setup(this, settings);
         this.target = settings.target;
         this.id = settings.id;
@@ -390,11 +450,11 @@
         this.facetWidgets = {};
         this.fqName = this.useJson ? "json.filter" : "fq";
     }
-    CurrentSearch.prototype = {
+    SearchStatusShowing.prototype = {
         useJson: false,
         renderItem: null,
         init: function(manager) {
-            a$.pass(this, CurrentSearch, "init", manager);
+            a$.pass(this, SearchStatusShowing, "init", manager);
             this.manager = manager;
         },
         registerWidget: function(widget, pivot) {
@@ -447,7 +507,11 @@
             } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
         }
     };
-    Item.prototype = {
+    function ItemShowing(settings) {
+        a$.setup(this, settings);
+        this.target = $(settings.target);
+    }
+    ItemShowing.prototype = {
         template: null,
         classes: null,
         renderItem: function(info) {
@@ -455,14 +519,14 @@
         }
     };
     var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
-    function ItemList$1(settings) {
+    function ItemListing(settings) {
         settings.baseUrl = jT$1.fixBaseUrl(settings.baseUrl) + "/";
         a$.setup(this, settings);
         this.lookupMap = settings.lookupMap || {};
         this.target = settings.target;
         this.id = settings.id;
     }
-    ItemList$1.prototype = {
+    ItemListing.prototype = {
         baseUrl: "",
         summaryPrimes: [ "RESULTS" ],
         tagDbs: {},
@@ -751,13 +815,13 @@
             if (status == "error") console && console.log("Error [" + params.service + "]: " + jhr.statusText);
         }
     };
-    function Pager(settings) {
+    function PageShowing(settings) {
         a$.setup(this, settings);
         this.target = $(settings.target);
         this.id = settings.id;
         this.manager = null;
     }
-    Pager.prototype = {
+    PageShowing.prototype = {
         __expects: [ "nextPage", "previousPage" ],
         innerWindow: 4,
         outerWindow: 1,
@@ -848,7 +912,7 @@
             }
         },
         afterResponse: function() {
-            a$.pass(this, Pager, "afterResponse");
+            a$.pass(this, PageShowing, "afterResponse");
             $(this.target).empty();
             this.renderLinks(this.windowedLinks());
             this.renderHeader(this.pageSize, (this.currentPage - 1) * this.pageSize, this.totalEntries);
@@ -866,6 +930,49 @@
         runSelector: ".switcher",
         runMethod: null,
         runTarget: null
+    };
+    function Tagging(settings) {
+        a$.setup(this, settings);
+        this.target = $$1(settings.target);
+        if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
+        this.id = settings.id;
+        this.color = this.color || this.target.data("color");
+        if (!!this.color) this.target.addClass(this.color);
+    }
+    Tagging.prototype = {
+        __expects: [ "hasValue", "clickHandler" ],
+        color: null,
+        renderItem: null,
+        onUpdated: null,
+        subtarget: null,
+        init: function(manager) {
+            a$.pass(this, Tagging, "init", manager);
+            this.manager = manager;
+        },
+        populate: function(objectedItems, preserve) {
+            var self = this, item = null, total = 0, el, selected, value;
+            if (objectedItems.length == null || objectedItems.length == 0) {
+                if (!preserve) this.target.html("No items found in this selection").addClass("jt-no-tags");
+            } else {
+                this.target.removeClass("jt-no-tags");
+                objectedItems.sort((function(a, b) {
+                    return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
+                }));
+                if (!preserve) this.target.empty();
+                for (var i = 0, l = objectedItems.length; i < l; i++) {
+                    item = objectedItems[i];
+                    value = item.value || item.val;
+                    selected = this.exclusion && this.hasValue(value);
+                    total += item.count;
+                    item.title = value.toString();
+                    if (typeof this.modifyTag === "function") item = this.modifyTag(item);
+                    if (!selected) item.onMain = self.clickHandler(value);
+                    this.target.append(el = this.renderItem(item));
+                    if (selected) el.addClass("selected");
+                }
+            }
+            a$.act(this, this.onUpdated, total);
+        }
     };
     function buildValueRange(stats, isUnits) {
         var vals = " = ";
@@ -896,15 +1003,15 @@
             return info;
         }
     };
-    var InnerTagWidget = a$(jT$1.Tag, InnerTagWidgeting);
-    function Pivot(settings) {
+    var InnerTagWidget = a$(Tagging, InnerTagWidgeting);
+    function PivotShowing(settings) {
         a$.setup(this, settings);
         this.target = settings.target;
         this.targets = {};
         this.lastEnabled = 0;
         this.initialPivotCounts = null;
     }
-    Pivot.prototype = {
+    PivotShowing.prototype = {
         __expects: [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ],
         automatic: false,
         renderTag: null,
@@ -912,19 +1019,19 @@
         aggregate: false,
         exclusion: false,
         init: function(manager) {
-            a$.pass(this, Pivot, "init", manager);
+            a$.pass(this, PivotShowing, "init", manager);
             this.manager = manager;
             this.manager.getListener("current").registerWidget(this, true);
         },
         addFaceter: function(info, idx) {
-            var f = a$.pass(this, Pivot, "addFaceter", info, idx);
+            var f = a$.pass(this, PivotShowing, "addFaceter", info, idx);
             if (typeof info === "object") f.color = info.color;
             if (idx > this.lastEnabled && !info.disabled) this.lastEnabled = idx;
             return f;
         },
         afterResponse: function(data) {
             var pivot = this.getPivotCounts(data.facets);
-            a$.pass(this, Pivot, "afterResponse", data);
+            a$.pass(this, PivotShowing, "afterResponse", data);
             for (i = 0; i < pivot.length; ++i) {
                 var p = pivot[i], pid = p.val.replace(iDificationRegExp, "_"), target = this.targets[pid];
                 if (!target) {
@@ -996,6 +1103,63 @@
             target.append(elements);
         }
     };
+    function SliderShowing(settings) {
+        a$.setup(this, settings);
+        this.target = $(settings.target);
+        this.prepareLimits(settings.limits);
+        if (this.initial == null) this.initial = this.isRange ? [ this.limits[0], this.limits[1] ] : (this.limits[0] + this.limits[1]) / 2;
+        this.target.val(Array.isArray(this.initial) ? this.initial.join(",") : this.initial);
+        if (!!this.automatic) this.makeSlider();
+    }
+    SliderShowing.prototype = {
+        __expects: [ "updateHandler" ],
+        limits: null,
+        units: null,
+        initial: null,
+        title: null,
+        width: null,
+        automatic: true,
+        isRange: true,
+        showScale: true,
+        format: "%s {{units}}",
+        prepareLimits: function(limits) {
+            this.limits = typeof limits === "string" ? limits.split(",") : limits;
+            this.limits[0] = parseFloat(this.limits[0]);
+            this.limits[1] = parseFloat(this.limits[1]);
+            this.precision = Math.pow(10, parseInt(Math.min(1, Math.floor(Math.log10(this.limits[1] - this.limits[0] + 1) - 3))));
+            if (this.precision < 1 && this.precision > .01) this.precison = .01;
+        },
+        updateSlider: function(value, limits) {
+            if (Array.isArray(value)) value = value.join(",");
+            if (limits != null) {
+                this.prepareLimits(limits);
+                this.target.jRange("updateRange", this.limits, value);
+            } else this.target.jRange("setValue", value);
+        },
+        makeSlider: function() {
+            var self = this, enabled = this.limits[1] > this.limits[0], scale = [ jT$1.formatNumber(this.limits[0], this.precision), this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), jT$1.formatNumber(this.limits[1], this.precision) ], updateHandler = self.updateHandler(), settings = {
+                from: this.limits[0],
+                to: this.limits[1],
+                step: this.precision,
+                scale: scale,
+                showScale: this.showScale,
+                showLabels: enabled,
+                disable: !enabled,
+                isRange: this.isRange,
+                width: this.width,
+                format: jT$1.formatString(this.format, this) || ""
+            };
+            if (this.color != null) settings.theme = "theme-" + this.color;
+            settings.ondragend = function(value) {
+                if (typeof value === "string" && self.isRange) value = value.split(",");
+                value = Array.isArray(value) ? value.map((function(v) {
+                    return parseFloat(v);
+                })) : parseFloat(value);
+                return updateHandler(value);
+            };
+            return this.target.jRange(settings);
+        }
+    };
     function SimpleRanger(settings) {
         this.sliderRoot = settings.sliderRoot;
     }
@@ -1015,7 +1179,7 @@
             this.manager.doRequest();
         }
     };
-    var SingleRangeWidget = a$(Solr$1.Ranging, Solr$1.Patterning, jT$1.Slider, SimpleRanger, CommBase.Delaying);
+    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, SliderShowing, SimpleRanger, CommBase.Delaying);
     var defaultParameters$1 = {
         facet: true,
         rows: 0,
@@ -1024,7 +1188,7 @@
         "facet.mincount": 1,
         echoParams: "none"
     };
-    function Ranger(settings) {
+    function RangeShowing(settings) {
         a$.setup(this, settings);
         this.slidersTarget = $$1(settings.slidersTarget);
         this.lookupMap = settings.lookupMap || {};
@@ -1032,12 +1196,12 @@
         this.rangeWidgets = [];
         if (!Array.isArray(this.titleSkips)) this.titleSkips = [ this.titleSkips ];
     }
-    Ranger.prototype = {
+    RangeShowing.prototype = {
         __expects: [ "getPivotEntry", "getPivotCounts" ],
         field: null,
         titleSkips: null,
         init: function(manager) {
-            a$.pass(this, Ranger, "init", manager);
+            a$.pass(this, RangeShowing, "init", manager);
             this.manager = manager;
             var self = this;
             self.applyCommand = $$1("#sliders-controls a.command.apply").on("click", (function(e) {
@@ -1052,7 +1216,7 @@
         },
         afterResponse: function(data) {
             var pivot = this.getPivotCounts(data.facets);
-            a$.pass(this, Ranger, "afterResponse", data);
+            a$.pass(this, RangeShowing, "afterResponse", data);
             if (!this.pivotMap) {
                 var qval = this.manager.getParameter("q").value || "";
                 if ((!qval || qval == "*:*") && !this.manager.getParameter(this.useJson ? "json.filter" : "fq").value) this.pivotMap = this.buildPivotMap(pivot);
@@ -1071,7 +1235,7 @@
             traverser = function(base, idx, pattern, valId) {
                 var p = self.getPivotEntry(idx), pid = p.id, color = p.color, info;
                 if (p.ranging && !p.disabled) valId = pid + ":" + base.val;
-                pattern += (!base.val ? "-" + p.field + ":*" : p.field + ":" + Solr$1.escapeValue(base.val)) + " ";
+                pattern += (!base.val ? "-" + p.field + ":*" : p.field + ":" + Solr.escapeValue(base.val)) + " ";
                 info = base;
                 p = self.getPivotEntry(idx + 1);
                 if (p != null) base = base[p.id].buckets;
@@ -1161,64 +1325,7 @@
         },
         clearValues: function() {
             this.rangeRemove();
-            a$.pass(this, Ranger, "clearValues");
-        }
-    };
-    function Slider(settings) {
-        a$.setup(this, settings);
-        this.target = $(settings.target);
-        this.prepareLimits(settings.limits);
-        if (this.initial == null) this.initial = this.isRange ? [ this.limits[0], this.limits[1] ] : (this.limits[0] + this.limits[1]) / 2;
-        this.target.val(Array.isArray(this.initial) ? this.initial.join(",") : this.initial);
-        if (!!this.automatic) this.makeSlider();
-    }
-    Slider.prototype = {
-        __expects: [ "updateHandler" ],
-        limits: null,
-        units: null,
-        initial: null,
-        title: null,
-        width: null,
-        automatic: true,
-        isRange: true,
-        showScale: true,
-        format: "%s {{units}}",
-        prepareLimits: function(limits) {
-            this.limits = typeof limits === "string" ? limits.split(",") : limits;
-            this.limits[0] = parseFloat(this.limits[0]);
-            this.limits[1] = parseFloat(this.limits[1]);
-            this.precision = Math.pow(10, parseInt(Math.min(1, Math.floor(Math.log10(this.limits[1] - this.limits[0] + 1) - 3))));
-            if (this.precision < 1 && this.precision > .01) this.precison = .01;
-        },
-        updateSlider: function(value, limits) {
-            if (Array.isArray(value)) value = value.join(",");
-            if (limits != null) {
-                this.prepareLimits(limits);
-                this.target.jRange("updateRange", this.limits, value);
-            } else this.target.jRange("setValue", value);
-        },
-        makeSlider: function() {
-            var self = this, enabled = this.limits[1] > this.limits[0], scale = [ jT$1.formatNumber(this.limits[0], this.precision), this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), jT$1.formatNumber(this.limits[1], this.precision) ], updateHandler = self.updateHandler(), settings = {
-                from: this.limits[0],
-                to: this.limits[1],
-                step: this.precision,
-                scale: scale,
-                showScale: this.showScale,
-                showLabels: enabled,
-                disable: !enabled,
-                isRange: this.isRange,
-                width: this.width,
-                format: jT$1.formatString(this.format, this) || ""
-            };
-            if (this.color != null) settings.theme = "theme-" + this.color;
-            settings.ondragend = function(value) {
-                if (typeof value === "string" && self.isRange) value = value.split(",");
-                value = Array.isArray(value) ? value.map((function(v) {
-                    return parseFloat(v);
-                })) : parseFloat(value);
-                return updateHandler(value);
-            };
-            return this.target.jRange(settings);
+            a$.pass(this, RangeShowing, "clearValues");
         }
     };
     function Switching(settings) {
@@ -1237,98 +1344,33 @@
         switchField: null,
         onSwitching: null
     };
-    function Tagging(settings) {
-        a$.setup(this, settings);
-        this.target = $$1(settings.target);
-        if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
-        this.id = settings.id;
-        this.color = this.color || this.target.data("color");
-        if (!!this.color) this.target.addClass(this.color);
-    }
-    Tagging.prototype = {
-        __expects: [ "hasValue", "clickHandler" ],
-        color: null,
-        renderItem: null,
-        onUpdated: null,
-        subtarget: null,
-        init: function(manager) {
-            a$.pass(this, Tagging, "init", manager);
-            this.manager = manager;
-        },
-        populate: function(objectedItems, preserve) {
-            var self = this, item = null, total = 0, el, selected, value;
-            if (objectedItems.length == null || objectedItems.length == 0) {
-                if (!preserve) this.target.html("No items found in this selection").addClass("jt-no-tags");
-            } else {
-                this.target.removeClass("jt-no-tags");
-                objectedItems.sort((function(a, b) {
-                    return (a.value || a.val) < (b.value || b.val) ? -1 : 1;
-                }));
-                if (!preserve) this.target.empty();
-                for (var i = 0, l = objectedItems.length; i < l; i++) {
-                    item = objectedItems[i];
-                    value = item.value || item.val;
-                    selected = this.exclusion && this.hasValue(value);
-                    total += item.count;
-                    item.title = value.toString();
-                    if (typeof this.modifyTag === "function") item = this.modifyTag(item);
-                    if (!selected) item.onMain = self.clickHandler(value);
-                    this.target.append(el = this.renderItem(item));
-                    if (selected) el.addClass("selected");
-                }
-            }
-            a$.act(this, this.onUpdated, total);
-        }
-    };
-    function Text(settings) {
+    function Texting(settings) {
         a$.setup(this, settings);
         this.target = $$1(settings.target).find("input").on("change", this.clickHandler());
         this.id = settings.id;
     }
-    Text.prototype = {
+    Texting.prototype = {
         __expects: [ "clickHandler " ],
         afterResponse: function() {
             $$1(this.target).val("");
         }
     };
-    Loader = function(settings) {
-        a$.setup(this, settings);
-    };
-    Loader.prototype = {
-        __expects: [ "populate" ],
-        errorMessage: "Error retrieving data!",
-        init(manager) {
-            a$.pass(this, Loader, "init", manager);
-            this.manager = manager;
-        },
-        beforeRequest() {
-            $$1(this.target).html($$1("<img>").attr("src", "images/ajax-loader.gif"));
-        },
-        afterResponse(data, jqXHR) {
-            if (!data) $$1(this.target).html(this.errorMessage); else {
-                $$1(this.target).empty();
-                this.populate(data.entries);
-            }
-        }
-    };
     _$1.assign(jT$1, _Tools);
+    jT$1.Listing = Listing;
+    jT$1.Loading = Loading;
     jT$1.AccordionExpansion = AccordionExpansion;
     jT$1.Autocompletion = Autocompletion;
-    jT$1.CurrentSearch = CurrentSearch;
-    jT$1.Item = Item;
-    jT$1.ItemList = ItemList$1;
+    jT$1.ItemShowing = ItemShowing;
+    jT$1.ItemListing = ItemListing;
     jT$1.Logging = Logging;
-    jT$1.Pager = Pager;
+    jT$1.PageShowing = PageShowing;
     jT$1.Passing = Passing;
-    jT$1.Pivot = Pivot;
-    jT$1.Range = Ranger;
-    jT$1.Slider = Slider;
+    jT$1.PivotShowing = PivotShowing;
+    jT$1.RangeShowing = RangeShowing;
+    jT$1.SliderShowing = SliderShowing;
     jT$1.Switching = Switching;
     jT$1.Tagging = Tagging;
-    jT$1.Text = Text;
-    jT$1.Loader = Loader;
-    jT$1.widget = {
-        Result: a$(Solr.Listing, jT$1.ListWidget, ItemList, Loader)
-    };
+    jT$1.Texting = Texting;
+    jT$1.SearchStatusShowing = SearchStatusShowing;
     return jT$1;
 }));

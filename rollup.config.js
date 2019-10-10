@@ -17,5 +17,5 @@ export default {
 			"commbase-jsx": "file:../CommBaseJsX",
 		}
 	},
-	external: [ "lodash", "as-sys", "jQuery", "solr-jsx", "ambit-jsx" ]
+	external: [ "lodash", "as-sys", "jQuery", "solr-jsx", "ambit-jsx", "commbase-jsx" ]
 };

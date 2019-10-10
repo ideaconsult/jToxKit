@@ -8,7 +8,7 @@ import a$ from 'as-sys';
 
 import jT from '../Core';
 
-function Slider(settings) {
+function SliderShowing(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -23,7 +23,7 @@ function Slider(settings) {
 		this.makeSlider();
 };
 
-Slider.prototype = {
+SliderShowing.prototype = {
 	__expects: ["updateHandler"],
 	limits: null, // The overall range limit.
 	units: null, // The units of the values.
@@ -96,4 +96,4 @@ Slider.prototype = {
 	}
 };
 
-export default Slider;
+export default SliderShowing;

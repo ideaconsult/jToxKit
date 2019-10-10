@@ -8,7 +8,7 @@
 import a$ from 'as-sys';
 import _ from 'lodash';
 
-function List(settings) {
+function Listing(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
@@ -17,7 +17,7 @@ function List(settings) {
 	this.clearItems();
 };
 
-List.prototype = {
+Listing.prototype = {
 	itemId: "id",
 
 	populate: function (docs, callback) {
@@ -63,4 +63,4 @@ List.prototype = {
 	}
 }
 
-export default List;
+export default Listing;

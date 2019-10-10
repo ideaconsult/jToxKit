@@ -10,54 +10,47 @@ import a$ from 'as-sys';
 
 import jT from './Core';
 import _Tools from './Integration';
+import _List from './Listing';
+import _Load from './Loading';
 
 _.assign(jT, _Tools);
+jT.Listing = _List;
+jT.Loading = _Load;
 
 import _Accord from './widgets/AccordionExpansion';
 import _Auto from './widgets/Autocompletion';
-import _Current from './widgets/CurrentSearch';
-import _Item from './widgets/Item';
-import _List from './widgets/ItemList';
+import _Current from './widgets/SearchStatusShowing';
+import _Item from './widgets/ItemShowing';
+import _ListItem from './widgets/ItemListing';
 import _Log from './widgets/Logging';
-import _Page from './widgets/Pager';
+import _Page from './widgets/PageShowing';
 import _Pass from './widgets/Passing';
-import _Pivot from './widgets/Pivot';
-import _Range from './widgets/Ranger';
-import _Slide from './widgets/Slider';
+import _Pivot from './widgets/PivotShowing';
+import _Range from './widgets/RangeShowing';
+import _Slide from './widgets/SliderShowing';
 import _Switch from './widgets/Switching';
 import _Tag from './widgets/Tagging';
-import _Text from './widgets/Text';
-import _Load from './widgets/Loader';
+import _Text from './widgets/Texting';
 
 jT.AccordionExpansion = _Accord;
 jT.Autocompletion = _Auto;
-jT.CurrentSearch = _Current;
-jT.Item = _Item;
-jT.ItemList = _List;
+jT.ItemShowing = _Item;
+jT.ItemListing = _ListItem;
 jT.Logging = _Log;
-jT.Pager = _Page;
+jT.PageShowing = _Page;
 jT.Passing = _Pass;
-jT.Pivot = _Pivot;
-jT.Range = _Range;
-jT.Slider = _Slide;
+jT.PivotShowing = _Pivot;
+jT.RangeShowing = _Range;
+jT.SliderShowing = _Slide;
 jT.Switching = _Switch;
 jT.Tagging = _Tag;
-jT.Text = _Text;
-jT.Loader = _Load;
+jT.Texting = _Text;
+jT.SearchStatusShowing = _Current;
 
 /** Wrapping all pre-defined widgets, from he skills here.
  */
-jT.widget = {
-	Result: a$(Solr.Listing, jT.ListWidget, ItemList, _Load)
-
-};
-
-// import kit_Facet from './kits/FacetedSearch';
-// import kit_Log from './kits/Logging';
-
-// jT.kit = {
-// 	FacetedSearch: kit_Facet,
-// 	Log: kit_Log
-// }
+// jT.widget = {
+// 	SolrResult: a$(Solr.Listing, ItemList, _Load)
+// };
 
 export default jT;

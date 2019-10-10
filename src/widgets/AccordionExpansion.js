@@ -9,7 +9,7 @@ import a$ from 'as-sys';
 import $ from 'jQuery';
 import jT from "../Core";
 
-AccordionExpansion = function (settings) {
+ function AccordionExpansion(settings) {
 	a$.setup(this, settings);
 
 	this.target = $(settings.target);
