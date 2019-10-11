@@ -6,6 +6,7 @@
  */
 
 import _ from 'lodash';
+import jT from "./Core";
 
 export default {
 	rootSettings: {}, // These can be modified from the URL string itself.

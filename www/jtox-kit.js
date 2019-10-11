@@ -1,10 +1,10 @@
 /** jToxKit - Chem-informatics UI tools, widgets and kits library. Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved. @license MIT.*/
 (function(global, factory) {
     typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("jQuery"), require("solr-jsx"), require("commbase-jsx")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "jQuery", "solr-jsx", "commbase-jsx" ], factory) : (global = global || self, 
-    global["jtox-kit"] = factory(global._, global.a$, global.$, global.Solr, global["file:"][""]["/CommBaseJsX"]));
+    global.jToxKit = factory(global._, global.asSys, global.$, global.Solr, global.CommBase));
 })(this, (function(_$1, a$, $$1, Solr, CommBase) {
     "use strict";
-    var jT$1 = {
+    var jT = {
         version: "3.0.0",
         fixBaseUrl(url) {
             if (url != null && url.charAt(url.length - 1) == "/") url = url.slice(0, -1);
@@ -326,7 +326,7 @@
         template: null,
         classes: null,
         renderItem: function(info) {
-            return jT$1.fillTemplate(template, info).addClass(this.classes);
+            return jT.fillTemplate(template, info).addClass(this.classes);
         }
     };
     function AccordionExpander(settings) {
@@ -343,7 +343,7 @@
         expansionTemplate: null,
         before: null,
         renderExpansion: function(info) {
-            return jT$1.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
+            return jT.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
         },
         makeExpansion: function(before, info) {
             if (!!this.header) return;
@@ -455,7 +455,7 @@
     };
     var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
     function Lister(settings) {
-        settings.baseUrl = jT$1.fixBaseUrl(settings.baseUrl) + "/";
+        settings.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
         a$.setup(this, settings);
         this.lookupMap = settings.lookupMap || {};
         this.target = settings.target;
@@ -480,7 +480,7 @@
                 return {
                     topic: "Study Providers",
                     content: val.map((function(ref) {
-                        return jT$1.formatString(htmlLink, {
+                        return jT.formatString(htmlLink, {
                             href: "#",
                             hint: "Freetext search",
                             target: "_self",
@@ -496,7 +496,7 @@
                     content: val.map((function(ref) {
                         var link = ref.match(/^doi:(.+)$/);
                         link = link != null ? "https://www.doi.org/" + link[1] : ref;
-                        return jT$1.formatString(link.match(/^https?:\/\//) ? htmlLink : plainLink, {
+                        return jT.formatString(link.match(/^https?:\/\//) ? htmlLink : plainLink, {
                             href: link,
                             hint: "External reference",
                             target: "ref",
@@ -532,7 +532,7 @@
         renderSubstance: function(doc) {
             var summaryhtml = $$1("#summary-item").html(), summarylist = this.buildSummary(doc), baseUrl = this.getBaseUrl(doc), summaryRender = function(summarylist) {
                 return summarylist.map((function(s) {
-                    return jT$1.formatString(summaryhtml, s);
+                    return jT.formatString(summaryhtml, s);
                 })).join("");
             };
             var item = {
@@ -568,7 +568,7 @@
                     for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + "</a>";
                 }
             }
-            return jT$1.fillTemplate("#result-item", item);
+            return jT.fillTemplate("#result-item", item);
         },
         getBaseUrl: function(doc) {
             if (this.tagDbs[doc.dbtag_hss] !== undefined) {
@@ -588,7 +588,7 @@
                     _.each(c, (function(v, k) {
                         var m = k.match(/^(\w+)_[shd]+$/);
                         k = m && m[1] || k;
-                        if (!k.match(/type|id|component/)) se.push(jT$1.formatString(htmlLink, {
+                        if (!k.match(/type|id|component/)) se.push(jT.formatString(htmlLink, {
                             href: "#",
                             hint: "Freetext search on '" + k + "'",
                             target: "_self",
@@ -636,7 +636,7 @@
         var root$ = $$1(settings.target);
         a$.setup(this, settings);
         this.target = settings.target;
-        root$.html(jT$1.templates["logger-main"]);
+        root$.html(jT.templates["logger-main"]);
         root$.addClass("jtox-toolkit jtox-log");
         if (typeof this.lineHeight == "number") this.lineHeight = this.lineHeight.toString() + "px";
         if (typeof this.keepMessages != "number") this.keepMessages = parseInt(this.keepMessages);
@@ -708,7 +708,7 @@
             }
         },
         addLine: function(data) {
-            var self = this, el$ = jT$1.fillTemplate("#jtox-logline", data);
+            var self = this, el$ = jT.fillTemplate("#jtox-logline", data);
             el$.height("0px");
             this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
             setTimeout((function() {
@@ -731,7 +731,7 @@
             return el$;
         },
         beforeRequest: function(params) {
-            var url = jT$1.parseURL(params.url), info = this.formatEvent(params), line$ = this.addLine(info);
+            var url = jT.parseURL(params.url), info = this.formatEvent(params), line$ = this.addLine(info);
             this.setStatus("connecting");
             this.events[params.logId = Date.now()] = line$;
             this.setIcon(line$, "connecting");
@@ -746,7 +746,7 @@
             }
             delete this.events[params.logId];
             this.setIcon(line$, status);
-            jT$1.fillTree(line$[0], info);
+            jT.fillTree(line$[0], info);
             if (status == "error") console && console.log("Error [" + params.service + "]: " + jhr.statusText);
         }
     };
@@ -914,7 +914,7 @@
         vals += stats.min == null ? "-&#x221E;" : stats.min;
         if (!!stats.avg) vals += "&#x2026;" + stats.avg;
         vals += "&#x2026;" + (stats.max == null ? "&#x221E;" : stats.max);
-        if (isUnits) vals += " " + jT$1.formatUnits(stats.val).replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;").replace(/<sup>(\d)<\/sup>/g, "^$1");
+        if (isUnits) vals += " " + jT.formatUnits(stats.val).replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;").replace(/<sup>(\d)<\/sup>/g, "^$1");
         return vals;
     }
     function InnterTagger(settings) {
@@ -970,7 +970,7 @@
             for (i = 0; i < pivot.length; ++i) {
                 var p = pivot[i], pid = p.val.replace(iDificationRegExp, "_"), target = this.targets[pid];
                 if (!target) {
-                    this.targets[pid] = target = new jT$1.AccordionExpansion($$1.extend(true, {}, this.settings, this.getFaceterEntry(0), {
+                    this.targets[pid] = target = new jT.AccordionExpansion($$1.extend(true, {}, this.settings, this.getFaceterEntry(0), {
                         id: pid,
                         title: p.val
                     }));
@@ -985,7 +985,7 @@
         updateHandler: function(target) {
             var hdr = target.getHeaderText();
             return function(count) {
-                hdr.textContent = jT$1.updateCounter(hdr.textContent, count);
+                hdr.textContent = jT.updateCounter(hdr.textContent, count);
             };
         },
         prepareTag: function(value) {
@@ -1025,7 +1025,7 @@
                 for (var i = 0, fl = bucket.length; i < fl; ++i) {
                     var f = bucket[i], fid = f.val.replace(iDificationRegExp, "_"), cont$;
                     if (target.children().length > 1) cont$ = $$1("#" + fid, target[0]).show(); else {
-                        cont$ = jT$1.fillTemplate($$1("#tag-facet"), faceter).attr("id", fid);
+                        cont$ = jT.fillTemplate($$1("#tag-facet"), faceter).attr("id", fid);
                         f.title = f.val;
                         f.onMain = this.clickHandler(faceter.id + ":" + f.val);
                         f.hint = buildValueRange(f);
@@ -1072,7 +1072,7 @@
             } else this.target.jRange("setValue", value);
         },
         makeSlider: function() {
-            var self = this, enabled = this.limits[1] > this.limits[0], scale = [ jT$1.formatNumber(this.limits[0], this.precision), this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), jT$1.formatNumber(this.limits[1], this.precision) ], updateHandler = self.updateHandler(), settings = {
+            var self = this, enabled = this.limits[1] > this.limits[0], scale = [ jT.formatNumber(this.limits[0], this.precision), this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), jT.formatNumber(this.limits[1], this.precision) ], updateHandler = self.updateHandler(), settings = {
                 from: this.limits[0],
                 to: this.limits[1],
                 step: this.precision,
@@ -1082,7 +1082,7 @@
                 disable: !enabled,
                 isRange: this.isRange,
                 width: this.width,
-                format: jT$1.formatString(this.format, this) || ""
+                format: jT.formatString(this.format, this) || ""
             };
             if (this.color != null) settings.theme = "theme-" + this.color;
             settings.ondragend = function(value) {
@@ -1227,7 +1227,7 @@
             this.lastPivotValue = value;
             this.slidersTarget.empty().parent().addClass("active");
             for (var i = 0, el = entry.length; i < el; ++i) {
-                var all = entry[i], ref = current[i], setup = {}, w, el$ = jT$1.fillTemplate("#slider-one");
+                var all = entry[i], ref = current[i], setup = {}, w, el$ = jT.fillTemplate("#slider-one");
                 this.slidersTarget.append(el$);
                 setup.id = all.id;
                 setup.targetValue = value;
@@ -1241,7 +1241,7 @@
                 setup.automatic = true;
                 setup.width = parseInt(this.slidersTarget.width() - $$1("#sliders-controls").width() - 20) / (Math.min(el, 2) + .1);
                 setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-                setup.units = ref.id == "unit" ? jT$1.formatUnits(ref.val) : "";
+                setup.units = ref.id == "unit" ? jT.formatUnits(ref.val) : "";
                 setup.useJson = this.useJson;
                 setup.domain = this.domain;
                 setup.sliderRoot = this;
@@ -1355,23 +1355,23 @@
             } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
         }
     };
-    _$1.assign(jT$1, _Tools);
-    jT$1.Listing = Listing;
-    jT$1.Loading = Loading;
-    jT$1.Iteming = Iteming;
-    jT$1.AccordionExpander = AccordionExpander;
-    jT$1.Autocompleter = Autocompleter;
-    jT$1.Lister = Lister;
-    jT$1.Logger = Logger;
-    jT$1.Pager = Pager;
-    jT$1.Passer = Passer;
-    jT$1.Pivoter = Pivoter;
-    jT$1.Ranger = Ranger;
-    jT$1.Slider = Slider;
-    jT$1.Switcher = Switcher;
-    jT$1.Tagger = Tagger;
-    jT$1.Texter = Texter;
-    jT$1.SearchReported = SearchReporter;
-    jT$1.kit = {};
-    return jT$1;
+    _$1.assign(jT, _Tools);
+    jT.Listing = Listing;
+    jT.Loading = Loading;
+    jT.Iteming = Iteming;
+    jT.AccordionExpander = AccordionExpander;
+    jT.Autocompleter = Autocompleter;
+    jT.Lister = Lister;
+    jT.Logger = Logger;
+    jT.Pager = Pager;
+    jT.Passer = Passer;
+    jT.Pivoter = Pivoter;
+    jT.Ranger = Ranger;
+    jT.Slider = Slider;
+    jT.Switcher = Switcher;
+    jT.Tagger = Tagger;
+    jT.Texter = Texter;
+    jT.SearchReported = SearchReporter;
+    jT.kit = {};
+    return jT;
 }));

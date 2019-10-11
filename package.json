@@ -34,12 +34,15 @@
 		"www/jtox-kit.js",
 		"www/jtox-kit.uis.js"
 	],
+	"config": {
+		"kitsname": "jtox-kit.kits"
+	},
 	"dependencies": {
-		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-		"lodash": "^4.17.15",
-		"solr-jsx": "file:../SolrJsX",
 		"ambit-jsx": "file:../AmbitJsx",
-		"commbase-jsx": "file:../CommBaseJsX"
+		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
+		"commbase-jsx": "file:../CommBaseJsX",
+		"lodash": "^4.17.15",
+		"solr-jsx": "file:../SolrJsX"
 	},
 	"devDependencies": {
 		"concat": "^1.0.3",
@@ -51,11 +54,13 @@
 		"terser": "^4.3.8"
 	},
 	"scripts": {
-		"core": "rm -f www/$npm_package_name*.js && rollup -c && sed -E -e \"s/\\{\\{VERSION\\}\\}/$npm_package_version/\" $npm_package_main | terser -b --comments -o $npm_package_main",
-		"kits": "cat src/kits/*.html | bin/html2js.pl --trim > www/jtox-kit.kits.js && terser www/jtox-kit.kits.js -mc --ie8 --keep-fnames -o www/jtox-kit.kits.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
+		"core": "rm -f www/$npm_package_name*.js && rollup -c && sed -E -e \"s/\\{\\{VERSION\\}\\}/$npm_package_version/\" $npm_package_main | terser -b --comments -o $npm_package_main && terser $npm_package_main -mc --ie8 --keep-fnames -o www/${npm_package_name}.min.js",
+		"kits": "cat src/kits/*.html | bin/html2js.pl --trim > www/${npm_package_config_kitsname}.js && terser www/${npm_package_config_kitsname}.js -mc --ie8 --keep-fnames -o www/${npm_package_config_kitsname}.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
 		"build": "npm run core && npm run kits",
 		"test": "npm run prepare && mocha test --require expectations",
-		"prepare": "npm run build && terser $npm_package_main -mc --ie8 --keep-fnames -o www/${npm_package_name}.min.js && cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
+		"archive": "cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
+		"libs": "rsync node_modules/lodash/lodash*.js www/libs && rsync node_modules/as-sys/as-sys*.js www/libs && rsync node_modules/ambit-jsx/ambit-jsx*.js www/libs && rsync node_modules/solr-jsx/solr-jsx*.js www/libs && rsync node_modules/commbase-jsx/commbase-jsx*.js www/libs",
+		"prepare": "npm run build && npm run libs && npm run archive",
 		"postpublish": "git push && git tag -am \"Release $npm_package_version.\" ${npm_package_version} && git push --tags"
 	}
 }

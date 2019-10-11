@@ -99,7 +99,7 @@
 		},
 
 		tagInit = function (manager) {
-			jT.TagWidget.prototype.init.call(this, manager);
+			jT.Tagger.prototype.init.call(this, manager);
 			manager.getListener("current").registerWidget(this);
 		},
 
@@ -133,7 +133,7 @@
 
 	jT.kit.FacetedSearch = function (settings) {
 		this.id = null;
-		a$.extend(true, this, defaultSettings, settings);
+		a$.setup(this, defaultSettings, settings);
 		this.serverUrl = this.solrUrl;
 
 		if (typeof this.lookupMap === "string")
@@ -297,9 +297,9 @@
 				PivotWidget = a$(Solr.Eventing, Solr.Spying, Solr.Pivoting, jT.Pivoter, jT.Ranger),
 				TagWidget = a$(Solr.Eventing, Solr.Faceting, jT.AccordionExpander, jT.Tagger, jT.Switcher);
 
-			this.manager = Manager = new(a$(CommBase.Connecting, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
+			this.manager = Manager = new(a$(CommBase.Communicating, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
 
-			Manager.addListeners(new jT.ResultWidget($.extend(true, {
+			Manager.addListeners(new jT.Lister($.extend(true, {
 				id: 'result',
 				target: $('#docs'),
 				itemId: "s_uuid",
@@ -407,7 +407,7 @@
 			}));
 
 			// ... And finally the current-selection one, and ...
-			Manager.addListeners(new jT.CurrentSearchWidget({
+			Manager.addListeners(new jT.SearchReporter({
 				id: 'current',
 				target: $('#selection'),
 				renderItem: tagRender,
