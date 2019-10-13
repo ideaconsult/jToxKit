@@ -64,7 +64,7 @@ var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{
 		}
 	};
 
-function SolrResulter(settings) {
+function SolrItemLister(settings) {
 	a$.setup(this, defSettings, settings);
 
 	this.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
@@ -73,7 +73,7 @@ function SolrResulter(settings) {
 	this.id = settings.id;
 };
 
-SolrResulter.prototype.renderItem = function (doc) {
+SolrItemLister.prototype.renderItem = function (doc) {
 	var self = this,
 		el = $(this.renderSubstance(doc));
 
@@ -113,7 +113,7 @@ SolrResulter.prototype.renderItem = function (doc) {
 /**
  * substance
  */
-SolrResulter.prototype.renderSubstance = function (doc) {
+SolrItemLister.prototype.renderSubstance = function (doc) {
 	var summaryhtml = $("#summary-item").html(),
 		summarylist = this.buildSummary(doc),
 		baseUrl = this.getBaseUrl(doc),
@@ -177,7 +177,7 @@ SolrResulter.prototype.renderSubstance = function (doc) {
 	return jT.fillTemplate("#result-item", item);
 };
 
-SolrResulter.prototype.getBaseUrl = function (doc) {
+SolrItemLister.prototype.getBaseUrl = function (doc) {
 	if (this.tagDbs[doc.dbtag_hss] !== undefined) {
 		var url = this.tagDbs[doc.dbtag_hss].server,
 			lastChar = url.substr(-1);
@@ -187,7 +187,7 @@ SolrResulter.prototype.getBaseUrl = function (doc) {
 	}
 };
 
-SolrResulter.prototype.renderComposition = function (doc, defValue) {
+SolrItemLister.prototype.renderComposition = function (doc, defValue) {
 	var summary = [],
 		composition = doc._extended_ && doc._extended_.composition;
 
@@ -239,7 +239,7 @@ SolrResulter.prototype.renderComposition = function (doc, defValue) {
 	return summary;
 };
 
-SolrResulter.prototype.buildSummary = function (doc) {
+SolrItemLister.prototype.buildSummary = function (doc) {
 	var self = this,
 		items = [];
 
@@ -276,4 +276,4 @@ SolrResulter.prototype.buildSummary = function (doc) {
 	return items;
 };
 
-export default SolrResulter;
+export default SolrItemLister;

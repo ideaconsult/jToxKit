@@ -22,7 +22,7 @@ jT.ItemRendering = _Item;
 
 import _Accord from './widgets/AccordionExpander';
 import _Auto from './widgets/Autocompleter';
-import _SolrResult from './widgets/SolrResulter';
+import _SolrResult from './widgets/SolrItemLister';
 import _Log from './widgets/Logger';
 import _Page from './widgets/Pager';
 import _Pass from './widgets/Passer';
@@ -32,11 +32,11 @@ import _Slide from './widgets/Slider';
 import _Switch from './widgets/Switcher';
 import _Tag from './widgets/Tagger';
 import _Text from './widgets/Texter';
-import _Reporter from './widgets/SolrQueryReporter';
+import _SolrReporter from './widgets/SolrQueryReporter';
 
 jT.AccordionExpander = _Accord;
 jT.Autocompleter = _Auto;
-jT.SolrResulter = _SolrResult;
+jT.SolrItemLister = _SolrResult;
 jT.Logger = _Log;
 jT.Pager = _Page;
 jT.Passer = _Pass;
@@ -46,7 +46,7 @@ jT.Slider = _Slide;
 jT.Switcher = _Switch;
 jT.Tagger = _Tag;
 jT.Texter = _Text;
-jT.SolrQueryReporter = _Reporter;
+jT.SolrQueryReporter = _SolrReporter;
 
 /** Wrapping all pre-defined widgets, from he skills here.
  */

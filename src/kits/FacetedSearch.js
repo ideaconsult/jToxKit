@@ -357,7 +357,6 @@
 						exclusion: this.multipleSelection || this.keepAllFacets,
 						useJson: true,
 						renderItem: tagRender,
-						init: tagInit,
 						onUpdated: tagsUpdated,
 						nesting: "type_s:substance",
 						domain: {
@@ -366,6 +365,8 @@
 						},
 						classes: f.color
 					}, f))
+
+				w.init = tagInit;
 
 				w.afterResponse = function (data) {
 					this.populate(this.getFacetCounts(data.facets));
@@ -414,7 +415,7 @@
 			}));
 
 			// Now add the basket.
-			this.basket = Basket = new(a$(jT.Populating, jT.SolrResulter))($.extend(true, {
+			this.basket = Basket = new(a$(jT.Populating, jT.SolrItemLister))($.extend(true, {
 				id: 'basket',
 				target: $('#basket-docs'),
 				summaryRenderers: this.summaryRenderers,

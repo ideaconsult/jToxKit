@@ -25,6 +25,8 @@ var defSettings = {
 	prevLabel: '&laquo; Previous', // The previous page link label. Defaults to "&laquo; Previous".
 	nextLabel: 'Next &raquo;', // The next page link label. Defaults to "Next &raquo;".
 	separator: ' ', // Separator between pagination links. Defaults to " ".
+
+	renderHeader() {} // A configurable callback for rendering a header.
 };
 
 function Pager(settings) {
