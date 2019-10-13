@@ -21,7 +21,7 @@ jT.Iteming = _Item;
 
 import _Accord from './widgets/AccordionExpander';
 import _Auto from './widgets/Autocompleter';
-import _Lister from './widgets/Lister';
+import _Resulter from './widgets/SolrResulter';
 import _Log from './widgets/Logger';
 import _Page from './widgets/Pager';
 import _Pass from './widgets/Passer';
@@ -35,7 +35,7 @@ import _Current from './widgets/SearchReporter';
 
 jT.AccordionExpander = _Accord;
 jT.Autocompleter = _Auto;
-jT.Lister = _Lister;
+jT.SolrResulter = _Resulter;
 jT.Logger = _Log;
 jT.Pager = _Page;
 jT.Passer = _Pass;
@@ -45,7 +45,7 @@ jT.Slider = _Slide;
 jT.Switcher = _Switch;
 jT.Tagger = _Tag;
 jT.Texter = _Text;
-jT.SearchReported = _Current;
+jT.SearchReporter = _Current;
 
 /** Wrapping all pre-defined widgets, from he skills here.
  */
@@ -53,7 +53,13 @@ jT.SearchReported = _Current;
 // 	SolrResult: a$(Solr.Listing, _Item, _Load)
 // };
 
-// Finally make space for the kits to self-register.
+// Make space for the kits to self-register.
 jT.kit = {};
+
+// Finally make some module-name maintanence steps.
+
+(	typeof global !== "undefined" ? global :
+	typeof self !== "undefined" ? self :
+	typeof window !== "undefined" ? window : {})['jT'] = jT;
 
 export default jT;

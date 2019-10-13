@@ -9,18 +9,18 @@
 import a$ from 'as-sys';
 import jT from './Core';
 
+var defSettings = {
+	template: null,
+	classes: null,
+};
+
 function Iteming(settings) {
-	a$.setup(this, settings);
+	a$.setup(this, defSettings, settings);
 	this.target = $(settings.target);
 };
 
-Iteming.prototype = {
-	template: null,
-	classes: null,
-
-	renderItem: function (info) {
-		return jT.fillTemplate(template, info).addClass(this.classes);
-	}
+Iteming.prototype.renderItem = function (info) {
+	return jT.fillTemplate(template, info).addClass(this.classes);
 };
 
 export default Iteming;

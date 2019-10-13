@@ -7,7 +7,7 @@
         version: "1.0.0"
     };
     function Authenticating(settings) {
-        a$.setup(this, settings);
+        a$.setup(this, Authenticating.prototype, settings);
         if (settings.authMethod === "Basic") {
             _.extend(this.ajaxSettings, {
                 headers: {
@@ -29,7 +29,7 @@
         processData: false
     };
     function Communicating(settings) {
-        a$.setup(this, settings);
+        a$.setup(this, Communicating.prototype, settings);
         this.listeners = {};
         this.response = null;
         this.error = null;

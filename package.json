@@ -55,7 +55,7 @@
 	},
 	"scripts": {
 		"core": "rm -f www/$npm_package_name*.js && rollup -c && sed -E -e \"s/\\{\\{VERSION\\}\\}/$npm_package_version/\" $npm_package_main | terser -b --comments -o $npm_package_main && terser $npm_package_main -mc --ie8 --keep-fnames -o www/${npm_package_name}.min.js",
-		"kits": "cat src/kits/*.html | bin/html2js.pl --trim > www/${npm_package_config_kitsname}.js && terser www/${npm_package_config_kitsname}.js -mc --ie8 --keep-fnames -o www/${npm_package_config_kitsname}.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
+		"kits": "cat src/kits/*.js > www/${npm_package_config_kitsname}.js && cat src/kits/*.html | bin/html2js.pl --trim >> www/${npm_package_config_kitsname}.js && terser www/${npm_package_config_kitsname}.js -mc --ie8 --keep-fnames -o www/${npm_package_config_kitsname}.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
 		"build": "npm run core && npm run kits",
 		"test": "npm run prepare && mocha test --require expectations",
 		"archive": "cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",

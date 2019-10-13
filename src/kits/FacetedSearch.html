@@ -24,10 +24,16 @@
 </head>
 
 <body>
-<div id="search-ui" class="jtox-kit" data-kit="FacetedSearch" data-configuration="Settings" data-solr-url="https://sandbox.ideaconsult.net/solr/enanondm_shard1_replica1/" data-base-url="https://data.enanomapper.net/substance/"/>
+<div id="search-ui" 
+	class="jtox-kit" 
+	data-kit="FacetedSearch" 
+	data-configuration="Settings" 
+	data-solr-url="http://127.0.0.1:8983/solr/nanoreg1/" 
+	data-base-url="http://localhost:8080/ambit2/">
+</div>
 
 <div class="jtox-template">
-<!--[[ jToxKit.ui.templates['faceted-search-kit'] -->
+<!--[[ jToxKit.templates['faceted-search-kit'] -->
 	<div class="query-container">
 		<!-- left -->
 		<div id="query" class="query-left">
@@ -95,7 +101,7 @@
 	<!-- query container -->	
 	</div> 
 <!-- // end of #faceted-search-kit ]]-->
-<!--[[ jToxKit.ui.templates['faceted-search-templates'] -->
+<!--[[ jToxKit.templates['faceted-search-templates'] -->
 	
 	<section id="result-item">
 		<article id="{{item_id}}" class="item">
@@ -170,6 +176,7 @@
 <!-- <script src="../www/jtox-kit.kits.js"></script> -->
 
 <script src="./FacetedSearch.js"></script>
+<script src="../../test/TestSettings.js"></script>
 
 <script lang="JavaScript">
 

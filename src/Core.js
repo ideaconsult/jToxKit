@@ -61,7 +61,7 @@ export default {
 			if (i >= pl)
 				break;
 
-			var f = a$.path(info, pieces[i]);
+			var f = _.get(info, pieces[i]);
 			if (f != null) // i.e. we've found it.
 				out += f;
 			else if (typeof def === 'function') // not found, but we have default function.
@@ -183,7 +183,7 @@ export default {
 	fillTree(root, info) {
 		$('.data-field', root).each(function () {
 			var me$ = $(this),
-				val = a$.path(info, me$.data('field'));
+				val = _.get(info, me$.data('field'));
 			if (val !== undefined)
 				me$.html(val);
 		});

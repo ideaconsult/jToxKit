@@ -19,14 +19,14 @@
     var global = window;
 
     function require(a) {
-      if (a == "lodash" || a == "_")
-        return _;
-      else if (a == "asSys" || a == "as-sys")
-        return asSys;
-      else if (a.match(/[.\/]/))
-        return window['jtox-kit'];
-      else
-        return window[a];
+      var map = {
+        'lodash': "_",
+        'as-sys': "asSys",
+        'commbase-jsx': "CommBase",
+        'ambit-jsh' : "Ambit",
+        'solr-jsx' : "Solr"
+      }
+      return window[a] || window[map[a]] || window['jtox-kit'] || window.jToxKit;
     }
 
     mocha.setup('bdd');

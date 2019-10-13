@@ -1,25 +1,8 @@
 (function(global, factory) {
-  typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash/core")) : typeof define === "function" && define.amd ? define([ "lodash/core" ], factory) : (global = global || self, 
+  typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash")) : typeof define === "function" && define.amd ? define([ "lodash" ], factory) : (global = global || self, 
   global.asSys = factory(global._));
 })(this, function(_) {
   "use strict";
-  var eachObj = !!_ && typeof _.each === "function" ? _.each : $.each;
-  var mergeObjs = !!_ && typeof _.extend === "function" ? _.extend : $.extend;
-  var equalObjs = !!_ && typeof _.equal === "function" ? _.equal : function(a, b) {
-    if (typeof a !== "object" || typeof b !== "object") return a === b; else {
-      var testedProps = {};
-      for (var p in a) {
-        if (!a.hasOwnProperty(p)) continue;
-        if (!b.hasOwnProperty(p) || !equalObjs(a[p], b[p])) return false;
-        testedProps[p] = true;
-      }
-      for (var p in b) {
-        if (testedProps[p] || !b.hasOwnProperty(p)) continue;
-        if (!a.hasOwnProperty(p) || !equalObjs(a[p], b[p])) return false;
-      }
-    }
-    return true;
-  };
   var similarObjs = function(a, b) {
     if (a instanceof RegExp) return typeof b === "string" && b.match(a) != null; else if (b instanceof RegExp) return typeof a === "string" && a.match(b) != null; else if (typeof a !== "object" || typeof b !== "object") return a == b; else for (var p in a) {
       if (!a.hasOwnProperty(p)) continue;
@@ -75,7 +58,7 @@
         for (var j = 0, el = a.prototype.__expects.length; j < el; ++j) expected[a.prototype.__expects[j]] = true;
       }
       skillmap.push(a);
-      A.prototype = A.prototype === undefined ? Object.create(a.prototype) : mergeObjs(A.prototype, a.prototype);
+      A.prototype = A.prototype === undefined ? Object.create(a.prototype) : _.extend(A.prototype, a.prototype);
       if (a.prototype.__skills !== undefined) {
         for (var j = 0, ssl = a.prototype.__skills.length, ss; j < ssl; ++j) {
           ss = a.prototype.__skills[j];
@@ -84,7 +67,7 @@
       }
     }
     if (!!expected) {
-      eachObj(expected, function(v, m) {
+      _.each(expected, function(v, m) {
         if (!A.prototype[m]) throw {
           name: "Unmatched expectation",
           message: "The expected method [" + m + "] was not found among provided skills.",
@@ -101,21 +84,16 @@
     });
     return A;
   };
-  a$.VERSION = "1.0.2";
+  a$.VERSION = "1.0.3";
   a$.equal = function() {
-    return multiScan(arguments, equalObjs);
+    return multiScan(arguments, _.isEqual);
   };
   a$.similar = function() {
     return multiScan(arguments, similarObjs);
   };
   a$.title = fnName;
-  a$.setup = function(agent) {
-    for (var p in agent) {
-      for (var i = 1; i < arguments.length; ++i) {
-        var src = arguments[i];
-        if (!!src && src[p] !== undefined) agent[p] = src[p];
-      }
-    }
+  a$.setup = function(agent, defaults) {
+    for (var i = 1, defKeys = _.keys(defaults); i < arguments.length; ++i) _.merge(agent, _.pick(arguments[i], defKeys));
     return agent;
   };
   a$.common = function(equal) {
@@ -152,7 +130,7 @@
   };
   a$.broadcast = function(agent, activity) {
     var args = Array.prototype.slice.call(arguments, 2);
-    eachObj(agent.__skills, function(s) {
+    _.each(agent.__skills, function(s) {
       if (typeof s.prototype[activity] === "function") s.prototype[activity].apply(agent, args);
     });
     return agent;
@@ -191,7 +169,7 @@
     for (var k in pool) {
       var a = pool[k];
       if (!selector.call(a, a, k, pool)) continue;
-      if (full) mergeObjs(skills, Object.getPrototypeOf(a));
+      if (full) _.merge(skills, Object.getPrototypeOf(a));
       res.push(a);
     }
     if (full) {
@@ -217,5 +195,6 @@
     }
     return res;
   };
+  (typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})["a$"] = a$;
   return a$;
 });

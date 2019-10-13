@@ -9,8 +9,14 @@
 import a$ from 'as-sys';
 import $ from 'jQuery';
 
+var defSettings = {
+	runSelector: ".switcher", // A CSS selector to find the switching element.
+	runMethod: null, // The method to be invoked on the given target or on self.
+	runTarget: null, // The target to invoke the method to - this will be used if null.
+};
+
 function Passer(settings) {
-	a$.setup(this, settings);
+	a$.setup(this, defSettings, settings);
 
 	var self = this,
 		target$ = $(self.runSelector, $(settings.target)[0]),
@@ -21,12 +27,6 @@ function Passer(settings) {
 		a$.act(runTarget, self.runMethod, this, e);
 		e.stopPropagation();
 	});
-};
-
-Passer.prototype = {
-	runSelector: ".switcher", // A CSS selector to find the switching element.
-	runMethod: null, // The method to be invoked on the given target or on self.
-	runTarget: null, // The target to invoke the method to - this will be used if null.
 };
 
 export default Passer;

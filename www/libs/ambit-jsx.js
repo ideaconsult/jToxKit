@@ -8,51 +8,51 @@
         version: "1.0.0"
     };
     function Paging(settings) {}
-    Paging.prototype = {};
-    function Tasking(settings) {
-        a$.setup(this, settings);
-    }
-    Tasking.prototype = {
+    Paging.prototype.nextPage = function() {};
+    var defSettings = {
         pollDelay: 250,
-        pollTimeout: 15e3,
-        init: function(manager) {
-            a$.pass(this, Tasking, "init", manager);
-            this.manager = manager;
-        },
-        pollTask: function(taskUri, callback) {
-            var self = this, proceedOnTask, queryTask, taskStart = null;
-            queryTask = function(settings) {
-                if (typeof settings === "string") settings = {
-                    url: settings,
-                    method: "GET"
-                };
-                settings.error = function(jhr) {
-                    callback(null, jhr);
-                };
-                settings.success = proceedOnTask;
-                settings.dataType = "json";
-                self.manager.doRequest(settings);
+        pollTimeout: 15e3
+    };
+    function Tasking(settings) {
+        a$.setup(this, defSettings, settings);
+    }
+    Tasking.prototype.init = function(manager) {
+        a$.pass(this, Tasking, "init", manager);
+        this.manager = manager;
+    };
+    Tasking.prototype.pollTask = function(taskUri, callback) {
+        var self = this, proceedOnTask, queryTask, taskStart = null;
+        queryTask = function(settings) {
+            if (typeof settings === "string") settings = {
+                url: settings,
+                method: "GET"
             };
-            proceedOnTask = function(task, jhr) {
-                if (task == null || task.task == null || task.task.length < 1) {
-                    callback(task, jhr);
-                    return;
-                }
-                task = task.task[0];
-                if (task.completed > -1 || !!task.error) callback(task, jhr); else if (taskStart == null) {
-                    taskStart = Date.now();
-                    setTimeout((function() {
-                        queryTask(task.result);
-                    }), self.pollDelay);
-                } else if (Date.now() - taskStart > self.poolTimeout) callback(task, jhr); else setTimeout((function() {
+            settings.error = function(jhr) {
+                callback(null, jhr);
+            };
+            settings.success = proceedOnTask;
+            settings.dataType = "json";
+            self.manager.doRequest(settings);
+        };
+        proceedOnTask = function(task, jhr) {
+            if (task == null || task.task == null || task.task.length < 1) {
+                callback(task, jhr);
+                return;
+            }
+            task = task.task[0];
+            if (task.completed > -1 || !!task.error) callback(task, jhr); else if (taskStart == null) {
+                taskStart = Date.now();
+                setTimeout((function() {
                     queryTask(task.result);
                 }), self.pollDelay);
-            };
-            queryTask(taskUri);
-        }
+            } else if (Date.now() - taskStart > self.poolTimeout) callback(task, jhr); else setTimeout((function() {
+                queryTask(task.result);
+            }), self.pollDelay);
+        };
+        queryTask(taskUri);
     };
     function Authorization(settings) {
-        a$.setup(this, settings);
+        a$.setup(this, Authorization.prototype, settings);
     }
     Authorization.prototype = {
         afterResponse: null,
@@ -61,7 +61,7 @@
         addPolicy(data) {}
     };
     function Modelling(settings) {
-        a$.setup(this, settings);
+        a$.setup(this, Modelling.prototype, settings);
         this.models = null;
     }
     Modelling.prototype = {

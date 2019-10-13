@@ -10,9 +10,14 @@ import a$ from 'as-sys';
 import _ from 'lodash';
 import $ from 'jQuery';
 
+var defSettings = {
+	switchSelector: ".switcher", // A CSS selector to find the switching element.
+	switchField: null, // The field to be modified.
+	onSwitching: null // The function to be invoked, on change.
+};
 
 function Switcher(settings) {
-	a$.setup(this, settings);
+	a$.setup(this, defSettings, settings);
 
 	var self = this,
 		target$ = $(self.switchSelector, $(settings.target)[0]),
@@ -32,12 +37,6 @@ function Switcher(settings) {
 		a$.act(self, self.onSwitching, e);
 		e.stopPropagation();
 	});
-};
-
-Switcher.prototype = {
-	switchSelector: ".switcher", // A CSS selector to find the switching element.
-	switchField: null, // The field to be modified.
-	onSwitching: null // The function to be invoked, on change.
 };
 
 export default Switcher;

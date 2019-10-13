@@ -9,32 +9,33 @@
 import a$ from 'as-sys';
 import $ from 'jQuery';
 
-// Keep in mind that the field should be the same in all entries.
-function Loading(settings) {
-	a$.setup(this, settings);
+var defSettings = {
+	errorMessage: "Error retrieving data!",
 };
 
-Loading.prototype = {
-	__expects: ["populate"],
-	errorMessage: "Error retrieving data!",
+// Keep in mind that the field should be the same in all entries.
+function Loading(settings) {
+	a$.setup(this, defSettings, settings);
+};
 
-	init(manager) {
-		a$.pass(this, Loading, 'init', manager);
-		this.manager = manager;
-	},
+Loading.prototype.__expects = ["populate"];
 
-	beforeRequest() {
-		$(this.target).html(
-			$('<img>').attr('src', 'images/ajax-loader.gif'));
-	},
+Loading.prototype.init = function (manager) {
+	a$.pass(this, Loading, 'init', manager);
+	this.manager = manager;
+};
 
-	afterResponse(data, jqXHR) {
-		if (!data) // i.e. error
-			$(this.target).html(this.errorMessage);
-		else {
-			$(this.target).empty();
-			this.populate(data.entries);
-		}
+Loading.prototype.beforeRequest = function () {
+	$(this.target).html(
+		$('<img>').attr('src', 'images/ajax-loader.gif'));
+};
+
+Loading.prototype.afterResponse = function (data, jqXHR) {
+	if (!data) // i.e. error
+		$(this.target).html(this.errorMessage);
+	else {
+		$(this.target).empty();
+		this.populate(data.entries);
 	}
 };
 

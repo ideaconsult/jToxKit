@@ -2,13 +2,12 @@
  * The combined, begamoth kit providing full faceted search capabilites.
  *
  * Author: Ivan (Jonan) Georgiev
- * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
+ * Copyright © 2017-2019, IDEAConsult Ltd. All rights reserved.
  */
 
 (function (Solr, a$, $, jT) {
 
-	var
-		mainLookupMap = {},
+	var mainLookupMap = {},
 		uiConfiguration = {},
 		defaultSettings = {
 			servlet: "select",
@@ -133,7 +132,7 @@
 
 	jT.kit.FacetedSearch = function (settings) {
 		this.id = null;
-		a$.setup(this, defaultSettings, settings);
+		_.merge(this, defaultSettings, settings);
 		this.serverUrl = this.solrUrl;
 
 		if (typeof this.lookupMap === "string")
@@ -299,7 +298,7 @@
 
 			this.manager = Manager = new(a$(CommBase.Communicating, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
 
-			Manager.addListeners(new jT.Lister($.extend(true, {
+			Manager.addListeners(new jT.SolrResulter($.extend(true, {
 				id: 'result',
 				target: $('#docs'),
 				itemId: "s_uuid",
@@ -415,7 +414,7 @@
 			}));
 
 			// Now add the basket.
-			this.basket = Basket = new(a$(jT.Listing, jT.Lister))($.extend(true, {
+			this.basket = Basket = new(a$(jT.Listing, jT.SolrResulter))($.extend(true, {
 				id: 'basket',
 				target: $('#basket-docs'),
 				summaryRenderers: this.summaryRenderers,
