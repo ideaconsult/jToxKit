@@ -83,10 +83,10 @@ Ranger.prototype.init = function (manager) {
 	});
 };
 
-Ranger.prototype.afterResponse = function (data) {
+Ranger.prototype.afterResponse = function (data, jhr, params) {
 	var pivot = this.getPivotCounts(data.facets);
 
-	a$.pass(this, Ranger, "afterResponse", data);
+	a$.pass(this, Ranger, "afterResponse", data, jhr, params);
 
 	if (!this.pivotMap) {
 		var qval = this.manager.getParameter('q').value || "";

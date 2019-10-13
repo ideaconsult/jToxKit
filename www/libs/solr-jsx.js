@@ -335,7 +335,7 @@
     Paging.prototype.nextPage = function() {
         return this.currentPage < this.totalPages ? this.currentPage + 1 : null;
     };
-    Paging.prototype.afterResponse = function(response, ajaxOpts, jqXHR) {
+    Paging.prototype.afterResponse = function(data, jqXHR, ajaxOpts) {
         var rawResponse = jqXHR.responseJSON, offset = parseInt(rawResponse.responseHeader && rawResponse.responseHeader.params && rawResponse.responseHeader.params.start || this.manager.getParameter("start").value || 0);
         this.pageSize = parseInt(rawResponse.responseHeader && rawResponse.responseHeader.params && rawResponse.responseHeader.params.rows || this.manager.getParameter("rows").value || this.pageSize);
         this.totalEntries = parseInt(rawResponse.response.numFound);
@@ -616,11 +616,7 @@
     };
     Faceting.prototype.getFacetCounts = function(facet_counts) {
         var property;
-        if (this.useJson === true) {
-            if (facet_counts == null) facet_counts = this.manager.response.facets;
-            return facet_counts.count > 0 ? facet_counts[this.id].buckets : [];
-        }
-        if (facet_counts == null) facet_counts = this.manager.response.facet_counts;
+        if (!facet_counts) return []; else if (this.useJson === true) return facet_counts.count > 0 ? facet_counts[this.id].buckets : [];
         if (this.facet.field !== undefined) property = "facet_fields"; else if (this.facet.date !== undefined) property = "facet_dates"; else if (this.facet.range !== undefined) property = "facet_ranges";
         if (property !== undefined) {
             switch (this.manager.getParameter("json.nl").value) {
@@ -781,11 +777,7 @@
         return this.faceters[typeof p === "string" ? p : p.id];
     };
     Pivoting.prototype.getPivotCounts = function(pivot_counts) {
-        if (this.useJson === true) {
-            if (pivot_counts == null) pivot_counts = this.manager.response.facets;
-            return pivot_counts.count > 0 ? pivot_counts[this.rootId].buckets : [];
-        } else {
-            if (pivot_counts == null) pivot_counts = this.manager.response.pivot;
+        if (!pivot_counts) return []; else if (this.useJson === true) return pivot_counts.count > 0 ? pivot_counts[this.rootId].buckets : []; else {
             throw {
                 error: "Not supported for now!"
             };

@@ -10,6 +10,8 @@ import a$ from 'as-sys';
 import $ from 'jQuery';
 
 import jT from '../Core';
+import _Populating from '../Populating';
+import _Loading from '../Loading';
 
 var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>',
 	plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>',

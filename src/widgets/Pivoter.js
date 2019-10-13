@@ -99,10 +99,10 @@ Pivoter.prototype.addFaceter = function (info, idx) {
 	return f;
 };
 
-Pivoter.prototype.afterResponse = function (data) {
+Pivoter.prototype.afterResponse = function (data, jhr, params) {
 	var pivot = this.getPivotCounts(data.facets);
 
-	a$.pass(this, Pivoter, "afterResponse", data);
+	a$.pass(this, Pivoter, "afterResponse", data, jhr, params);
 
 	// Iterate on the main entries
 	for (var i = 0; i < pivot.length; ++i) {

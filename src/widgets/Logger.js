@@ -60,14 +60,15 @@ function Logger(settings) {
 	if (!!this.mountDestination) {
 		var dest = typeof this.mountDestination === 'object' ? this.mountDestination : _.get(window, this.mountDestination),
 			self = this;
+
 		dest.onPrepare = function (params) {
 			return self.beforeRequest(params);
 		};
-		dest.onSuccess = function (response, jqXHR, params) {
-			return self.afterResponse(response, params, jqXHR);
+		dest.onSuccess = function (data, jqXHR, params) {
+			return self.afterResponse(data, jqXHR, params, this); // we know onSuccess is invoked in `this` context. 
 		};
 		dest.onError = function (jqXHR, params) {
-			return self.afterResponse(null, jqXHR, params);
+			return self.afterResponse(null, jqXHR, params, this);
 		};
 	}
 };
@@ -170,7 +171,7 @@ Logger.prototype.beforeRequest = function (params) {
 	line$.data('status', "connecting");
 };
 
-Logger.prototype.afterResponse = function (response, params, jhr) {
+Logger.prototype.afterResponse = function (response, jhr, params) {
 	var info = this.formatEvent(params, jhr),
 		line$ = this.events[params.logId],
 		status = !!response ? 'success' : 'error';

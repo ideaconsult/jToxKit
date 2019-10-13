@@ -154,7 +154,7 @@
 		this.initExport();
 	};
 
-	jT.kit.FacetedSearch.prototype = {
+	jT.kit.FacetedSearch.prototype = _.extend(jT.kit.FacetedSearch.prototype, {
 		initDom: function () {
 			// Now instantiate and things around it.
 			this.accordion = $("#accordion");
@@ -298,7 +298,7 @@
 
 			this.manager = Manager = new(a$(CommBase.Communicating, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
 
-			Manager.addListeners(new jT.SolrResulter($.extend(true, {
+			Manager.addListeners(new jT.widget.SolrResult($.extend(true, {
 				id: 'result',
 				target: $('#docs'),
 				itemId: "s_uuid",
@@ -327,7 +327,7 @@
 				}
 			}, this)));
 
-			Manager.addListeners(new(a$(Solr.Paging))({
+			Manager.addListeners(new(jT.widget.SolrPaging)({
 				id: 'pager',
 				target: $('#pager'),
 				prevLabel: '&lt;',
@@ -406,7 +406,7 @@
 			}));
 
 			// ... And finally the current-selection one, and ...
-			Manager.addListeners(new jT.SearchReporter({
+			Manager.addListeners(new jT.SolrQueryReporter({
 				id: 'current',
 				target: $('#selection'),
 				renderItem: tagRender,
@@ -414,7 +414,7 @@
 			}));
 
 			// Now add the basket.
-			this.basket = Basket = new(a$(jT.Listing, jT.SolrResulter))($.extend(true, {
+			this.basket = Basket = new(a$(jT.Populating, jT.SolrResulter))($.extend(true, {
 				id: 'basket',
 				target: $('#basket-docs'),
 				summaryRenderers: this.summaryRenderers,
@@ -691,6 +691,6 @@
 				});
 			}
 		}
-	};
+	});
 
 })(Solr, asSys || a$, jQuery || $, jToxKit || jT);

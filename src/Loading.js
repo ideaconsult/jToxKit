@@ -30,7 +30,7 @@ Loading.prototype.beforeRequest = function () {
 		$('<img>').attr('src', 'images/ajax-loader.gif'));
 };
 
-Loading.prototype.afterResponse = function (data, jqXHR) {
+Loading.prototype.afterResponse = function (data) {
 	if (!data) // i.e. error
 		$(this.target).html(this.errorMessage);
 	else {

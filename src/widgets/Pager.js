@@ -51,9 +51,9 @@ Pager.prototype.gapMarker = function () {
  */
 Pager.prototype.windowedLinks = function () {
 	var links = [],
-		prev = null;
-
-	visible = this.visiblePageNumbers();
+		prev = null,
+		visible = this.visiblePageNumbers();
+		
 	for (var i = 0, l = visible.length; i < l; i++) {
 		if (prev && visible[i] > prev + 1) links.push(this.gapMarker());
 		links.push(this.pageLinkOrSpan(visible[i], ['pager-current']));
@@ -176,8 +176,8 @@ Pager.prototype.renderLinks = function (links) {
 	}
 }
 
-Pager.prototype.afterResponse = function () {
-	a$.pass(this, Pager, 'afterResponse');
+Pager.prototype.afterResponse = function (data, jhr, params) {
+	a$.pass(this, Pager, 'afterResponse', data, jhr, params);
 
 	$(this.target).empty();
 

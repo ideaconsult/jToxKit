@@ -130,7 +130,7 @@ Autocompleter.prototype.onResponse = function (response) {
 		self.reportCallback(list);
 };
 
-Autocompleter.prototype.afterResponse = function (response) {
+Autocompleter.prototype.afterResponse = function () {
 	var qval = this.manager.getParameter('q').value || "";
 	this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
 	this.requestSent = false;

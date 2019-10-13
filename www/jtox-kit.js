@@ -1,8 +1,8 @@
 /** jToxKit - Chem-informatics UI tools, widgets and kits library. Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved. @license MIT.*/
 (function(global, factory) {
-    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("jQuery"), require("solr-jsx"), require("commbase-jsx")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "jQuery", "solr-jsx", "commbase-jsx" ], factory) : (global = global || self, 
-    global.jToxKit = factory(global._, global.asSys, global.$, global.Solr, global.CommBase));
-})(this, (function(_$1, a$, $$1, Solr, CommBase) {
+    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("solr-jsx"), require("as-sys"), require("jQuery"), require("commbase-jsx")) : typeof define === "function" && define.amd ? define([ "lodash", "solr-jsx", "as-sys", "jQuery", "commbase-jsx" ], factory) : (global = global || self, 
+    global.jToxKit = factory(global._, global.Solr, global.asSys, global.$, global.CommBase));
+})(this, (function(_$1, Solr, a$$1, $$1, CommBase) {
     "use strict";
     var jT = {
         version: "3.0.0",
@@ -261,40 +261,41 @@
     var defSettings = {
         itemId: "id"
     };
-    function Listing(settings) {
-        a$.setup(this, defSettings = settings);
+    function Populating(settings) {
+        a$$1.setup(this, defSettings = settings);
         this.target = $(settings.target);
         this.length = 0;
         this.clearItems();
     }
-    Listing.prototype.populate = function(docs, callback) {
+    Populating.prototype.__expects = [ "renderItem" ];
+    Populating.prototype.populate = function(docs, callback) {
         this.items = docs;
         this.length = docs.length;
         this.target.empty();
         for (var i = 0, l = docs.length; i < l; i++) this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
     };
-    Listing.prototype.addItem = function(doc) {
+    Populating.prototype.addItem = function(doc) {
         this.items.push(doc);
         ++this.length;
         return this.renderItem(doc);
     };
-    Listing.prototype.clearItems = function() {
+    Populating.prototype.clearItems = function() {
         this.target.empty();
         this.items = [];
         this.length = 0;
     };
-    Listing.prototype.findItem = function(id) {
+    Populating.prototype.findItem = function(id) {
         var self = this;
         return _$1.findIndex(this.items, typeof id !== "string" ? id : function(doc) {
             return doc[self.itemId] === id;
         });
     };
-    Listing.prototype.eraseItem = function(id) {
+    Populating.prototype.eraseItem = function(id) {
         var i = this.findItem(id), r = i >= 0 ? this.items.splice(i, 1)[0] : false;
         this.length = this.items.length;
         return r;
     };
-    Listing.prototype.enumerateItems = function(callback) {
+    Populating.prototype.enumerateItems = function(callback) {
         var els = this.target.children();
         for (var i = 0, l = this.items.length; i < l; ++i) callback.call(els[i], this.items[i]);
     };
@@ -302,17 +303,17 @@
         errorMessage: "Error retrieving data!"
     };
     function Loading(settings) {
-        a$.setup(this, defSettings$1, settings);
+        a$$1.setup(this, defSettings$1, settings);
     }
     Loading.prototype.__expects = [ "populate" ];
     Loading.prototype.init = function(manager) {
-        a$.pass(this, Loading, "init", manager);
+        a$$1.pass(this, Loading, "init", manager);
         this.manager = manager;
     };
     Loading.prototype.beforeRequest = function() {
         $$1(this.target).html($$1("<img>").attr("src", "images/ajax-loader.gif"));
     };
-    Loading.prototype.afterResponse = function(data, jqXHR) {
+    Loading.prototype.afterResponse = function(data) {
         if (!data) $$1(this.target).html(this.errorMessage); else {
             $$1(this.target).empty();
             this.populate(data.entries);
@@ -322,11 +323,11 @@
         template: null,
         classes: null
     };
-    function Iteming(settings) {
-        a$.setup(this, defSettings$2, settings);
+    function ItemRendering(settings) {
+        a$$1.setup(this, defSettings$2, settings);
         this.target = $(settings.target);
     }
-    Iteming.prototype.renderItem = function(info) {
+    ItemRendering.prototype.renderItem = function(info) {
         return jT.fillTemplate(template, info).addClass(this.classes);
     };
     var defSettings$3 = {
@@ -337,7 +338,7 @@
         before: null
     };
     function AccordionExpander(settings) {
-        a$.setup(this, defSettings$3, settings);
+        a$$1.setup(this, defSettings$3, settings);
         this.target = $$1(settings.target);
         this.header = null;
         this.id = settings.id;
@@ -381,7 +382,7 @@
         activeFacets: null
     };
     function Autocompleter(settings) {
-        a$.setup(this, defSettings$4, settings);
+        a$$1.setup(this, defSettings$4, settings);
         this.target = $$1(settings.target);
         this.id = settings.id;
         this.lookupMap = settings.lookupMap || {};
@@ -391,7 +392,7 @@
     }
     Autocompleter.prototype.__expects = [ "addValue", "doSpying" ];
     Autocompleter.prototype.init = function(manager) {
-        a$.pass(this, Autocompleter, "init", manager);
+        a$$1.pass(this, Autocompleter, "init", manager);
         this.manager = manager;
         var self = this;
         self.findBox = this.target.find("input").on("change", (function(e) {
@@ -448,7 +449,7 @@
         }));
         if (typeof this.reportCallback === "function") self.reportCallback(list);
     };
-    Autocompleter.prototype.afterResponse = function(response) {
+    Autocompleter.prototype.afterResponse = function() {
         var qval = this.manager.getParameter("q").value || "";
         this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
         this.requestSent = false;
@@ -500,7 +501,7 @@
         }
     };
     function SolrResulter(settings) {
-        a$.setup(this, defSettings$5, settings);
+        a$$1.setup(this, defSettings$5, settings);
         this.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
         this.lookupMap = settings.lookupMap || {};
         this.target = settings.target;
@@ -641,7 +642,7 @@
         autoHide: true
     };
     function Logger(settings) {
-        a$.setup(this, defSettings$6, settings);
+        a$$1.setup(this, defSettings$6, settings);
         var root$ = $$1(this.target = settings.target);
         root$.html(jT.templates["logger-main"]);
         root$.addClass("jtox-toolkit jtox-log");
@@ -667,11 +668,11 @@
             dest.onPrepare = function(params) {
                 return self.beforeRequest(params);
             };
-            dest.onSuccess = function(response, jqXHR, params) {
-                return self.afterResponse(response, params, jqXHR);
+            dest.onSuccess = function(data, jqXHR, params) {
+                return self.afterResponse(data, jqXHR, params, this);
             };
             dest.onError = function(jqXHR, params) {
-                return self.afterResponse(null, jqXHR, params);
+                return self.afterResponse(null, jqXHR, params, this);
             };
         }
     }
@@ -736,7 +737,7 @@
         this.setIcon(line$, "connecting");
         line$.data("status", "connecting");
     };
-    Logger.prototype.afterResponse = function(response, params, jhr) {
+    Logger.prototype.afterResponse = function(response, jhr, params) {
         var info = this.formatEvent(params, jhr), line$ = this.events[params.logId], status = !!response ? "success" : "error";
         this.setStatus(status);
         if (!line$) {
@@ -756,7 +757,7 @@
         separator: " "
     };
     function Pager(settings) {
-        a$.setup(this, defSettings$7, settings);
+        a$$1.setup(this, defSettings$7, settings);
         this.target = $(settings.target);
         this.id = settings.id;
         this.manager = null;
@@ -766,8 +767,7 @@
         return '<span class="pager-gap">&hellip;</span>';
     };
     Pager.prototype.windowedLinks = function() {
-        var links = [], prev = null;
-        visible = this.visiblePageNumbers();
+        var links = [], prev = null, visible = this.visiblePageNumbers();
         for (var i = 0, l = visible.length; i < l; i++) {
             if (prev && visible[i] > prev + 1) links.push(this.gapMarker());
             links.push(this.pageLinkOrSpan(visible[i], [ "pager-current" ]));
@@ -845,8 +845,8 @@
             }
         }
     };
-    Pager.prototype.afterResponse = function() {
-        a$.pass(this, Pager, "afterResponse");
+    Pager.prototype.afterResponse = function(data, jhr, params) {
+        a$$1.pass(this, Pager, "afterResponse", data, jhr, params);
         $(this.target).empty();
         this.renderLinks(this.windowedLinks());
         this.renderHeader(this.pageSize, (this.currentPage - 1) * this.pageSize, this.totalEntries);
@@ -857,10 +857,10 @@
         runTarget: null
     };
     function Passer(settings) {
-        a$.setup(this, defSettings$8, settings);
+        a$$1.setup(this, defSettings$8, settings);
         var self = this, target$ = $$1(self.runSelector, $$1(settings.target)[0]), runTarget = self.runTarget || self;
         target$.on("click", (function(e) {
-            a$.act(runTarget, self.runMethod, this, e);
+            a$$1.act(runTarget, self.runMethod, this, e);
             e.stopPropagation();
         }));
     }
@@ -871,7 +871,7 @@
         subtarget: null
     };
     function Tagger(settings) {
-        a$.setup(this, defSettings$9, settings);
+        a$$1.setup(this, defSettings$9, settings);
         this.target = $$1(settings.target);
         if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
         this.id = settings.id;
@@ -880,7 +880,7 @@
     }
     Tagger.prototype.__expects = [ "hasValue", "clickHandler" ];
     Tagger.prototype.init = function(manager) {
-        a$.pass(this, Tagger, "init", manager);
+        a$$1.pass(this, Tagger, "init", manager);
         this.manager = manager;
     };
     Tagger.prototype.populate = function(objectedItems, preserve) {
@@ -905,7 +905,7 @@
                 if (selected) el.addClass("selected");
             }
         }
-        a$.act(this, this.onUpdated, total);
+        a$$1.act(this, this.onUpdated, total);
     };
     function buildValueRange(stats, isUnits) {
         var vals = " = ";
@@ -933,7 +933,7 @@
         info.color = this.color;
         return info;
     };
-    var InnerTagWidget = a$(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$a = {
+    var InnerTagWidget = a$$1(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$a = {
         automatic: false,
         renderTag: null,
         multivalue: false,
@@ -941,7 +941,7 @@
         exclusion: false
     };
     function Pivoter(settings) {
-        a$.setup(this, defSettings$a, settings);
+        a$$1.setup(this, defSettings$a, settings);
         this.target = settings.target;
         this.targets = {};
         this.lastEnabled = 0;
@@ -949,19 +949,19 @@
     }
     Pivoter.prototype.__expects = [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ];
     Pivoter.prototype.init = function(manager) {
-        a$.pass(this, Pivoter, "init", manager);
+        a$$1.pass(this, Pivoter, "init", manager);
         this.manager = manager;
         this.manager.getListener("current").registerWidget(this, true);
     };
     Pivoter.prototype.addFaceter = function(info, idx) {
-        var f = a$.pass(this, Pivoter, "addFaceter", info, idx);
+        var f = a$$1.pass(this, Pivoter, "addFaceter", info, idx);
         if (typeof info === "object") f.color = info.color;
         if (idx > this.lastEnabled && !info.disabled) this.lastEnabled = idx;
         return f;
     };
-    Pivoter.prototype.afterResponse = function(data) {
+    Pivoter.prototype.afterResponse = function(data, jhr, params) {
         var pivot = this.getPivotCounts(data.facets);
-        a$.pass(this, Pivoter, "afterResponse", data);
+        a$$1.pass(this, Pivoter, "afterResponse", data, jhr, params);
         for (var i = 0; i < pivot.length; ++i) {
             var p = pivot[i], pid = p.val.replace(iDificationRegExp, "_"), target = this.targets[pid];
             if (!target) {
@@ -1044,7 +1044,7 @@
         format: "%s {{units}}"
     };
     function Slider(settings) {
-        a$.setup(this, defSettings$b, settings);
+        a$$1.setup(this, defSettings$b, settings);
         this.target = $(settings.target);
         this.prepareLimits(settings.limits);
         if (this.initial == null) this.initial = this.isRange ? [ this.limits[0], this.limits[1] ] : (this.limits[0] + this.limits[1]) / 2;
@@ -1106,7 +1106,7 @@
     SimpleRanger.prototype.doRequest = function() {
         this.manager.doRequest();
     };
-    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, CommBase.Delaying), defaultParameters$1 = {
+    var SingleRangeWidget = a$$1(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, CommBase.Delaying), defaultParameters$1 = {
         facet: true,
         rows: 0,
         fl: "id",
@@ -1118,7 +1118,7 @@
         titleSkips: null
     };
     function Ranger(settings) {
-        a$.setup(this, defSettings$c, settings);
+        a$$1.setup(this, defSettings$c, settings);
         this.slidersTarget = $$1(settings.slidersTarget);
         this.lookupMap = settings.lookupMap || {};
         this.pivotMap = null;
@@ -1127,7 +1127,7 @@
     }
     Ranger.prototype.__expects = [ "getPivotEntry", "getPivotCounts" ];
     Ranger.prototype.init = function(manager) {
-        a$.pass(this, Ranger, "init", manager);
+        a$$1.pass(this, Ranger, "init", manager);
         this.manager = manager;
         var self = this;
         self.applyCommand = $$1("#sliders-controls a.command.apply").on("click", (function(e) {
@@ -1140,9 +1140,9 @@
             return false;
         }));
     };
-    Ranger.prototype.afterResponse = function(data) {
+    Ranger.prototype.afterResponse = function(data, jhr, params) {
         var pivot = this.getPivotCounts(data.facets);
-        a$.pass(this, Ranger, "afterResponse", data);
+        a$$1.pass(this, Ranger, "afterResponse", data, jhr, params);
         if (!this.pivotMap) {
             var qval = this.manager.getParameter("q").value || "";
             if ((!qval || qval == "*:*") && !this.manager.getParameter(this.useJson ? "json.filter" : "fq").value) this.pivotMap = this.buildPivotMap(pivot);
@@ -1250,7 +1250,7 @@
     };
     Ranger.prototype.clearValues = function() {
         this.rangeRemove();
-        a$.pass(this, Ranger, "clearValues");
+        a$$1.pass(this, Ranger, "clearValues");
     };
     var defSettings$d = {
         switchSelector: ".switcher",
@@ -1258,13 +1258,13 @@
         onSwitching: null
     };
     function Switcher(settings) {
-        a$.setup(this, defSettings$d, settings);
+        a$$1.setup(this, defSettings$d, settings);
         var self = this, target$ = $$1(self.switchSelector, $$1(settings.target)[0]), initial = _$1.get(self, self.switchField);
         if (typeof initial === "boolean") target$[0].checked = initial; else target$.val(initial);
         target$.on("change", (function(e) {
             var val = $$1(this).val();
             _$1.set(self, self.switchField, typeof initial === "boolean" ? this.checked || val === "on" : val);
-            a$.act(self, self.onSwitching, e);
+            a$$1.act(self, self.onSwitching, e);
             e.stopPropagation();
         }));
     }
@@ -1280,22 +1280,22 @@
         useJson: false,
         renderItem: null
     };
-    function SearchReporter(settings) {
-        a$.setup(this, defSettings$e, settings);
+    function SolrQueryReporter(settings) {
+        a$$1.setup(this, defSettings$e, settings);
         this.target = settings.target;
         this.id = settings.id;
         this.manager = null;
         this.facetWidgets = {};
         this.fqName = this.useJson ? "json.filter" : "fq";
     }
-    SearchReporter.prototype.init = function(manager) {
-        a$.pass(this, SearchReporter, "init", manager);
+    SolrQueryReporter.prototype.init = function(manager) {
+        a$$1.pass(this, SolrQueryReporter, "init", manager);
         this.manager = manager;
     };
-    SearchReporter.prototype.registerWidget = function(widget, pivot) {
+    SolrQueryReporter.prototype.registerWidget = function(widget, pivot) {
         this.facetWidgets[widget.id] = pivot;
     };
-    SearchReporter.prototype.afterResponse = function(data) {
+    SolrQueryReporter.prototype.afterResponse = function() {
         var self = this, links = [], q = this.manager.getParameter("q"), fq = this.manager.getAllValues(this.fqName);
         if (!!q.value && !q.value.match(/^(\*:)?\*$/)) {
             links.push(self.renderItem({
@@ -1342,9 +1342,9 @@
         } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
     };
     _$1.assign(jT, _Tools);
-    jT.Listing = Listing;
+    jT.Populating = Populating;
     jT.Loading = Loading;
-    jT.Iteming = Iteming;
+    jT.ItemRendering = ItemRendering;
     jT.AccordionExpander = AccordionExpander;
     jT.Autocompleter = Autocompleter;
     jT.SolrResulter = SolrResulter;
@@ -1357,7 +1357,11 @@
     jT.Switcher = Switcher;
     jT.Tagger = Tagger;
     jT.Texter = Texter;
-    jT.SearchReporter = SearchReporter;
+    jT.SolrQueryReporter = SolrQueryReporter;
+    jT.widget = {
+        SolrResult: a$(Solr.Listing, Populating, SolrResulter, Loading),
+        SolrPaging: a$(Solr.Paging, Pager)
+    };
     jT.kit = {};
     (typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})["jT"] = jT;
     return jT;

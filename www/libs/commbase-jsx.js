@@ -31,7 +31,6 @@
     function Communicating(settings) {
         a$.setup(this, Communicating.prototype, settings);
         this.listeners = {};
-        this.response = null;
         this.error = null;
         this.pendingRequests = [];
         this.inRequest = false;
@@ -73,13 +72,13 @@
                     a$.act(self, self.onError, jqXHR, ajaxOpts);
                 }
             };
-            ajaxOpts.success = function(data, status, jqXHR) {
-                self.response = a$.act(self, "parseResponse", data) || data;
-                if (typeof callback === "function") callback(self.response, jqXHR); else {
+            ajaxOpts.success = function(response, status, jqXHR) {
+                var data = a$.act(self, "parseResponse", response) || response;
+                if (typeof callback === "function") callback(data, response, jqXHR); else {
                     _.each(self.listeners, (function(l) {
-                        a$.act(l, l.afterResponse, self.response, ajaxOpts, jqXHR, self);
+                        a$.act(l, l.afterResponse, data, jqXHR, ajaxOpts, self);
                     }));
-                    a$.act(self, self.onSuccess, self.response, jqXHR, ajaxOpts);
+                    a$.act(self, self.onSuccess, data, jqXHR, ajaxOpts);
                 }
             };
             ajaxOpts.complete = function() {

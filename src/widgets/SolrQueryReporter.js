@@ -14,7 +14,7 @@ var defSettings = {
 	renderItem: null,
 };
 
-function SearchReporter(settings) {
+function SolrQueryReporter(settings) {
 	a$.setup(this, defSettings, settings);
 
 	this.target = settings.target;
@@ -25,17 +25,17 @@ function SearchReporter(settings) {
 	this.fqName = this.useJson ? "json.filter" : "fq";
 };
 
-SearchReporter.prototype.init = function (manager) {
-	a$.pass(this, SearchReporter, "init", manager);
+SolrQueryReporter.prototype.init = function (manager) {
+	a$.pass(this, SolrQueryReporter, "init", manager);
 
 	this.manager = manager;
 };
 
-SearchReporter.prototype.registerWidget = function (widget, pivot) {
+SolrQueryReporter.prototype.registerWidget = function (widget, pivot) {
 	this.facetWidgets[widget.id] = pivot;
 };
 
-SearchReporter.prototype.afterResponse = function (data) {
+SolrQueryReporter.prototype.afterResponse = function () {
 	var self = this,
 		links = [],
 		q = this.manager.getParameter('q'),
@@ -111,4 +111,4 @@ SearchReporter.prototype.afterResponse = function (data) {
 		this.target.removeClass('tags').html('<li>No filters selected!</li>');
 };
 
-export default SearchReporter;
+export default SolrQueryReporter;

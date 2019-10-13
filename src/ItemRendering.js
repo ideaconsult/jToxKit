@@ -14,13 +14,13 @@ var defSettings = {
 	classes: null,
 };
 
-function Iteming(settings) {
+function ItemRendering(settings) {
 	a$.setup(this, defSettings, settings);
 	this.target = $(settings.target);
 };
 
-Iteming.prototype.renderItem = function (info) {
+ItemRendering.prototype.renderItem = function (info) {
 	return jT.fillTemplate(template, info).addClass(this.classes);
 };
 
-export default Iteming;
+export default ItemRendering;

@@ -7,21 +7,22 @@
 
 import _ from 'lodash';
 import a$ from 'as-sys';
+import Solr from 'solr-jsx';
 
 import jT from './Core';
 import _Tools from './Integration';
-import _List from './Listing';
+import _Populate from './Populating';
 import _Load from './Loading';
-import _Item from './Iteming';
+import _Item from './ItemRendering';
 
 _.assign(jT, _Tools);
-jT.Listing = _List;
+jT.Populating = _Populate;
 jT.Loading = _Load;
-jT.Iteming = _Item;
+jT.ItemRendering = _Item;
 
 import _Accord from './widgets/AccordionExpander';
 import _Auto from './widgets/Autocompleter';
-import _Resulter from './widgets/SolrResulter';
+import _SolrResult from './widgets/SolrResulter';
 import _Log from './widgets/Logger';
 import _Page from './widgets/Pager';
 import _Pass from './widgets/Passer';
@@ -31,11 +32,11 @@ import _Slide from './widgets/Slider';
 import _Switch from './widgets/Switcher';
 import _Tag from './widgets/Tagger';
 import _Text from './widgets/Texter';
-import _Current from './widgets/SearchReporter';
+import _Reporter from './widgets/SolrQueryReporter';
 
 jT.AccordionExpander = _Accord;
 jT.Autocompleter = _Auto;
-jT.SolrResulter = _Resulter;
+jT.SolrResulter = _SolrResult;
 jT.Logger = _Log;
 jT.Pager = _Page;
 jT.Passer = _Pass;
@@ -45,13 +46,14 @@ jT.Slider = _Slide;
 jT.Switcher = _Switch;
 jT.Tagger = _Tag;
 jT.Texter = _Text;
-jT.SearchReporter = _Current;
+jT.SolrQueryReporter = _Reporter;
 
 /** Wrapping all pre-defined widgets, from he skills here.
  */
-// jT.widget = {
-// 	SolrResult: a$(Solr.Listing, _Item, _Load)
-// };
+jT.widget = {
+	SolrResult: a$(Solr.Listing, _Populate, _SolrResult, _Load),
+	SolrPaging: a$(Solr.Paging, _Page)
+};
 
 // Make space for the kits to self-register.
 jT.kit = {};
