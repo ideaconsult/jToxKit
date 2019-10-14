@@ -27,7 +27,7 @@
     var datasetUri = "https://apps.ideaconsult.net/data/query/compound/search/all?type=auto&search=c1cccc1&page=0&pagesize=1",
         Manager = new (a$(Solr.Management, Solr.QueryingURL, Solr.Configuring))({ 
           serverUrl: "https://apps.ideaconsult.net/data/",
-          connector: $
+          connector: $.ajax
         }),
         Runner = new (a$(jT.ModelRunning, jT.TaskPolling, jT.Running))({ 
           /* Running skill settings */

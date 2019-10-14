@@ -13,7 +13,7 @@
 			servlet: "select",
 			multipleSelection: true,
 			keepAllFacets: true,
-			connector: $,
+			connector: $.ajax,
 			onPrepare: function (settings) {
 				var qidx = settings.url.indexOf("?");
 
@@ -459,6 +459,8 @@
 					w.addValue(v)
 				});
 			}
+
+			Manager.addListeners(jT.initKit($("#log-ui")));
 
 			// now get the search parameters passed via URL
 			Manager.doRequest();

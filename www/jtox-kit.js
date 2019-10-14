@@ -136,10 +136,9 @@
         templates: {},
         callId: 0,
         initKit: function(element) {
-            var self = this, dataParams = element.data(), kit = dataParams.kit, topSettings = $.extend(true, {}, self.rootSettings);
-            parent = null;
+            var self = this, dataParams = element.data(), kit = dataParams.kit, topSettings = $.extend(true, {}, self.rootSettings), parent = null;
             _$1.each(element.parents(".jtox-kit,.jtox-widget").toArray().reverse(), (function(el) {
-                parent = self.kit(el);
+                parent = self.getInstance(el);
                 if (parent != null) topSettings = $.extend(true, topSettings, parent);
             }));
             if (!parent) parent = self;
@@ -147,15 +146,15 @@
             dataParams.baseUrl = self.fixBaseUrl(dataParams.baseUrl);
             dataParams.target = element;
             if (dataParams.id === undefined) dataParams.id = element.attr("id");
-            var realInit = function(params, element) {
+            var realInit = function(params) {
                 if (!kit) return null;
                 var fn = window[kit];
                 if (typeof fn !== "function") {
                     kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-                    fn = jT.kit[kit] || jT[kit];
+                    fn = jT.kit[kit] || jT.widget[kit] || jT[kit];
                 }
                 var obj = null;
-                if (typeof fn == "function") obj = new fn(params); else if (typeof fn == "object" && typeof fn.init == "function") obj = fn.init(params);
+                if (typeof fn === "function") obj = new fn(params); else if (typeof fn === "object" && typeof fn.init === "function") obj = fn.init(params);
                 if (obj != null) {
                     if (fn.prototype.__kits === undefined) fn.prototype.__kits = [];
                     fn.prototype.__kits.push(obj);
@@ -173,11 +172,13 @@
                     element.data("jtKit", realInit(dataParams));
                 }));
             } else {
-                if (typeof dataParams.configuration == "string" && !!window[dataParams.configuration]) {
+                if (typeof dataParams.configuration === "string" && !!window[dataParams.configuration]) {
                     var config = window[dataParams.configuration];
                     $.extend(true, dataParams, typeof config === "function" ? config.call(kit, dataParams, kit) : config);
                 }
-                element.data("jtKit", realInit(dataParams));
+                var theKit = realInit(dataParams);
+                element.data("jtKit", theKit);
+                return theKit;
             }
         },
         initialize: function(root) {
@@ -202,12 +203,18 @@
                 root = document;
             }
             var fnInit = function() {
-                if (!$(this).data("manualInit")) self.initKit($(this));
+                var me$ = $(this);
+                if (!me$.data("manualInit")) {
+                    var theKit = self.initKit(me$), bindKit = me$.data("jtoxBind");
+                    if (!theKit) console.log("Referring unknown widget: " + me$.data("kit")); else if (me$.hasClass("jtox-widget") && bindKit != null) {
+                        if (!self.kitsMap[bindKit]) console.log("'" + me$.attr("id") + "' is binding to unknown kit: " + bindKit); else self.kitsMap[bindKit].manager.addListeners(theKit);
+                    }
+                }
             };
             $(".jtox-kit", root).each(fnInit);
             $(".jtox-widget", root).each(fnInit);
         },
-        kit: function(element) {
+        getInstance: function(element) {
             if (typeof element !== "string") return $(element).data("jtKit"); else if (this.kitsMap[element] !== undefined) return this.kitsMap[element]; else return $("#" + element).data("jtKit");
         },
         attachKit: function(element, kit) {
@@ -218,7 +225,7 @@
             var query = null;
             if (typeof name == "string") name = window[name];
             $(element).parents(".jtox-kit").each((function() {
-                var kit = self.kit(this);
+                var kit = self.getInstance(this);
                 if (!kit || !!query) return;
                 if (!name || kit instanceof name) query = kit;
             }));
@@ -633,7 +640,6 @@
         return items;
     };
     var defSettings$6 = {
-        mountDestination: null,
         statusDelay: 1500,
         keepMessages: 50,
         lineHeight: "20px",
@@ -662,18 +668,6 @@
             root$.bind("mouseleave", (function(e) {
                 $$1(this).addClass("hidden");
             }));
-        }
-        if (!!this.mountDestination) {
-            var dest = typeof this.mountDestination === "object" ? this.mountDestination : _$1.get(window, this.mountDestination), self = this;
-            dest.onPrepare = function(params) {
-                return self.beforeRequest(params);
-            };
-            dest.onSuccess = function(data, jqXHR, params) {
-                return self.afterResponse(data, jqXHR, params, this);
-            };
-            dest.onError = function(jqXHR, params) {
-                return self.afterResponse(null, jqXHR, params, this);
-            };
         }
     }
     Logger.prototype.formatEvent = function(params, jhr) {
@@ -731,7 +725,7 @@
         return el$;
     };
     Logger.prototype.beforeRequest = function(params) {
-        var url = jT.parseURL(params.url), info = this.formatEvent(params), line$ = this.addLine(info);
+        var url = jT.parseURL(params.url), service = params.service = url.protocol + "://" + url.host + url.path, info = this.formatEvent(params), line$ = this.addLine(info);
         this.setStatus("connecting");
         this.events[params.logId = Date.now()] = line$;
         this.setIcon(line$, "connecting");
@@ -748,6 +742,23 @@
         this.setIcon(line$, status);
         jT.fillTree(line$[0], info);
         if (status == "error") console && console.log("Error [" + params.service + "]: " + jhr.statusText);
+    };
+    Logger.prototype.mountOnHandlers = function(dest) {
+        var self = this;
+        if (typeof dest === "string") dest = _$1.get(window, dest); else if (typeof dest === "function") dest = dest.prototype; else if (typeof dest !== "object") throw {
+            name: "Wrong argument",
+            message: "Passed object for mounting [" + dest + "] cannot be resolved to an object!"
+        };
+        dest.onPrepare = function(params) {
+            return self.beforeRequest(params);
+        };
+        dest.onSuccess = function(data, jqXHR, params) {
+            return self.afterResponse(data, jqXHR, params, this);
+        };
+        dest.onError = function(jqXHR, params) {
+            return self.afterResponse(null, jqXHR, params, this);
+        };
+        return dest;
     };
     var defSettings$7 = {
         innerWindow: 4,
@@ -1361,7 +1372,8 @@
     jT.SolrQueryReporter = SolrQueryReporter;
     jT.widget = {
         SolrResult: a$(Solr.Listing, Populating, SolrItemLister, Loading),
-        SolrPaging: a$(Solr.Paging, Pager)
+        SolrPaging: a$(Solr.Paging, Pager),
+        Logger: Logger
     };
     jT.kit = {};
     (typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})["jT"] = jT;

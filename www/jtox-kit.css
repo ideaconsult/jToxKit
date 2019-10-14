@@ -248,7 +248,6 @@
 .jtox-toolkit button.loading,
 .jtox-toolkit span.loading {
   background-position: center center;
-  text-fill-color: rgba(0, 0, 0, 0);
   color: rgba(0, 0, 0, 0);
 }
 

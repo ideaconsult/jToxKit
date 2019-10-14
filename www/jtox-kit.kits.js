@@ -13,7 +13,7 @@
 			servlet: "select",
 			multipleSelection: true,
 			keepAllFacets: true,
-			connector: $,
+			connector: $.ajax,
 			onPrepare: function (settings) {
 				var qidx = settings.url.indexOf("?");
 
@@ -460,6 +460,8 @@
 				});
 			}
 
+			Manager.addListeners(jT.initKit($("#log-ui")));
+
 			// now get the search parameters passed via URL
 			Manager.doRequest();
 		},
@@ -819,4 +821,21 @@ jToxKit.templates['faceted-search-templates']  =
 "</div>" +
 "</div>" +
 ""; // end of #faceted-search-templates 
+
+jT.templates['logger-main']  = 
+"<div class=\"list-wrap\">" +
+"<div class=\"list-root\"></div>" +
+"</div>" +
+"<div class=\"status\"><div class=\"icon jtox-fadable\"></div></div>" +
+""; // end of #jtox-logger 
+
+jT.templates['logger-line']  = 
+"<div id=\"jtox-logline\">" +
+"<div class=\"logline\">" +
+"<div class=\"icon\"></div>" +
+"<span class=\"content data-field\" data-field=\"header\">{{header}}</span>" +
+"<div class=\"details data-field\" data-field=\"details\">{{details}}</div>" +
+"</div>" +
+"</div>" +
+""; // end of #jtox-logline 
 

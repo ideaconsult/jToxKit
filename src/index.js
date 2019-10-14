@@ -52,7 +52,8 @@ jT.SolrQueryReporter = _SolrReporter;
  */
 jT.widget = {
 	SolrResult: a$(Solr.Listing, _Populate, _SolrResult, _Load),
-	SolrPaging: a$(Solr.Paging, _Page)
+	SolrPaging: a$(Solr.Paging, _Page),
+	Logger: _Log
 };
 
 // Make space for the kits to self-register.

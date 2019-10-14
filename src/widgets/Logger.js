@@ -12,7 +12,6 @@ import $ from 'jQuery';
 import jT from '../Core';
 
 var defSettings = {
-	mountDestination: null, // mount onPrepare, onSuccess and onError handlers as properties of given variable.
 	statusDelay: 1500, // number of milliseconds to keep success / error messages before fading out
 	keepMessages: 50, // how many messages to keep in the queue
 	lineHeight: "20px", // the height of each status line
@@ -55,21 +54,6 @@ function Logger(settings) {
 		root$.bind('mouseleave', function (e) {
 			$(this).addClass('hidden');
 		});
-	}
-
-	if (!!this.mountDestination) {
-		var dest = typeof this.mountDestination === 'object' ? this.mountDestination : _.get(window, this.mountDestination),
-			self = this;
-
-		dest.onPrepare = function (params) {
-			return self.beforeRequest(params);
-		};
-		dest.onSuccess = function (data, jqXHR, params) {
-			return self.afterResponse(data, jqXHR, params, this); // we know onSuccess is invoked in `this` context. 
-		};
-		dest.onError = function (jqXHR, params) {
-			return self.afterResponse(null, jqXHR, params, this);
-		};
 	}
 };
 
@@ -161,7 +145,7 @@ Logger.prototype.addLine = function (data) {
 
 Logger.prototype.beforeRequest = function (params) {
 	var url = jT.parseURL(params.url),
-		// service = params.service = url.protocol + "://" + url.host + url.path,
+		service = params.service = url.protocol + "://" + url.host + url.path,
 		info = this.formatEvent(params),
 		line$ = this.addLine(info);
 
@@ -188,5 +172,36 @@ Logger.prototype.afterResponse = function (response, jhr, params) {
 	if (status == 'error')
 		console && console.log("Error [" + params.service + "]: " + jhr.statusText);
 };
+
+/**
+ * Set `onPrepare`, `onSuccess` and `onError` callback methods of a given object
+ * to point to my handlers.
+ * @param {Object} dest The object to be set.
+ */
+Logger.prototype.mountOnHandlers = function (dest) {
+	var self = this;
+
+	if (typeof dest === 'string')
+		dest = _.get(window, dest);
+	else if (typeof dest === 'function')
+		dest = dest.prototype;
+	else if (typeof dest !== 'object')
+		throw {
+			"name": "Wrong argument",
+			"message": "Passed object for mounting [" + dest + "] cannot be resolved to an object!" 
+		};
+
+	dest.onPrepare = function (params) {
+		return self.beforeRequest(params);
+	};
+	dest.onSuccess = function (data, jqXHR, params) {
+		return self.afterResponse(data, jqXHR, params, this); // we know onSuccess is invoked in `this` context. 
+	};
+	dest.onError = function (jqXHR, params) {
+		return self.afterResponse(null, jqXHR, params, this);
+	};
+
+	return dest;
+}
 
 export default Logger;

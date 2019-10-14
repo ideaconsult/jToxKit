@@ -127,7 +127,7 @@
                 }));
             };
             obtainResults = function(uri) {
-                self.manager.connector.ajax({
+                self.manager.connector({
                     url: uri,
                     method: "GET",
                     dataType: "json",

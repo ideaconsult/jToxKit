@@ -21,12 +21,12 @@ export default {
 		var self = this,
 			dataParams = element.data(),
 			kit = dataParams.kit,
-			topSettings = $.extend(true, {}, self.rootSettings);
-		parent = null;
+			topSettings = $.extend(true, {}, self.rootSettings),
+			parent = null;
 
 		// we need to traverse up, to collect some parent's settings...
 		_.each(element.parents('.jtox-kit,.jtox-widget').toArray().reverse(), function (el) {
-			parent = self.kit(el);
+			parent = self.getInstance(el);
 			if (parent != null)
 				topSettings = $.extend(true, topSettings, parent);
 		});
@@ -43,7 +43,7 @@ export default {
 			dataParams.id = element.attr('id');
 
 		// the real initialization function
-		var realInit = function (params, element) {
+		var realInit = function (params) {
 			if (!kit)
 				return null;
 
@@ -51,13 +51,13 @@ export default {
 			var fn = window[kit];
 			if (typeof fn !== 'function') {
 				kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-				fn = jT.kit[kit] || jT[kit];
+				fn = jT.kit[kit] || jT.widget[kit] || jT[kit];
 			}
 
 			var obj = null;
-			if (typeof fn == 'function')
+			if (typeof fn === 'function')
 				obj = new fn(params);
-			else if (typeof fn == "object" && typeof fn.init == "function")
+			else if (typeof fn === "object" && typeof fn.init === "function")
 				obj = fn.init(params);
 
 			if (obj != null) {
@@ -87,12 +87,15 @@ export default {
 				element.data('jtKit', realInit(dataParams));
 			});
 		} else {
-			if (typeof dataParams.configuration == "string" && !!window[dataParams.configuration]) {
+			if (typeof dataParams.configuration === "string" && !!window[dataParams.configuration]) {
 				var config = window[dataParams.configuration];
 				$.extend(true, dataParams, (typeof config === 'function' ? config.call(kit, dataParams, kit) : config));
 			}
 
-			element.data('jtKit', realInit(dataParams, element));
+			var theKit = realInit(dataParams);
+			element.data('jtKit', theKit);
+
+			return theKit;
 		}
 	},
 
@@ -134,13 +137,26 @@ export default {
 
 		// now scan all insertion divs
 		var fnInit = function () {
-			if (!$(this).data('manualInit')) self.initKit($(this));
+			var me$ = $(this);
+			if (!me$.data('manualInit')) {
+				var theKit = self.initKit(me$),
+					bindKit = me$.data('jtoxBind');
+				if (!theKit)
+					console.log("Referring unknown widget: " + me$.data('kit'))
+				else if (me$.hasClass('jtox-widget') && bindKit != null) {
+					if (!self.kitsMap[bindKit])
+						console.log("'" + me$.attr('id') + "' is binding to unknown kit: " + bindKit);
+					else
+						self.kitsMap[bindKit].manager.addListeners(theKit);
+				}
+			}
 		};
+
 		$('.jtox-kit', root).each(fnInit);
 		$('.jtox-widget', root).each(fnInit);
 	},
 
-	kit: function (element) {
+	getInstance: function (element) {
 		if (typeof element !== "string")
 			return $(element).data('jtKit');
 		else if (this.kitsMap[element] !== undefined)
@@ -159,7 +175,7 @@ export default {
 		if (typeof name == 'string')
 			name = window[name];
 		$(element).parents('.jtox-kit').each(function () {
-			var kit = self.kit(this);
+			var kit = self.getInstance(this);
 			if (!kit || !!query)
 				return;
 			if (!name || kit instanceof name)

@@ -87,7 +87,7 @@
             };
             a$.broadcast(self, "onPrepare", ajaxOpts);
             a$.act(self, self.onPrepare, ajaxOpts);
-            return self.connector.ajax(ajaxOpts);
+            return self.connector(ajaxOpts);
         },
         init: function() {
             var self = this;
