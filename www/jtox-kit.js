@@ -1,8 +1,8 @@
 /** jToxKit - Chem-informatics UI tools, widgets and kits library. Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved. @license MIT.*/
 (function(global, factory) {
-    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("solr-jsx"), require("jQuery"), require("commbase-jsx")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "solr-jsx", "jQuery", "commbase-jsx" ], factory) : (global = global || self, 
-    global.jToxKit = factory(global._, global.asSys, global.Solr, global.$, global.CommBase));
-})(this, (function(_$1, a$, Solr, $$1, CommBase) {
+    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("solr-jsx"), require("jQuery")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "solr-jsx", "jQuery" ], factory) : (global = global || self, 
+    global.jToxKit = factory(global._, global.asSys, global.Solr, global.$));
+})(this, (function(_$1, a$, Solr, $$1) {
     "use strict";
     var jT = {
         version: "3.0.0",
@@ -18,7 +18,7 @@
         },
         formBaseUrl(url) {
             var burl = !!url.host ? url.protocol + "://" + url.host + (url.port.length > 0 ? ":" + url.port : "") + "/" + url.segments[0] : null;
-            console.log("Deduced base URL: " + burl + " (from: " + url.source + ")");
+            console && console.log("Deduced base URL: " + burl + " (from: " + url.source + ")");
             return burl;
         },
         copyToClipboard(text, prompt) {
@@ -160,7 +160,7 @@
                     fn.prototype.__kits.push(obj);
                     obj.parentKit = parent;
                     if (dataParams.id !== null) self.kitsMap[dataParams.id] = obj;
-                } else console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
+                } else console && console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
                 return obj;
             };
             if (dataParams.configFile != null) {
@@ -206,8 +206,8 @@
                 var me$ = $(this);
                 if (!me$.data("manualInit")) {
                     var theKit = self.initKit(me$), bindKit = me$.data("jtoxBind");
-                    if (!theKit) console.log("Referring unknown widget: " + me$.data("kit")); else if (me$.hasClass("jtox-widget") && bindKit != null) {
-                        if (!self.kitsMap[bindKit]) console.log("'" + me$.attr("id") + "' is binding to unknown kit: " + bindKit); else self.kitsMap[bindKit].manager.addListeners(theKit);
+                    if (!theKit) console && console.log("Referring unknown widget: " + me$.data("kit")); else if (me$.hasClass("jtox-widget") && bindKit != null) {
+                        if (!self.kitsMap[bindKit]) console && console.log("'" + me$.attr("id") + "' is binding to unknown kit: " + bindKit); else self.kitsMap[bindKit].manager.addListeners(theKit);
                     }
                 }
             };
@@ -261,7 +261,7 @@
                 var handler = null;
                 if (kit.settings.configuration != null && kit.settings.configuration.handlers != null) handler = kit.settings.configuration.handlers[name];
                 handler = handler || window[name];
-                if (!handler) console.log("jToxQuery: referring unknown handler: " + name); else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA") jT.$(this).on("change", handler).on("keydown", jT.enterBlur); else jT.$(this).on("click", handler);
+                if (!handler) console && console.log("jToxQuery: referring unknown handler: " + name); else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA") jT.$(this).on("change", handler).on("keydown", jT.enterBlur); else jT.$(this).on("click", handler);
             }));
         }
     };
@@ -337,7 +337,183 @@
     ItemRendering.prototype.renderItem = function(info) {
         return jT.fillTemplate(template, info).addClass(this.classes);
     };
-    var defSettings$3 = {
+    var ajaxDefaults = {
+        async: true,
+        dataType: "json",
+        method: "GET",
+        processData: false
+    }, defSettings$3 = {
+        connector: null,
+        serverUrl: "",
+        onPrepare: null,
+        onError: null,
+        onSuccess: null,
+        ajaxSettings: null
+    };
+    function Communicating(settings) {
+        a$.setup(this, defSettings$3, settings);
+        this.listeners = {};
+        this.error = null;
+        this.pendingRequests = [];
+        this.inRequest = false;
+        this.ajaxSettings = _$1.defaults(this.ajaxSettings, ajaxDefaults);
+    }
+    Communicating.prototype.__expects = [ "prepareQuery" ];
+    Communicating.prototype.doRequest = function(servlet, isPrivate, callback) {
+        if (this.inRequest) {
+            this.pendingRequests.push(arguments);
+            return;
+        }
+        this.inRequest = true;
+        if (typeof servlet === "function") {
+            callback = servlet;
+            isPrivate = false;
+            servlet = null;
+        } else if (typeof isPrivate === "function") {
+            callback = isPrivate;
+            isPrivate = false;
+        }
+        servlet = servlet || this.servlet || "";
+        var self = this, cancel = null, ajaxOpts = _$1.defaults(this.prepareQuery(servlet), {
+            service: typeof servlet === "object" ? servlet.url : servlet
+        }, this.ajaxSettings);
+        if (!isPrivate) {
+            _$1.each(self.listeners, (function(l) {
+                if (a$.act(l, l.beforeRequest, ajaxOpts, self) === false) cancel = l;
+            }));
+            if (cancel !== null) {
+                a$.act(cancel, self.onError, null, "Request cancelled", cancel, self);
+                return;
+            }
+        }
+        ajaxOpts.error = function(jqXHR, status, message) {
+            if (typeof callback === "function") callback(null, jqXHR);
+            if (!isPrivate) {
+                _$1.each(self.listeners, (function(l) {
+                    a$.act(l, l.afterResponse, null, jqXHR, ajaxOpts, self);
+                }));
+                a$.act(self, self.onError, jqXHR, ajaxOpts);
+            }
+        };
+        ajaxOpts.success = function(response, status, jqXHR) {
+            var data = a$.act(self, "parseResponse", response) || response;
+            if (typeof callback === "function") callback(data, response, jqXHR);
+            if (!isPrivate) {
+                _$1.each(self.listeners, (function(l) {
+                    a$.act(l, l.afterResponse, data, jqXHR, ajaxOpts, self);
+                }));
+                a$.act(self, self.onSuccess, data, jqXHR, ajaxOpts);
+            }
+        };
+        ajaxOpts.complete = function() {
+            self.inRequest = false;
+            if (self.pendingRequests.length > 0) self.doRequest.apply(self, self.pendingRequests.shift());
+        };
+        a$.broadcast(self, "onPrepare", ajaxOpts);
+        a$.act(self, self.onPrepare, ajaxOpts);
+        return self.connector(ajaxOpts);
+    };
+    Communicating.prototype.init = function() {
+        var self = this;
+        a$.pass(self, Communicating, "init");
+        _$1.each(this.listeners, (function(l) {
+            a$.act(l, l.init, self);
+        }));
+    };
+    Communicating.prototype.addListeners = function(one) {
+        var listener = one;
+        if (arguments.length > 1) listener = arguments; else if (!Array.isArray(one)) listener = [ one ]; else listener = one;
+        for (var l, i = 0, ll = listener.length; i < ll; ++i) {
+            l = listener[i];
+            this.listeners[l.id] = l;
+        }
+        return this;
+    };
+    Communicating.prototype.removeOneListener = function(listener) {
+        if (typeof listener === "object") listener = listener.id;
+        delete this.listeners[listener];
+        return this;
+    };
+    Communicating.prototype.removeListeners = function(selector, context) {
+        if (typeof selector !== "function") throw {
+            name: "Enumeration error",
+            message: "Attempt to select-remove listeners with non-function 'selector': " + selector
+        };
+        var self = this;
+        _$1.each(self.listeners, (function(l, id) {
+            if (selector.call(context, l, id, self)) delete self.listeners[id];
+        }));
+        return self;
+    };
+    Communicating.prototype.enumerateListeners = function(callback, context) {
+        if (typeof callback !== "function") throw {
+            name: "Enumeration error",
+            message: "Attempt to enumerate listeners with non-function 'selector': " + callback
+        };
+        var self = this;
+        _$1.each(this.listeners, (function(l, id) {
+            callback.call(context, l, id, self);
+        }));
+    };
+    Communicating.prototype.getListener = function(id) {
+        return this.listeners[id];
+    };
+    var defSettings$4 = {
+        delay: 300
+    };
+    function Delaying(settings) {
+        a$.setup(this, defSettings$4, settings);
+        this.delayTimer = null;
+    }
+    Delaying.prototype.doRequest = function(a, b, c, d) {
+        var self = this, doInvoke = function() {
+            a$.pass(self, Delaying, "doRequest", a, b, c, d);
+            self.delayTimer = null;
+        };
+        if (this.delay == null || this.delay < 10) return doInvoke(); else if (this.delayTimer != null) clearTimeout(this.delayTimer);
+        this.delayTimer = setTimeout(doInvoke, this.delay);
+    };
+    function Authenticating(settings) {
+        a$.setup(this, Authenticating.prototype, settings);
+        if (settings.authMethod === "Basic") {
+            _$1.extend(this.ajaxSettings, {
+                headers: {
+                    Authorization: "Basic " + btoa(this.username + ":" + this.password)
+                }
+            });
+        }
+    }
+    Authenticating.prototype = {
+        username: null,
+        password: null,
+        authMethod: null,
+        ajaxSettings: null
+    };
+    var defSettings$5 = {
+        servlet: null,
+        privateRequest: false,
+        onSpyResponse: null
+    };
+    function Spying(settings) {
+        a$.setup(this, defSettings$5, settings);
+        this.manager = null;
+    }
+    Spying.prototype.init = function(manager) {
+        a$.pass(this, Spying, "init", manager);
+        this.manager = manager;
+    };
+    Spying.prototype.doSpying = function(settings, callback) {
+        var man = this.manager;
+        man.pushParameters(true);
+        if (typeof settings === "function") settings(man); else _$1.each(settings, (function(v, k) {
+            if (v == null) man.removeParameters(k); else if (Array.isArray(v)) _$1.each(v, (function(vv) {
+                man.addParameter(k, vv);
+            })); else if (typeof v === "object") man.addParameter(v); else man.addParameter(k, v);
+        }));
+        man.doRequest(this.servlet, this.privateRequest, callback || this.onSpyResponse);
+        man.popParameters();
+    };
+    var defSettings$6 = {
         automatic: true,
         title: null,
         classes: null,
@@ -345,7 +521,7 @@
         before: null
     };
     function AccordionExpander(settings) {
-        a$.setup(this, defSettings$3, settings);
+        a$.setup(this, defSettings$6, settings);
         this.target = $$1(settings.target);
         this.header = null;
         this.id = settings.id;
@@ -381,7 +557,7 @@
         "facet.mincount": 1,
         echoParams: "none"
     };
-    var defSettings$4 = {
+    var defSettings$7 = {
         servlet: "select",
         urlFeed: null,
         useJson: false,
@@ -389,7 +565,7 @@
         activeFacets: null
     };
     function Autocompleter(settings) {
-        a$.setup(this, defSettings$4, settings);
+        a$.setup(this, defSettings$7, settings);
         this.target = $$1(settings.target);
         this.id = settings.id;
         this.lookupMap = settings.lookupMap || {};
@@ -461,7 +637,7 @@
         this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
         this.requestSent = false;
     };
-    var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>', defSettings$5 = {
+    var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>', defSettings$8 = {
         baseUrl: "",
         summaryPrimes: [ "RESULTS" ],
         tagDbs: {},
@@ -508,7 +684,7 @@
         }
     };
     function SolrItemLister(settings) {
-        a$.setup(this, defSettings$5, settings);
+        a$.setup(this, defSettings$8, settings);
         this.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
         this.lookupMap = settings.lookupMap || {};
         this.target = settings.target;
@@ -639,7 +815,11 @@
         }));
         return items;
     };
-    var defSettings$6 = {
+    function buildServiceId(params) {
+        var url = jT.parseURL(params.url);
+        return url.protocol + "://" + url.host + url.path;
+    }
+    var defSettings$9 = {
         statusDelay: 1500,
         keepMessages: 50,
         lineHeight: "20px",
@@ -648,10 +828,11 @@
         autoHide: true
     };
     function Logger(settings) {
-        a$.setup(this, defSettings$6, settings);
+        a$.setup(this, defSettings$9, settings);
         var root$ = $$1(this.target = settings.target);
         root$.html(jT.templates["logger-main"]);
         root$.addClass("jtox-toolkit jtox-log");
+        this.id = root$.attr("id");
         if (typeof this.lineHeight == "number") this.lineHeight = this.lineHeight.toString() + "px";
         if (typeof this.keepMessages != "number") this.keepMessages = parseInt(this.keepMessages);
         this.listRoot = $$1(".list-root", this.target)[0], this.statusEl = $$1(".status", this.target)[0];
@@ -674,7 +855,7 @@
         if (jhr != null) return {
             details: jhr.status + " " + jhr.statusText + "<br/>" + jhr.getAllResponseHeaders()
         }; else if (params != null) return {
-            header: params.method.toUpperCase() + ": " + params.service,
+            header: params.method.toUpperCase() + ": " + buildServiceId(params),
             details: "..."
         }; else return null;
     };
@@ -725,7 +906,7 @@
         return el$;
     };
     Logger.prototype.beforeRequest = function(params) {
-        var url = jT.parseURL(params.url), service = params.service = url.protocol + "://" + url.host + url.path, info = this.formatEvent(params), line$ = this.addLine(info);
+        var info = this.formatEvent(params), line$ = this.addLine(info);
         this.setStatus("connecting");
         this.events[params.logId = Date.now()] = line$;
         this.setIcon(line$, "connecting");
@@ -735,13 +916,13 @@
         var info = this.formatEvent(params, jhr), line$ = this.events[params.logId], status = !!response ? "success" : "error";
         this.setStatus(status);
         if (!line$) {
-            console.log("jToxLog: missing line for:" + params.service + "(" + jhr.statusText + ")");
+            console && console.log("jToxLog: missing line for:" + buildServiceId(params) + "(" + jhr.statusText + ")");
             return;
         }
         delete this.events[params.logId];
         this.setIcon(line$, status);
         jT.fillTree(line$[0], info);
-        if (status == "error") console && console.log("Error [" + params.service + "]: " + jhr.statusText);
+        if (status == "error") console && console.log("Error [" + buildServiceId(params) + "]: " + jhr.statusText);
     };
     Logger.prototype.mountOnHandlers = function(dest) {
         var self = this;
@@ -760,7 +941,7 @@
         };
         return dest;
     };
-    var defSettings$7 = {
+    var defSettings$a = {
         innerWindow: 4,
         outerWindow: 1,
         prevLabel: "&laquo; Previous",
@@ -769,7 +950,7 @@
         renderHeader() {}
     };
     function Pager(settings) {
-        a$.setup(this, defSettings$7, settings);
+        a$.setup(this, defSettings$a, settings);
         this.target = $(settings.target);
         this.id = settings.id;
         this.manager = null;
@@ -863,27 +1044,27 @@
         this.renderLinks(this.windowedLinks());
         this.renderHeader(this.pageSize, (this.currentPage - 1) * this.pageSize, this.totalEntries);
     };
-    var defSettings$8 = {
+    var defSettings$b = {
         runSelector: ".switcher",
         runMethod: null,
         runTarget: null
     };
     function Passer(settings) {
-        a$.setup(this, defSettings$8, settings);
+        a$.setup(this, defSettings$b, settings);
         var self = this, target$ = $$1(self.runSelector, $$1(settings.target)[0]), runTarget = self.runTarget || self;
         target$.on("click", (function(e) {
             a$.act(runTarget, self.runMethod, this, e);
             e.stopPropagation();
         }));
     }
-    var defSettings$9 = {
+    var defSettings$c = {
         color: null,
         renderItem: null,
         onUpdated: null,
         subtarget: null
     };
     function Tagger(settings) {
-        a$.setup(this, defSettings$9, settings);
+        a$.setup(this, defSettings$c, settings);
         this.target = $$1(settings.target);
         if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
         this.id = settings.id;
@@ -945,7 +1126,7 @@
         info.color = this.color;
         return info;
     };
-    var InnerTagWidget = a$(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$a = {
+    var InnerTagWidget = a$(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$d = {
         automatic: false,
         renderTag: null,
         multivalue: false,
@@ -953,7 +1134,7 @@
         exclusion: false
     };
     function Pivoter(settings) {
-        a$.setup(this, defSettings$a, settings);
+        a$.setup(this, defSettings$d, settings);
         this.target = settings.target;
         this.targets = {};
         this.lastEnabled = 0;
@@ -1044,7 +1225,7 @@
         }
         target.append(elements);
     };
-    var defSettings$b = {
+    var defSettings$e = {
         limits: null,
         units: null,
         initial: null,
@@ -1056,7 +1237,7 @@
         format: "%s {{units}}"
     };
     function Slider(settings) {
-        a$.setup(this, defSettings$b, settings);
+        a$.setup(this, defSettings$e, settings);
         this.target = $(settings.target);
         this.prepareLimits(settings.limits);
         if (this.initial == null) this.initial = this.isRange ? [ this.limits[0], this.limits[1] ] : (this.limits[0] + this.limits[1]) / 2;
@@ -1118,19 +1299,19 @@
     SimpleRanger.prototype.doRequest = function() {
         this.manager.doRequest();
     };
-    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, CommBase.Delaying), defaultParameters$1 = {
+    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, Delaying), defaultParameters$1 = {
         facet: true,
         rows: 0,
         fl: "id",
         "facet.limit": -1,
         "facet.mincount": 1,
         echoParams: "none"
-    }, defSettings$c = {
+    }, defSettings$f = {
         field: null,
         titleSkips: null
     };
     function Ranger(settings) {
-        a$.setup(this, defSettings$c, settings);
+        a$.setup(this, defSettings$f, settings);
         this.slidersTarget = $$1(settings.slidersTarget);
         this.lookupMap = settings.lookupMap || {};
         this.pivotMap = null;
@@ -1264,13 +1445,13 @@
         this.rangeRemove();
         a$.pass(this, Ranger, "clearValues");
     };
-    var defSettings$d = {
+    var defSettings$g = {
         switchSelector: ".switcher",
         switchField: null,
         onSwitching: null
     };
     function Switcher(settings) {
-        a$.setup(this, defSettings$d, settings);
+        a$.setup(this, defSettings$g, settings);
         var self = this, target$ = $$1(self.switchSelector, $$1(settings.target)[0]), initial = _$1.get(self, self.switchField);
         if (typeof initial === "boolean") target$[0].checked = initial; else target$.val(initial);
         target$.on("change", (function(e) {
@@ -1288,12 +1469,12 @@
     Texter.prototype.afterResponse = function() {
         $$1(this.target).val("");
     };
-    var defSettings$e = {
+    var defSettings$h = {
         useJson: false,
         renderItem: null
     };
     function SolrQueryReporter(settings) {
-        a$.setup(this, defSettings$e, settings);
+        a$.setup(this, defSettings$h, settings);
         this.target = settings.target;
         this.id = settings.id;
         this.manager = null;
@@ -1357,6 +1538,10 @@
     jT.Populating = Populating;
     jT.Loading = Loading;
     jT.ItemRendering = ItemRendering;
+    jT.Communicating = Communicating;
+    jT.Delaying = Delaying;
+    jT.Authenticating = Authenticating;
+    jT.Spying = Spying;
     jT.AccordionExpander = AccordionExpander;
     jT.Autocompleter = Autocompleter;
     jT.SolrItemLister = SolrItemLister;

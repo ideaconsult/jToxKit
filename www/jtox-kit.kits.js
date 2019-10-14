@@ -293,10 +293,10 @@
 		 */
 		initComm: function () {
 			var Manager, Basket,
-				PivotWidget = a$(Solr.Eventing, Solr.Spying, Solr.Pivoting, jT.Pivoter, jT.Ranger),
+				PivotWidget = a$(Solr.Eventing, jT.Spying, Solr.Pivoting, jT.Pivoter, jT.Ranger),
 				TagWidget = a$(Solr.Eventing, Solr.Faceting, jT.AccordionExpander, jT.Tagger, jT.Switcher);
 
-			this.manager = Manager = new(a$(CommBase.Communicating, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
+			this.manager = Manager = new(a$(jT.Communicating, Solr.Configuring, Solr.QueryingJson, Solr.NestedAdapter))(this);
 
 			Manager.addListeners(new jT.widget.SolrResult($.extend(true, {
 				id: 'result',
@@ -422,7 +422,7 @@
 				itemId: "s_uuid",
 				onClick: function (e, doc) {
 					if (Basket.eraseItem(doc.s_uuid) === false) {
-						console.log("Trying to remove from basket an inexistent entry: " + JSON.stringify(doc));
+						console && console.log("Trying to remove from basket an inexistent entry: " + JSON.stringify(doc));
 						return;
 					}
 

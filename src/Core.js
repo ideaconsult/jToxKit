@@ -38,7 +38,7 @@ export default {
 	// form the "default" baseUrl if no other is supplied
 	formBaseUrl(url) {
 		var burl = !!url.host ? url.protocol + "://" + url.host + (url.port.length > 0 ? ":" + url.port : '') + '/' + url.segments[0] : null;
-		console.log("Deduced base URL: " + burl + " (from: " + url.source + ")");
+		console && console.log("Deduced base URL: " + burl + " (from: " + url.source + ")");
 		return burl;
 	},
 

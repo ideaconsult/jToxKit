@@ -32,17 +32,16 @@
 	"main": "www/jtox-kit.js",
 	"browser": [
 		"www/jtox-kit.js",
-		"www/jtox-kit.uis.js"
+		"www/jtox-kit.kits.js"
 	],
 	"config": {
 		"kitsname": "jtox-kit.kits"
 	},
 	"dependencies": {
-		"ambit-jsx": "file:../AmbitJsx",
 		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-		"commbase-jsx": "file:../CommBaseJsX",
 		"lodash": "^4.17.15",
-		"solr-jsx": "file:../SolrJsX"
+		"solr-jsx": "file:../SolrJsX",
+		"ambit-jsx": "file:../AmbitJsx"
 	},
 	"devDependencies": {
 		"concat": "^1.0.3",
@@ -59,7 +58,7 @@
 		"build": "npm run core && npm run kits",
 		"test": "npm run prepare && mocha test --require expectations",
 		"archive": "cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
-		"libs": "rsync node_modules/lodash/lodash*.js www/libs && rsync node_modules/as-sys/as-sys*.js www/libs && rsync node_modules/ambit-jsx/ambit-jsx*.js www/libs && rsync node_modules/solr-jsx/solr-jsx*.js www/libs && rsync node_modules/commbase-jsx/commbase-jsx*.js www/libs",
+		"libs": "rsync node_modules/lodash/lodash*.js www/libs && rsync node_modules/as-sys/as-sys*.js www/libs && rsync node_modules/ambit-jsx/ambit-jsx*.js www/libs && rsync node_modules/solr-jsx/solr-jsx*.js www/libs",
 		"prepare": "npm run build && npm run libs && npm run archive",
 		"postpublish": "git push && git tag -am \"Release $npm_package_version.\" ${npm_package_version} && git push --tags"
 	}

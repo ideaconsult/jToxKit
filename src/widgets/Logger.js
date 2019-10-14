@@ -11,6 +11,12 @@ import $ from 'jQuery';
 
 import jT from '../Core';
 
+function buildServiceId(params) {
+	var url = jT.parseURL(params.url);
+
+	return url.protocol + "://" + url.host + url.path;
+};
+
 var defSettings = {
 	statusDelay: 1500, // number of milliseconds to keep success / error messages before fading out
 	keepMessages: 50, // how many messages to keep in the queue
@@ -26,6 +32,9 @@ function Logger(settings) {
 	var root$ = $(this.target = settings.target);
 	root$.html(jT.templates['logger-main']);
 	root$.addClass('jtox-toolkit jtox-log'); // to make sure it is there even when manually initialized
+
+	// We can deduce the id from the provided element.
+	this.id = root$.attr('id');
 
 	if (typeof this.lineHeight == "number")
 		this.lineHeight = this.lineHeight.toString() + 'px';
@@ -66,7 +75,7 @@ Logger.prototype.formatEvent = function (params, jhr) {
 		};
 	else if (params != null)
 		return {
-			header: params.method.toUpperCase() + ": " + params.service,
+			header: params.method.toUpperCase() + ": " + buildServiceId(params),
 			details: "..."
 		};
 	else
@@ -144,9 +153,7 @@ Logger.prototype.addLine = function (data) {
 };
 
 Logger.prototype.beforeRequest = function (params) {
-	var url = jT.parseURL(params.url),
-		service = params.service = url.protocol + "://" + url.host + url.path,
-		info = this.formatEvent(params),
+	var info = this.formatEvent(params),
 		line$ = this.addLine(info);
 
 	this.setStatus("connecting");
@@ -162,7 +169,7 @@ Logger.prototype.afterResponse = function (response, jhr, params) {
 
 	this.setStatus(status);
 	if (!line$) {
-		console.log("jToxLog: missing line for:" + params.service + "(" + jhr.statusText + ")");
+		console && console.log("jToxLog: missing line for:" + buildServiceId(params) + "(" + jhr.statusText + ")");
 		return;
 	}
 	delete this.events[params.logId];
@@ -170,7 +177,7 @@ Logger.prototype.afterResponse = function (response, jhr, params) {
 	jT.fillTree(line$[0], info);
 
 	if (status == 'error')
-		console && console.log("Error [" + params.service + "]: " + jhr.statusText);
+		console && console.log("Error [" + buildServiceId(params) + "]: " + jhr.statusText);
 };
 
 /**

@@ -69,7 +69,7 @@ export default {
 				if (dataParams.id !== null)
 					self.kitsMap[dataParams.id] = obj;
 			} else
-				console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
+				console && console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
 
 			return obj;
 		};
@@ -142,10 +142,10 @@ export default {
 				var theKit = self.initKit(me$),
 					bindKit = me$.data('jtoxBind');
 				if (!theKit)
-					console.log("Referring unknown widget: " + me$.data('kit'))
+					console && console.log("Referring unknown widget: " + me$.data('kit'))
 				else if (me$.hasClass('jtox-widget') && bindKit != null) {
 					if (!self.kitsMap[bindKit])
-						console.log("'" + me$.attr('id') + "' is binding to unknown kit: " + bindKit);
+						console && console.log("'" + me$.attr('id') + "' is binding to unknown kit: " + bindKit);
 					else
 						self.kitsMap[bindKit].manager.addListeners(theKit);
 				}
@@ -225,7 +225,7 @@ export default {
 			handler = handler || window[name];
 
 			if (!handler)
-				console.log("jToxQuery: referring unknown handler: " + name);
+				console && console.log("jToxQuery: referring unknown handler: " + name);
 			else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
 				jT.$(this).on('change', handler).on('keydown', jT.enterBlur);
 			else // all the rest respond on click

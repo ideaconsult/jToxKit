@@ -60,97 +60,97 @@
         loadPolicies() {},
         addPolicy(data) {}
     };
-    function Modelling(settings) {
-        a$.setup(this, Modelling.prototype, settings);
-        this.models = null;
-    }
-    Modelling.prototype = {
-        __expects: [ "pollTask" ],
+    var defSettings$1 = {
         algorithms: false,
         forceCreate: false,
         loadOnInit: false,
         listFilter: null,
-        onLoaded: null,
-        init: function(manager) {
-            a$.pass(this, jT.Modelling, "init", manager);
-            this.manager = manager;
-            if (this.loadOnInit) this.queryList();
-        },
-        listModels: function() {
-            var self = this;
-            self.manager.doRequest("model", (function(result, jhr) {
-                if (result && result.model) self.models = result.model; else if (jhr.status == 200) result = {
-                    model: []
-                };
-                a$.act(self, self.onLoaded, result);
-            }));
-        },
-        listAlgorithms: function(needle) {
-            var self = this, servlet = "algorithm";
-            if (!!needle) servlet += "?search=" + needle;
-            self.manager.doRequest(servlet, (function(result, jhr) {
-                if (result && result.algorithm) self.algorithm = result.algorithm; else if (jhr.status == 200) result = {
-                    algorithm: []
-                };
-                a$.act(self, self.onLoaded, result, jhr);
-            }));
-        },
-        getModel: function(algoUri, callback) {
-            var self = this, reportIt = function(task, jhr) {
-                return callback(task && task.completed > -1 ? task.result : null, jhr);
+        onLoaded: null
+    };
+    function Modelling(settings) {
+        a$.setup(this, defSettings$1, settings);
+        this.models = null;
+    }
+    Modelling.prototype.__expects = [ "pollTask" ];
+    Modelling.prototype.init = function(manager) {
+        a$.pass(this, Modelling, "init", manager);
+        this.manager = manager;
+        if (this.loadOnInit) this.queryList();
+    };
+    Modelling.prototype.listModels = function() {
+        var self = this;
+        self.manager.doRequest("model", (function(result, jhr) {
+            if (result && result.model) self.models = result.model; else if (jhr.status == 200) result = {
+                model: []
             };
-            if (self.forceCreate) self.pollTask({
+            a$.act(self, self.onLoaded, result);
+        }));
+    };
+    Modelling.prototype.listAlgorithms = function(needle) {
+        var self = this, servlet = "algorithm";
+        if (!!needle) servlet += "?search=" + needle;
+        self.manager.doRequest(servlet, (function(result, jhr) {
+            if (result && result.algorithm) self.algorithm = result.algorithm; else if (jhr.status == 200) result = {
+                algorithm: []
+            };
+            a$.act(self, self.onLoaded, result, jhr);
+        }));
+    };
+    Modelling.prototype.getModel = function(algoUri, callback) {
+        var self = this, reportIt = function(task, jhr) {
+            return callback(task && task.completed > -1 ? task.result : null, jhr);
+        };
+        if (self.forceCreate) self.pollTask({
+            url: algoUri,
+            method: "POST"
+        }, reportIt); else self.manager.doRequest("model?algorithm=" + encodeURIComponent(algoUri), (function(result, jhr) {
+            if (!result && jhr.status != 404) callback(null, jhr); else if (!result || result.model.length == 0) self.pollTask({
                 url: algoUri,
                 method: "POST"
-            }, reportIt); else self.manager.doRequest("model?algorithm=" + encodeURIComponent(algoUri), (function(result, jhr) {
-                if (!result && jhr.status != 404) callback(null, jhr); else if (!result || result.model.length == 0) self.pollTask({
-                    url: algoUri,
-                    method: "POST"
-                }, reportIt); else callback(result.model[0].URI, jhr);
-            }));
-        },
-        runPrediction: function(datasetUri, modelUri, callback) {
-            var self = this, createAttempted = false, obtainResults = null, createIt = function(jhr) {
-                if (createAttempted) {
-                    callback(null, jhr);
-                    return;
+            }, reportIt); else callback(result.model[0].URI, jhr);
+        }));
+    };
+    Modelling.prototype.runPrediction = function(datasetUri, modelUri, callback) {
+        var self = this, createAttempted = false, obtainResults = null, createIt = function(jhr) {
+            if (createAttempted) {
+                callback(null, jhr);
+                return;
+            }
+            self.pollTask({
+                url: modelUri,
+                method: "POST",
+                data: {
+                    dataset_uri: datasetUri
                 }
-                self.pollTask({
-                    url: modelUri,
-                    method: "POST",
-                    data: {
-                        dataset_uri: datasetUri
-                    }
-                }, (function(task, jhr) {
-                    createAttempted = true;
-                    if (task && task.completed > -1) obtainResults(task.result);
-                }));
-            };
-            obtainResults = function(uri) {
-                self.manager.connector({
-                    url: uri,
-                    method: "GET",
-                    dataType: "json",
-                    error: function(jhr) {
-                        callback(null, jhr);
-                    },
-                    success: function(result, jhr) {
-                        if (result && result.dataEntry && result.dataEntry.length > 0) {
-                            var empty = true;
-                            for (var i = 0, rl = result.dataEntry.length; i < rl; ++i) if (a$.weight(result.dataEntry[i].values) > 0) {
-                                empty = false;
-                                break;
-                            }
-                            if (empty) createIt(jhr); else callback(result, jhr);
-                        } else createIt(jhr);
-                    }
-                });
-            };
-            if (self.forceCreate) createIt(); else obtainResults(jT.ui.addParameter(datasetUri, "feature_uris[]=" + encodeURIComponent(modelUri + "/predicted")));
-        },
-        queryList: function(needle) {
-            if (this.algorithms) this.listAlgorithms(this.listFilter = needle || this.listFilter); else this.listModels(this.modelUri);
-        }
+            }, (function(task, jhr) {
+                createAttempted = true;
+                if (task && task.completed > -1) obtainResults(task.result);
+            }));
+        };
+        obtainResults = function(uri) {
+            self.manager.connector({
+                url: uri,
+                method: "GET",
+                dataType: "json",
+                error: function(jhr) {
+                    callback(null, jhr);
+                },
+                success: function(result, jhr) {
+                    if (result && result.dataEntry && result.dataEntry.length > 0) {
+                        var empty = true;
+                        for (var i = 0, rl = result.dataEntry.length; i < rl; ++i) if (a$.weight(result.dataEntry[i].values) > 0) {
+                            empty = false;
+                            break;
+                        }
+                        if (empty) createIt(jhr); else callback(result, jhr);
+                    } else createIt(jhr);
+                }
+            });
+        };
+        if (self.forceCreate) createIt(); else obtainResults(jT.addParameter(datasetUri, "feature_uris[]=" + encodeURIComponent(modelUri + "/predicted")));
+    };
+    Modelling.prototype.queryList = function(needle) {
+        if (this.algorithms) this.listAlgorithms(this.listFilter = needle || this.listFilter); else this.listModels(this.modelUri);
     };
     Ambit.Paging = Paging;
     Ambit.Tasking = Tasking;

@@ -10,10 +10,10 @@
 import a$ from 'as-sys';
 import $ from 'jQuery';
 import Solr from 'solr-jsx';
-import CommBase from 'commbase-jsx';
 
 import jT from '../Core';
 import Slider from './Slider';
+import Delaying from '../Delaying';
 
 function SimpleRanger(settings) {
 	this.sliderRoot = settings.sliderRoot;
@@ -36,7 +36,7 @@ SimpleRanger.prototype.doRequest = function () {
 	this.manager.doRequest();
 };
 
-var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, CommBase.Delaying),
+var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, Delaying),
 	defaultParameters = {
 		'facet': true,
 		'rows': 0,

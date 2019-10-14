@@ -6,7 +6,7 @@
     "use strict";
     var bracketsRegExp = /^\s*\(\s*|\s*\)\s*$/g, statsRegExp = /^([^()]+)\(([^)]+)\)$/g;
     var Solr$1 = {
-        version: "1.0.0",
+        version: "1.0.1",
         escapeValue(value) {
             if (typeof value !== "string") value = value.toString();
             if (value.match(/[ :\/"]/) && !value.match(/[\[\{]\S+ TO \S+[\]\}]/) && !value.match(/^["\(].*["\)]$/)) {
@@ -351,6 +351,7 @@
     };
     var defSettings$5 = {
         resetPage: true,
+        privateRequest: false,
         customResponse: null
     };
     function Eventing(settings) {
@@ -363,7 +364,7 @@
     };
     Eventing.prototype.doRequest = function() {
         if (this.resetPage) this.manager.addParameter("start", 0);
-        this.manager.doRequest(self.customResponse);
+        this.manager.doRequest(null, self.privateRequest, self.customResponse);
     };
     Eventing.prototype.updateHandler = function() {
         var self = this, args = arguments;
@@ -388,44 +389,22 @@
         };
     };
     var defSettings$6 = {
-        servlet: null
-    };
-    function Spying(settings) {
-        a$$1.setup(this, defSettings$6, settings);
-        this.manager = null;
-    }
-    Spying.prototype.init = function(manager) {
-        a$$1.pass(this, Spying, "init", manager);
-        this.manager = manager;
-    };
-    Spying.prototype.doSpying = function(settings, callback) {
-        var man = this.manager;
-        man.pushParameters(true);
-        if (typeof settings === "function") settings(man); else _$1.each(settings, (function(v, k) {
-            if (v == null) man.removeParameters(k); else if (Array.isArray(v)) _$1.each(v, (function(vv) {
-                man.addParameter(k, vv);
-            })); else if (typeof v === "object") man.addParameter(v); else man.addParameter(k, v);
-        }));
-        man.doRequest(this.servlet, callback || this.onSpyResponse);
-        man.popParameters();
-    };
-    var defSettings$7 = {
         valuePattern: "{{-}}{{v}}"
     };
     function Patterning(settings) {
-        this.valuePattern = settings && settings.valuePattern || defSettings$7.valuePattern;
+        this.valuePattern = settings && settings.valuePattern || defSettings$6.valuePattern;
         var oldRE = this.fqRegExp.toString().replace(/^\/\^?|\$?\/$/g, ""), newRE = "^" + _$1.escapeRegExp(this.valuePattern.replace(/\{\{!?-\}\}/g, "-?").replace("{{v}}", "__v__")).replace("__v__", oldRE).replace("--?", "-?").replace("--", "");
         this.fqRegExp = new RegExp(newRE);
     }
     Patterning.prototype.fqValue = function(value, exclude) {
         return this.valuePattern.replace("{{-}}", exclude ? "-" : "").replace("{{!-}}", exclude ? "" : "-").replace("{{v}}", a$.pass(this, Solr.Patterning, "fqValue", value, exclude)).replace("--", "");
     };
-    var defSettings$8 = {
+    var defSettings$7 = {
         domain: null,
         escapeNeedle: false
     };
     function Texting(settings) {
-        a$$1.setup(this, defSettings$8, settings);
+        a$$1.setup(this, defSettings$7, settings);
         this.manager = null;
     }
     Texting.prototype.__expects = [ "doRequest" ];
@@ -461,7 +440,7 @@
         method: null,
         "enum.cache.minDf": null
     };
-    var defSettings$9 = {
+    var defSettings$8 = {
         multivalue: false,
         aggregate: false,
         exclusion: false,
@@ -473,7 +452,7 @@
         statistics: null
     };
     function Faceting(settings) {
-        a$$1.setup(this, defSettings$9, settings);
+        a$$1.setup(this, defSettings$8, settings);
         this.id = settings.id;
         this.field = settings.field;
         this.manager = null;
@@ -672,7 +651,7 @@
     function rangeValue(value) {
         return Array.isArray(value) ? "[" + Solr$1.escapeValue(value[0] || "*") + " TO " + Solr$1.escapeValue(value[1] || "*") + "]" : Solr$1.escapeValue(value);
     }
-    var defSettings$a = {
+    var defSettings$9 = {
         multirange: false,
         exclusion: false,
         domain: null,
@@ -680,7 +659,7 @@
         domain: null
     };
     function Ranging(settings) {
-        a$$1.setup(this, defSettings$a, settings);
+        a$$1.setup(this, defSettings$9, settings);
         this.id = settings.id;
         this.field = settings.field;
         this.manager = null;
@@ -716,14 +695,14 @@
         m.shift();
         return m;
     };
-    var defSettings$b = {
+    var defSettings$a = {
         pivot: null,
         useJson: false,
         statistics: null,
         domain: null
     };
     function Pivoting(settings) {
-        a$$1.setup(this, defSettings$b, settings);
+        a$$1.setup(this, defSettings$a, settings);
         this.manager = null;
         this.faceters = {};
         this.id = settings.id;
@@ -823,14 +802,14 @@
         })); else if (v != null) v = p.id + ":" + v;
         return v;
     };
-    var defSettings$c = {
+    var defSettings$b = {
         nestingRules: null,
         nestingField: null,
         nestLevel: null,
         listingFields: [ "*" ]
     };
     function Listing(settings) {
-        a$$1.setup(this, defSettings$c, settings);
+        a$$1.setup(this, defSettings$b, settings);
         this.manager = null;
     }
     Listing.prototype.init = function(manager) {
@@ -843,7 +822,7 @@
             manager.addParameter("fl", f);
         }));
     };
-    var defSettings$d = {
+    var defSettings$c = {
         collapseRules: {
             study: {
                 fields: /topcategory[_sh]*|endpointcategory[_sh]*|guidance[_sh]*|reference[_sh]*|reference_owner[_sh]*|reference_year[_sh]*|guidance[_sh]*/
@@ -854,7 +833,7 @@
         }
     };
     function RawAdapter(settings) {
-        a$$1.setup(this, defSettings$d, settings);
+        a$$1.setup(this, defSettings$c, settings);
     }
     RawAdapter.prototype.init = function(manager) {
         a$$1.pass(this, RawAdapter, "init", manager);
@@ -923,7 +902,7 @@
                     start: response.response.start,
                     count: response.response.docs.length,
                     total: response.response.numFound,
-                    pageSize: parseInt(response.responseHeader.params.rows)
+                    pageSize: parseInt(response.responseHeader.params && response.responseHeader.params.rows || 0)
                 }
             };
         }
@@ -935,7 +914,6 @@
     Solr$1.Persisting = Persisting;
     Solr$1.Paging = Paging;
     Solr$1.Eventing = Eventing;
-    Solr$1.Spying = Spying;
     Solr$1.Patterning = Patterning;
     Solr$1.Texting = Texting;
     Solr$1.Faceting = Faceting;

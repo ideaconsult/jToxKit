@@ -14,9 +14,8 @@ export default {
 			"jQuery": "$",
 			"solr-jsx": "Solr",
 			"ambit-jsx": "Ambit",
-			"commbase-jsx": "CommBase",
 			"jtox-kit": "jToxKit"
 		}
 	},
-	external: [ "lodash", "as-sys", "jQuery", "solr-jsx", "ambit-jsx", "commbase-jsx" ]
+	external: [ "lodash", "as-sys", "jQuery", "solr-jsx", "ambit-jsx" ]
 };

@@ -14,11 +14,20 @@ import _Tools from './Integration';
 import _Populate from './Populating';
 import _Load from './Loading';
 import _Item from './ItemRendering';
+import _Comm from './Communicating';
+import _Delay from './Delaying';
+import _Auth from './Authenticating';
+import _Spying from "./Spying";
+
 
 _.assign(jT, _Tools);
 jT.Populating = _Populate;
 jT.Loading = _Load;
 jT.ItemRendering = _Item;
+jT.Communicating = _Comm;
+jT.Delaying = _Delay;
+jT.Authenticating = _Auth;
+jT.Spying = _Spying;
 
 import _Accord from './widgets/AccordionExpander';
 import _Auto from './widgets/Autocompleter';
