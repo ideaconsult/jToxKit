@@ -5,9 +5,8 @@
  * Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved.
  */
 
-import a$ from 'as-sys';
 import _ from 'lodash';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 // Define this as a main object to put everything in
 export default {
@@ -176,7 +175,7 @@ export default {
 	/** Gets a template with given selector and replaces the designated
 	 * {{placeholders}} from the provided `info`.
 	 */
-	 fillTemplate(selector, info) {
+	fillTemplate(selector, info) {
 		return $(this.formatString($(selector).html(), info).replace(/(<img(\s+.*)?)(\s+jt-src=")/, "$1 src=\""));
 	},
 
@@ -189,30 +188,7 @@ export default {
 		});
 	},
 
-	updateCounter(str, count, total) {
-		var re = null;
-		var add = '';
-		if (count == null)
-			count = 0;
-		if (total == null) {
-			re = /\(([\d\?]+)\)$/;
-			add = '' + count;
-		} else {
-			re = /\(([\d\?]+\/[\d\?\+-]+)\)$/;
-			add = '' + count + '/' + total;
-		}
-
-		// now the addition
-		if (!str.match(re))
-			str += ' (' + add + ')';
-		else
-			str = str.replace(re, "(" + add + ")");
-
-		return str;
-	},
-
-	enterBlur(e) {
-		if (e.keyCode == 13)
-			this.blur();
-	}
+	joinDeep(data, field, sep) {
+		return _.map(data, function (val) { val[field] }).join(sep);
+	}	
 };

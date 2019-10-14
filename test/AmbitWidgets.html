@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+	<title>[jTox] Logging Widget development page</title>
+	<link rel="stylesheet" href="style/base.css" type="text/css">
+	<link rel="stylesheet" href="style/skeleton-fluid.css" type="text/css">
+	<link rel="stylesheet" href="style/layout.css" type="text/css">
+
+	<link rel="stylesheet" href="style/query.css">
+
+	<link rel="stylesheet" href="style/ambit2.css" type="text/css">
+	<link rel="stylesheet" href="style/toplinks.css" type="text/css">
+	<link rel="stylesheet" href="style/table.css" type="text/css">
+	<link rel="stylesheet" href="style/cssflow.css" type="text/css">
+	<link rel="stylesheet" href="style/sm-core-css.css" type="text/css">
+	<link rel="stylesheet" href="style/sm-mint.css" type="text/css">
+
+	<link rel="stylesheet" href="../www/libs/jquery-ui.min.css">
+	<link rel="stylesheet" href="../www/libs/jquery.ui.theme.css">
+	<link rel="stylesheet" href="../www/libs/jquery.range.css" type="text/css">
+	<link rel="stylesheet" href="../www/libs/jquery.dataTables.css" type="text/css">
+
+	<link rel="stylesheet" href="../www/jtox-kit.css">
+
+</head>
+
+<body>
+	<div id="manager" class="jtox-kit" data-kit="CommManager" data-configuration="Settings">
+		<div id="modeller" class="jtox-widget" data-kit="AmbitAlgorithmer" data-jtox-manager="__parent"></div>
+	</div>
+
+	<script src="../www/libs/jquery.js"></script>
+	<script src="../www/libs/jquery-ui.min.js"></script>
+	<script src="../www/libs/purl.js"></script>
+	<script src="../www/libs/jquery.range-min.js"></script>
+	<script src="../www/libs/jquery.sticky.js"></script>
+	<script src="../www/libs/jquery.dataTables.js"></script>
+
+	<script src="../www/libs/lodash.js"></script>
+	<script src="../www/libs/as-sys.js"></script>
+	<script src="../www/libs/solr-jsx.js"></script>
+	<script src="../www/libs/ambit-jsx.js"></script>
+	<script src="../www/jtox-kit.js"></script>
+	<!-- <script src="../www/jtox-kit.kits.js"></script> -->
+
+	<!-- <script src="js/ont.js"></script> -->
+	<!-- <script src="js/SolrQueryUI.js"></script> -->
+	<script src="js/TestSettings.js"></script>
+
+	<script lang="JavaScript">
+		CommManager = a$(jT.Communicating, Ambit.Querying);
+		Settings.serverUrl = Settings.ambitUrl;
+
+		$(document).ready(function () {
+			jT.initialize();
+			jT.kitsMap.manager.init();
+			jT.kitsMap.modeller.doRequest();
+		});
+	</script>
+
+</body>
+
+</html>

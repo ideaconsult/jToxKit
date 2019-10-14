@@ -140,14 +140,16 @@ export default {
 			var me$ = $(this);
 			if (!me$.data('manualInit')) {
 				var theKit = self.initKit(me$),
-					bindKit = me$.data('jtoxBind');
+					managerKit = me$.data('jtoxManager');
 				if (!theKit)
 					console && console.log("Referring unknown widget: " + me$.data('kit'))
-				else if (me$.hasClass('jtox-widget') && bindKit != null) {
-					if (!self.kitsMap[bindKit])
-						console && console.log("'" + me$.attr('id') + "' is binding to unknown kit: " + bindKit);
+				else if (managerKit === '__parent')
+					theKit.parentKit.addListeners(theKit);
+				else if (managerKit != null) {
+					if (!self.kitsMap[managerKit])
+						console && console.log("'" + me$.attr('id') + "' is binding to unknown kit: " + managerKit);
 					else
-						self.kitsMap[bindKit].manager.addListeners(theKit);
+						self.kitsMap[managerKit].addListeners(theKit);
 				}
 			}
 		};
@@ -211,25 +213,5 @@ export default {
 			this.init(root); // since we're pasting as HTML - we need to make re-traverse and initiazaltion of possible jTox kits.
 		}
 		return root;
-	},
-
-	installHandlers: function (kit, root) {
-		if (root == null)
-			root = kit.rootElement;
-
-		jT.$('.jtox-handler', root).each(function () {
-			var name = jT.$(this).data('handler');
-			var handler = null;
-			if (kit.settings.configuration != null && kit.settings.configuration.handlers != null)
-				handler = kit.settings.configuration.handlers[name];
-			handler = handler || window[name];
-
-			if (!handler)
-				console && console.log("jToxQuery: referring unknown handler: " + name);
-			else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
-				jT.$(this).on('change', handler).on('keydown', jT.enterBlur);
-			else // all the rest respond on click
-				jT.$(this).on('click', handler);
-		});
 	}
 };

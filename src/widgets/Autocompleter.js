@@ -8,7 +8,7 @@
  */
 
 import a$ from 'as-sys';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 var defaultParameters = {
 	'facet': true,

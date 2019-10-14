@@ -1,8 +1,8 @@
 /** AmbitJsX library - a neXt Ambit queries JavaScript library. Copyright © 2019, IDEAConsult Ltd. All rights reserved. @license MIT.*/
 (function(global, factory) {
-    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("as-sys")) : typeof define === "function" && define.amd ? define([ "as-sys" ], factory) : (global = global || self, 
-    global.Ambit = factory(global.asSys));
-})(this, (function(a$) {
+    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("as-sys"), require("lodash")) : typeof define === "function" && define.amd ? define([ "as-sys", "lodash" ], factory) : (global = global || self, 
+    global.Ambit = factory(global.asSys, global._));
+})(this, (function(a$, _) {
     "use strict";
     var Ambit = {
         version: "1.0.0"
@@ -27,12 +27,10 @@
                 url: settings,
                 method: "GET"
             };
-            settings.error = function(jhr) {
-                callback(null, jhr);
-            };
-            settings.success = proceedOnTask;
             settings.dataType = "json";
-            self.manager.doRequest(settings);
+            self.manager.doRequest(settings, true, (function(task, jhr) {
+                if (task == null) callback(null, jhr); else proceedOnTask(task, jhr);
+            }));
         };
         proceedOnTask = function(task, jhr) {
             if (task == null || task.task == null || task.task.length < 1) {
@@ -51,67 +49,83 @@
         };
         queryTask(taskUri);
     };
-    function Authorization(settings) {
-        a$.setup(this, Authorization.prototype, settings);
-    }
-    Authorization.prototype = {
-        afterResponse: null,
-        loadRoles() {},
-        loadPolicies() {},
-        addPolicy(data) {}
-    };
+    function Configuring(settigs) {}
     var defSettings$1 = {
-        algorithms: false,
+        baseUrl: null
+    };
+    function Querying(settings) {
+        a$.setup(this, defSettings$1, settings);
+        if (!this.baseUrl) this.baseUrl = this.serverUrl;
+    }
+    Querying.prototype.__expects = [ "buildUrl" ];
+    Querying.prototype.prepareQuery = function(servlet) {
+        var url, questionIdx;
+        if (typeof servlet !== "object") {
+            url = servlet;
+            servlet = {};
+        } else url = servlet.url;
+        questionIdx = url.indexOf("?");
+        return _.defaults({
+            url: this.buildUrl(url),
+            serviceId: questionIdx > 0 ? url.substr(0, questionIdx) : url
+        }, servlet);
+    };
+    var defSettings$2 = {};
+    function Authorization(settings) {
+        a$.setup(this, defSettings$2, settings);
+    }
+    Authorization.prototype.init = function(manager) {
+        a$.pass(this, Authorization, "init", manager);
+        this.manager = manager;
+    };
+    Authorization.prototype.loadRoles = function() {
+        this.manager.doRequest("admin/restpolicy", (function(result, jhr, opts) {}));
+    };
+    Authorization.prototype.loadPolicies = function() {
+        this.manager.doRequest("admin/restpolicy", (function(result, jhr, opts) {}));
+    };
+    Authorization.prototype.addPolicy = function(data) {
+        this.manager.doRequest("admin/restpolicy", (function(result, jhr, opts) {}));
+    };
+    var serviceId = "model", defSettings$3 = {
         forceCreate: false,
-        loadOnInit: false,
-        listFilter: null,
-        onLoaded: null
+        defaultUri: null
     };
     function Modelling(settings) {
-        a$.setup(this, defSettings$1, settings);
+        a$.setup(this, defSettings$3, settings);
         this.models = null;
     }
-    Modelling.prototype.__expects = [ "pollTask" ];
+    Modelling.prototype.__expects = [ "pollTask", "populate" ];
+    Modelling.prototype.serviceId = serviceId;
     Modelling.prototype.init = function(manager) {
         a$.pass(this, Modelling, "init", manager);
         this.manager = manager;
-        if (this.loadOnInit) this.queryList();
     };
-    Modelling.prototype.listModels = function() {
+    Modelling.prototype.doRequest = function(uri) {
         var self = this;
-        self.manager.doRequest("model", (function(result, jhr) {
+        self.manager.doRequest(uri || this.defaultUri || serviceId, (function(result, jhr) {
             if (result && result.model) self.models = result.model; else if (jhr.status == 200) result = {
                 model: []
             };
-            a$.act(self, self.onLoaded, result);
-        }));
-    };
-    Modelling.prototype.listAlgorithms = function(needle) {
-        var self = this, servlet = "algorithm";
-        if (!!needle) servlet += "?search=" + needle;
-        self.manager.doRequest(servlet, (function(result, jhr) {
-            if (result && result.algorithm) self.algorithm = result.algorithm; else if (jhr.status == 200) result = {
-                algorithm: []
-            };
-            a$.act(self, self.onLoaded, result, jhr);
+            a$.act(self, self.populate, result.model);
         }));
     };
     Modelling.prototype.getModel = function(algoUri, callback) {
         var self = this, reportIt = function(task, jhr) {
             return callback(task && task.completed > -1 ? task.result : null, jhr);
-        };
-        if (self.forceCreate) self.pollTask({
-            url: algoUri,
-            method: "POST"
-        }, reportIt); else self.manager.doRequest("model?algorithm=" + encodeURIComponent(algoUri), (function(result, jhr) {
-            if (!result && jhr.status != 404) callback(null, jhr); else if (!result || result.model.length == 0) self.pollTask({
+        }, createIt = function() {
+            self.pollTask({
                 url: algoUri,
                 method: "POST"
-            }, reportIt); else callback(result.model[0].URI, jhr);
+            }, reportIt);
+        };
+        if (self.forceCreate) createIt(); else self.manager.doRequest(serviceId + "?algorithm=" + encodeURIComponent(algoUri), (function(result, jhr, opts) {
+            if (!result && jhr.status != 404) callback(null, jhr, opts); else if (!result || result.model.length == 0) createIt(); else callback(result.model[0].URI, jhr, opts);
         }));
     };
     Modelling.prototype.runPrediction = function(datasetUri, modelUri, callback) {
-        var self = this, createAttempted = false, obtainResults = null, createIt = function(jhr) {
+        var self = this, createAttempted = false, obtainResults = null, createIt = null;
+        createIt = function(jhr) {
             if (createAttempted) {
                 callback(null, jhr);
                 return;
@@ -127,34 +141,54 @@
                 if (task && task.completed > -1) obtainResults(task.result);
             }));
         };
-        obtainResults = function(uri) {
-            self.manager.connector({
-                url: uri,
+        obtainResults = function(url) {
+            var query = {
+                url: url,
                 method: "GET",
-                dataType: "json",
-                error: function(jhr) {
-                    callback(null, jhr);
-                },
-                success: function(result, jhr) {
-                    if (result && result.dataEntry && result.dataEntry.length > 0) {
-                        var empty = true;
-                        for (var i = 0, rl = result.dataEntry.length; i < rl; ++i) if (a$.weight(result.dataEntry[i].values) > 0) {
-                            empty = false;
-                            break;
-                        }
-                        if (empty) createIt(jhr); else callback(result, jhr);
-                    } else createIt(jhr);
-                }
-            });
+                dataType: "json"
+            };
+            self.manager.doRequest(query, (function(result, jhr, opts) {
+                if (!result) callback(result, jhr); else if (result && result.dataEntry && result.dataEntry.length > 0) {
+                    var empty = true;
+                    for (var i = 0, rl = result.dataEntry.length; i < rl; ++i) if (a$.weight(result.dataEntry[i].values) > 0) {
+                        empty = false;
+                        break;
+                    }
+                    if (empty) createIt(jhr); else callback(result, jhr);
+                } else createIt(jhr);
+            }));
         };
-        if (self.forceCreate) createIt(); else obtainResults(jT.addParameter(datasetUri, "feature_uris[]=" + encodeURIComponent(modelUri + "/predicted")));
+        if (self.forceCreate) createIt(); else obtainResults(self.manager.addUrlParameters(datasetUri, "feature_uris[]=" + encodeURIComponent(modelUri + "/predicted")));
     };
-    Modelling.prototype.queryList = function(needle) {
-        if (this.algorithms) this.listAlgorithms(this.listFilter = needle || this.listFilter); else this.listModels(this.modelUri);
+    var serviceId$1 = "algorithm", defSettings$4 = {
+        defaultFilter: null
+    };
+    function Algorithming(settings) {
+        a$.setup(this, defSettings$4, settings);
+        this.algorithms = null;
+    }
+    Algorithming.prototype.__expects = [ "populate" ];
+    Algorithming.prototype.serviceId = serviceId$1;
+    Algorithming.prototype.init = function(manager) {
+        a$.pass(this, Algorithming, "init", manager);
+        this.manager = manager;
+    };
+    Algorithming.prototype.doRequest = function(needle) {
+        var self = this, servlet = serviceId$1, theNeedle = needle || this.defaultFilter;
+        if (!!theNeedle) servlet = serviceId$1 + "?search=" + theNeedle;
+        self.manager.doRequest(servlet, (function(result, jhr) {
+            if (result && result.algorithm) self.algorithm = result.algorithm; else if (jhr.status == 200) result = {
+                algorithm: []
+            };
+            self.populate(result.algorithm);
+        }));
     };
     Ambit.Paging = Paging;
     Ambit.Tasking = Tasking;
+    Ambit.Querying = Querying;
+    Ambit.Configuring = Configuring;
     Ambit.Authorization = Authorization;
     Ambit.Modelling = Modelling;
+    Ambit.Algorithming = Algorithming;
     return Ambit;
 }));

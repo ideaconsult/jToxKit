@@ -8,7 +8,7 @@
 
 import a$ from 'as-sys';
 import _ from 'lodash';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 var defSettings = {
 	switchSelector: ".switcher", // A CSS selector to find the switching element.

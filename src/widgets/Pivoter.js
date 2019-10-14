@@ -8,7 +8,7 @@
  */
 
 import a$ from 'as-sys';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 import jT from '../Core';
 import Tagger from './Tagger';

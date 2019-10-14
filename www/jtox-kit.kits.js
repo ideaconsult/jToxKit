@@ -826,7 +826,9 @@ jT.templates['logger-main']  =
 "<div class=\"list-wrap\">" +
 "<div class=\"list-root\"></div>" +
 "</div>" +
-"<div class=\"status\"><div class=\"icon jtox-fadable\"></div></div>" +
+"<div class=\"status\">" +
+"<div class=\"icon jtox-fadable\"></div>" +
+"</div>" +
 ""; // end of #jtox-logger 
 
 jT.templates['logger-line']  = 

@@ -5,7 +5,7 @@
  * Copyright © 2017, IDEAConsult Ltd. All rights reserved.
  */
 
-import $ from 'jQuery';
+import $ from 'jquery';
 
 function Texter(settings) {
 	this.target = $(settings.target).find('input').on('change', this.clickHandler());

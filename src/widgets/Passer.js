@@ -7,7 +7,7 @@
  */
 
 import a$ from 'as-sys';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 var defSettings = {
 	runSelector: ".switcher", // A CSS selector to find the switching element.

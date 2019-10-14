@@ -1,6 +1,7 @@
 var	Settings = {
       ambitUrl: 'http://localhost:8080/ambit2/',
       solrUrl: 'http://127.0.0.1:8983/solr/nanoreg1/',
+      connector: $.ajax,
       multipleSelection: true,
       keepAllFacets: true,
       aggregateFacets: true,

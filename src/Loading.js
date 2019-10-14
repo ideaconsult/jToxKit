@@ -7,15 +7,17 @@
  */
 
 import a$ from 'as-sys';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 var defSettings = {
 	errorMessage: "Error retrieving data!",
+	loadingImgUrl: "images/ajax-loader.gif"
 };
 
 // Keep in mind that the field should be the same in all entries.
 function Loading(settings) {
 	a$.setup(this, defSettings, settings);
+	this.target = settings && settings.target;
 };
 
 Loading.prototype.__expects = ["populate"];
@@ -26,8 +28,7 @@ Loading.prototype.init = function (manager) {
 };
 
 Loading.prototype.beforeRequest = function () {
-	$(this.target).html(
-		$('<img>').attr('src', 'images/ajax-loader.gif'));
+	$(this.target).html('<img src="' + this.loadingImgUrl+ '">');
 };
 
 Loading.prototype.afterResponse = function (data) {

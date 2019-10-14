@@ -1,10 +1,10 @@
 /** jToxKit - Chem-informatics UI tools, widgets and kits library. Copyright © 2016-2019, IDEAConsult Ltd. All rights reserved. @license MIT.*/
 (function(global, factory) {
-    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("solr-jsx"), require("jQuery")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "solr-jsx", "jQuery" ], factory) : (global = global || self, 
-    global.jToxKit = factory(global._, global.asSys, global.Solr, global.$));
-})(this, (function(_$1, a$, Solr, $$1) {
+    typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("solr-jsx"), require("ambit-jsx"), require("jquery")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "solr-jsx", "ambit-jsx", "jquery" ], factory) : (global = global || self, 
+    global.jToxKit = factory(global._, global.asSys, global.Solr, global.Ambit, global.$));
+})(this, (function(_$1, a$$1, Solr, Ambit, $$1) {
     "use strict";
-    var jT = {
+    var jT$1 = {
         version: "3.0.0",
         fixBaseUrl(url) {
             if (url != null && url.charAt(url.length - 1) == "/") url = url.slice(0, -1);
@@ -111,22 +111,10 @@
                 if (val !== undefined) me$.html(val);
             }));
         },
-        updateCounter(str, count, total) {
-            var re = null;
-            var add = "";
-            if (count == null) count = 0;
-            if (total == null) {
-                re = /\(([\d\?]+)\)$/;
-                add = "" + count;
-            } else {
-                re = /\(([\d\?]+\/[\d\?\+-]+)\)$/;
-                add = "" + count + "/" + total;
-            }
-            if (!str.match(re)) str += " (" + add + ")"; else str = str.replace(re, "(" + add + ")");
-            return str;
-        },
-        enterBlur(e) {
-            if (e.keyCode == 13) this.blur();
+        joinDeep(data, field, sep) {
+            return _$1.map(data, (function(val) {
+                val[field];
+            })).join(sep);
         }
     };
     var _Tools = {
@@ -151,7 +139,7 @@
                 var fn = window[kit];
                 if (typeof fn !== "function") {
                     kit = kit.charAt(0).toUpperCase() + kit.slice(1);
-                    fn = jT.kit[kit] || jT.widget[kit] || jT[kit];
+                    fn = jT$1.kit[kit] || jT$1.widget[kit] || jT$1[kit];
                 }
                 var obj = null;
                 if (typeof fn === "function") obj = new fn(params); else if (typeof fn === "object" && typeof fn.init === "function") obj = fn.init(params);
@@ -205,9 +193,9 @@
             var fnInit = function() {
                 var me$ = $(this);
                 if (!me$.data("manualInit")) {
-                    var theKit = self.initKit(me$), bindKit = me$.data("jtoxBind");
-                    if (!theKit) console && console.log("Referring unknown widget: " + me$.data("kit")); else if (me$.hasClass("jtox-widget") && bindKit != null) {
-                        if (!self.kitsMap[bindKit]) console && console.log("'" + me$.attr("id") + "' is binding to unknown kit: " + bindKit); else self.kitsMap[bindKit].manager.addListeners(theKit);
+                    var theKit = self.initKit(me$), managerKit = me$.data("jtoxManager");
+                    if (!theKit) console && console.log("Referring unknown widget: " + me$.data("kit")); else if (managerKit === "__parent") theKit.parentKit.addListeners(theKit); else if (managerKit != null) {
+                        if (!self.kitsMap[managerKit]) console && console.log("'" + me$.attr("id") + "' is binding to unknown kit: " + managerKit); else self.kitsMap[managerKit].addListeners(theKit);
                     }
                 }
             };
@@ -253,23 +241,436 @@
                 this.init(root);
             }
             return root;
+        }
+    };
+    var _Helpers = {
+        shortenedData: function(content, message, data) {
+            var res = "";
+            if (data == null) data = content;
+            if (data.toString().length <= 5) {
+                res += content;
+            } else {
+                res += '<div class="shortened">' + content + "</div>";
+                if (message != null) res += '<span class="ui-icon ui-icon-copy" title="' + message + '" data-uuid="' + data + '"></span>';
+            }
+            return res;
+        },
+        linkedData: function(content, message, data) {
+            var res = "";
+            if (data == null) {
+                data = content;
+            }
+            if (data.toString().length <= 5) {
+                res += content;
+            } else {
+                if (message != null) {
+                    res += res += '<div title="' + message + '">' + content + "</div>";
+                } else res += "<div >" + content + "</div>";
+            }
+            return res;
+        },
+        changeTabsIds: function(root, suffix) {
+            $$1("ul li a", root).each((function() {
+                var id = $$1(this).attr("href").substr(1);
+                var el = document.getElementById(id);
+                id += suffix;
+                el.id = id;
+                $$1(this).attr("href", "#" + id);
+            }));
+        },
+        addTab: function(root, name, id, content) {
+            if (document.getElementById(id) != null) return;
+            var li = document.createElement("li");
+            var a = document.createElement("a");
+            li.appendChild(a);
+            a.href = "#" + id;
+            a.innerHTML = name;
+            $$1("ul", root)[0].appendChild(li);
+            if (typeof content == "function") content = content(root); else if (typeof content == "string") {
+                var div = document.createElement("div");
+                div.innerHTML = content;
+                content = div;
+            }
+            content.id = id;
+            root.appendChild(content);
+            $$1(root).tabs("refresh");
+            return {
+                tab: a,
+                content: content
+            };
+        },
+        modifyColDef: function(kit, col, category, group) {
+            if (col.sTitle === undefined || col.sTitle == null) return null;
+            var name = col.sTitle.toLowerCase();
+            var getColDef = function(cat) {
+                var catCol = kit.configuration.columns[cat];
+                if (catCol != null) {
+                    if (!!group) {
+                        catCol = catCol[group];
+                        if (catCol != null) {
+                            if (catCol.bVisible != null) {
+                                catCol[name] = catCol[name] || {};
+                                catCol[name].bVisible = !!catCol[name].bVisible || !!catCol.bVisible;
+                            }
+                            catCol = catCol[name];
+                        }
+                    } else {
+                        catCol = catCol[name];
+                    }
+                }
+                if (catCol == null) catCol = {};
+                return catCol;
+            };
+            col = $$1.extend(col, !!group ? getColDef("_") : {}, getColDef(category));
+            return col.bVisible == null || col.bVisible ? col : null;
+        },
+        sortColDefs: function(colDefs) {
+            for (var i = 0, l = colDefs.length; i < l; ++i) colDefs[i].iNaturalOrder = i;
+            colDefs.sort((function(a, b) {
+                var res = (a.iOrder || 0) - (b.iOrder || 0);
+                if (res == 0) res = a.iNaturalOrder - b.iNaturalOrder;
+                return res;
+            }));
+        },
+        processColumns: function(kit, category) {
+            var colDefs = [];
+            var catList = kit.configuration.columns[category];
+            for (var name in catList) {
+                var col = this.modifyColDef(kit, catList[name], category);
+                if (col != null) colDefs.push(col);
+            }
+            this.sortColDefs(colDefs);
+            return colDefs;
+        },
+        renderMulti: function(data, type, full, render) {
+            var dlen = data.length;
+            if (dlen < 2) return render(data[0], type, full);
+            var df = "<table>";
+            for (var i = 0, dlen = data.length; i < dlen; ++i) {
+                df += '<tr class="' + (i % 2 == 0 ? "even" : "odd") + '"><td>' + render(data[i], type, full, i) + "</td></tr>";
+            }
+            df += "</table>";
+            return df;
+        },
+        inlineChanger: function(location, breed, holder, handler) {
+            if (handler == null) handler = "changed";
+            if (breed == "select") return function(data, type, full) {
+                return type != "display" ? data || "" : '<select class="jt-inlineaction jtox-handler" data-handler="' + handler + '" data-data="' + location + '" value="' + (data || "") + '">' + (holder || "") + "</select>";
+            }; else if (breed == "checkbox") return function(data, type, full) {
+                return type != "display" ? data || "" : '<input type="checkbox" class="jt-inlineaction jtox-handler" data-handler="' + handler + '" data-data="' + location + '"' + (!!holder && data == holder || !!data ? 'checked="checked"' : "") + '"/>';
+            }; else if (breed == "text") return function(data, type, full) {
+                return type != "display" ? data || "" : '<input type="text" class="jt-inlineaction jtox-handler" data-handler="' + handler + '" data-data="' + location + '" value="' + (data || "") + '"' + (!holder ? "" : ' placeholder="' + holder + '"') + "/>";
+            };
+        },
+        installMultiSelect: function(root, callback, parenter) {
+            if (parenter == null) parenter = function(el) {
+                return el.parentNode;
+            };
+            $$1("a.select-all", root).on("click", (function(e) {
+                $$1('input[type="checkbox"]', parenter(this)).each((function() {
+                    this.checked = true;
+                    if (callback == null) $$1(this).trigger("change");
+                }));
+                if (callback != null) callback.call(this, e);
+            }));
+            $$1("a.unselect-all", root).on("click", (function(e) {
+                $$1('input[type="checkbox"]', parenter(this)).each((function() {
+                    this.checked = false;
+                    if (callback == null) $$1(this).trigger("change");
+                }));
+                if (callback != null) callback.call(this, e);
+            }));
         },
         installHandlers: function(kit, root) {
             if (root == null) root = kit.rootElement;
-            jT.$(".jtox-handler", root).each((function() {
-                var name = jT.$(this).data("handler");
+            $$1(".jtox-handler", root).each((function() {
+                var name = $$1(this).data("handler");
                 var handler = null;
-                if (kit.settings.configuration != null && kit.settings.configuration.handlers != null) handler = kit.settings.configuration.handlers[name];
+                if (kit.configuration != null && kit.configuration.handlers != null) handler = kit.configuration.handlers[name];
                 handler = handler || window[name];
-                if (!handler) console && console.log("jToxQuery: referring unknown handler: " + name); else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA") jT.$(this).on("change", handler).on("keydown", jT.enterBlur); else jT.$(this).on("click", handler);
+                if (!handler) console && console.log("jToxQuery: referring unknown handler: " + name); else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA") $$1(this).on("change", handler).on("keydown", jT.enterBlur); else $$1(this).on("click", handler);
             }));
+        },
+        enterBlur: function(e) {
+            if (e.keyCode == 13) this.blur();
+        },
+        rowData: function(el) {
+            var row = $$1(el).closest("tr")[0];
+            var table = $$1(row).closest("table")[0];
+            return $$1(table).dataTable().fnGetData(row);
+        },
+        rowIndex: function(el) {
+            var row = $$1(el).closest("tr")[0];
+            var table = $$1(row).closest("table")[0];
+            return $$1(table).dataTable().fnGetPosition(row);
+        },
+        rowInline: function(el, base) {
+            var row = $$1(el).closest("tr")[0];
+            var data = $$1.extend({}, base);
+            $$1(".jt-inlineaction", row).each((function() {
+                var loc = $$1(this).data("data");
+                if (loc != null) _$1.set(data, loc, $$1(this).val());
+            }));
+            return data;
+        },
+        columnData: function(cols, data, type) {
+            var out = new Array(data.length);
+            if (type == null) type = "display";
+            for (var i = 0, dl = data.length; i < dl; ++i) {
+                var entry = {};
+                var d = data[i];
+                for (var c = 0, cl = cols.length; c < cl; ++c) {
+                    var col = cols[c], val = _$1.get(d, col.mData) || col.sDefaultValue;
+                    entry[col.sTitle] = typeof col.mRender != "function" ? val : col.mRender(val, type, d);
+                }
+                out[i] = entry;
+            }
+            return out;
+        },
+        queryInfo: function(aoData) {
+            var info = {};
+            for (var i = 0, dl = aoData.length; i < dl; ++i) info[aoData[i].name] = aoData[i].value;
+            if (info.iSortingCols > 0) {
+                info.iSortDirection = info.sSortDir_0.toLowerCase();
+                info.sSortData = info["mDataProp_" + info.iSortCol_0];
+            } else {
+                info.iSortDirection = 0;
+                info.sSortData = "";
+            }
+            return info;
+        },
+        putTable: function(kit, root, config) {
+            var self = this, onRow = kit.onRow, opts = $$1.extend({
+                bPaginate: false,
+                bProcessing: true,
+                bLengthChange: false,
+                bAutoWidth: false,
+                sDom: kit.sDom,
+                oLanguage: kit.oLanguage,
+                bServerSide: false,
+                fnCreatedRow: function(nRow, aData, iDataIndex) {
+                    if (typeof onRow == "function") {
+                        var res = a$.act(kit, onRow, nRow, aData, iDataIndex);
+                        if (res === false) return;
+                    }
+                    self.equalizeHeights.apply(window, $$1("td.jtox-multi table tbody", nRow).toArray());
+                    self.installHandlers(kit, nRow);
+                    if (typeof kit.selectionHandler == "function") $$1("input.jt-selection", nRow).on("change", kit.selectionHandler);
+                    if (!!kit.onDetails) {
+                        $$1(".jtox-details-toggle", nRow).on("click", (function(e) {
+                            var root = self.toggleDetails(e, nRow);
+                            if (!!root) {
+                                a$.act(kit, kit.onDetails, root, aData, this);
+                            }
+                        }));
+                    }
+                }
+            }, kit.configuration);
+            if (opts.aoColumns == null) opts.aoColumns = self.processColumns(kit, config);
+            if (opts.oLanguage == null) delete opts.oLanguage;
+            var table = $$1(root).dataTable(opts);
+            $$1(table).dataTable().fnAdjustColumnSizing();
+            return table;
+        },
+        renderRelation: function(data, type, full) {
+            if (type != "display") return this.joinDeep(data, "relation", ",");
+            var res = "";
+            for (var i = 0, il = data.length; i < il; ++i) res += "<span>" + data[i].relation.substring(4).toLowerCase() + "</span>" + this.putInfo(full.URI + "/composition", data[i].compositionName + "(" + data[i].compositionUUID + ")");
+            return res;
+        },
+        renderRange: function(data, unit, type, prefix) {
+            var out = "";
+            if (typeof data == "string" || typeof data == "number") {
+                out += type != "display" ? data : (!!prefix ? prefix + "&nbsp;=&nbsp;" : "") + this.valueWithUnits(data, unit);
+            } else if (typeof data == "object" && data != null) {
+                var loValue = _$1.trim(data.loValue), upValue = _$1.trim(data.upValue);
+                if (String(loValue) != "" && String(upValue) != "" && !!data.upQualifier && data.loQualifier != "=") {
+                    if (!!prefix) {
+                        out += prefix + "&nbsp;=&nbsp;";
+                    }
+                    out += data.loQualifier == ">=" ? "[" : "(";
+                    out += loValue + ", " + upValue;
+                    out += data.upQualifier == "<=" ? "]" : ") ";
+                } else {
+                    var fnFormat = function(p, q, v) {
+                        var o = "";
+                        if (!!p) {
+                            o += p + " ";
+                        }
+                        if (!!q) {
+                            o += !!p || q != "=" ? q + " " : "";
+                        }
+                        return o + v;
+                    };
+                    if (String(loValue) != "") {
+                        out += fnFormat(prefix, data.loQualifier || "=", loValue);
+                    } else if (String(upValue) != "") {
+                        out += fnFormat(prefix, data.upQualifier || "=", upValue);
+                    } else {
+                        if (!!prefix) {
+                            out += prefix;
+                        } else {
+                            out += type == "display" ? "-" : "";
+                        }
+                    }
+                }
+                out = out.replace(/ /g, "&nbsp;");
+                if (type == "display") {
+                    unit = _$1.trim(data.unit || unit);
+                    if (!!unit) {
+                        out += '&nbsp;<span class="units">' + unit.replace(/ /g, "&nbsp;") + "</span>";
+                    }
+                }
+            } else {
+                out += "-";
+            }
+            return out;
+        },
+        renderObjValue: function(data, units, type, pre) {
+            if (!data) {
+                return type == "display" ? "-" : "";
+            }
+            var val = this.renderRange(data, units, type, pre);
+            if (_$1.trim(val) == "-") {
+                val = "";
+            }
+            if (val != "" && type != "display" && !!data.units) {
+                val += "&nbsp;" + data.units;
+            }
+            if (!!data.textValue) {
+                if (val != "" && type == "display") {
+                    val += "&nbsp;/&nbsp;";
+                }
+                val += data.textValue;
+            }
+            if (!val) {
+                val = "-";
+            }
+            return val;
+        },
+        putInfo: function(href, title) {
+            return '<sup class="helper"><a target="_blank" href="' + (href || "#") + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
+        },
+        putStars: function(kit, stars, title) {
+            if (!kit.shortStars) {
+                var res = '<div title="' + title + '">';
+                for (var i = 0; i < kit.maxStars; ++i) {
+                    res += '<span class="ui-icon ui-icon-star jtox-inline';
+                    if (i >= stars) res += " transparent";
+                    res += '"></span>';
+                }
+                return res + "</div>";
+            } else {
+                return '<span class="ui-icon ui-icon-star jtox-inline" title="' + title + '"></span>' + stars;
+            }
+        },
+        diagramUri: function(URI) {
+            return !!URI && typeof URI == "string" ? URI.replace(/(.+)(\/conformer.*)/, "$1") + "?media=image/png" : "";
+        },
+        valueWithUnits: function(val, unit) {
+            var out = "";
+            if (val != null) {
+                out += _$1.trim(val.toString()).replace(/ /g, "&nbsp;");
+                if (!!unit) out += '&nbsp;<span class="units">' + unit.replace(/ /g, "&nbsp;") + "</span>";
+            }
+            return out;
+        },
+        updateCounter: function(str, count, total) {
+            var re = null;
+            var add = "";
+            if (count == null) count = 0;
+            if (total == null) {
+                re = /\(([\d\?]+)\)$/;
+                add = "" + count;
+            } else {
+                re = /\(([\d\?]+\/[\d\?\+-]+)\)$/;
+                add = "" + count + "/" + total;
+            }
+            if (!str.match(re)) str += " (" + add + ")"; else str = str.replace(re, "(" + add + ")");
+            return str;
+        },
+        bindControls: function(kit, handlers) {
+            var pane = $$1(".jtox-controls", kit.rootElement)[0];
+            if (kit.showControls) {
+                this.fillTree(pane, {
+                    pagesize: kit.pageSize
+                });
+                $$1(".next-field", pane).on("click", handlers.nextPage);
+                $$1(".prev-field", pane).on("click", handlers.prevPage);
+                $$1("select", pane).on("change", handlers.sizeChange);
+                var pressTimeout = null;
+                $$1("input", pane).on("keydown", (function(e) {
+                    var el = this;
+                    if (pressTimeout != null) clearTimeout(pressTimeout);
+                    pressTimeout = setTimeout((function() {
+                        handlers.filter.apply(el, [ e ]);
+                    }), 350);
+                }));
+            } else pane.style.display = "none";
+        },
+        putActions: function(kit, col, ignoreOriginal) {
+            if (!!kit.selectionHandler || !!kit.onDetails) {
+                var oldFn = col.mRender;
+                var newFn = function(data, type, full) {
+                    var html = oldFn(data, type, full);
+                    if (type != "display") return html;
+                    if (!!ignoreOriginal) html = "";
+                    if (!!kit.selectionHandler) html = '<input type="checkbox" value="' + data + '" class="' + (typeof kit.selectionHandler == "string" ? 'jtox-handler" data-handler="' + kit.selectionHandler + '"' : 'jt-selection"') + "/>" + html;
+                    if (!!kit.onDetails) html += '<span class="jtox-details-toggle ui-icon ui-icon-folder-collapsed" data-data="' + data + '" title="Press to open/close detailed info for this entry"></span>';
+                    return html;
+                };
+                col.mRender = newFn;
+            }
+            return col;
+        },
+        toggleDetails: function(event, row) {
+            $$1(event.currentTarget).toggleClass("ui-icon-folder-collapsed");
+            $$1(event.currentTarget).toggleClass("ui-icon-folder-open");
+            $$1(event.currentTarget).toggleClass("jtox-openned");
+            if (!row) row = $$1(event.currentTarget).parents("tr")[0];
+            var cell = $$1(event.currentTarget).parents("td")[0];
+            if ($$1(event.currentTarget).hasClass("jtox-openned")) {
+                var detRow = document.createElement("tr");
+                var detCell = document.createElement("td");
+                detRow.appendChild(detCell);
+                $$1(detCell).addClass("jtox-details");
+                detCell.setAttribute("colspan", $$1(row).children().length - 1);
+                row.parentNode.insertBefore(detRow, row.nextElementSibling);
+                cell.setAttribute("rowspan", "2");
+                return detCell;
+            } else {
+                cell.removeAttribute("rowspan");
+                $$1(row).next().remove();
+                return null;
+            }
+        },
+        equalizeHeights: function() {
+            var tabs = [];
+            for (var i = 0; i < arguments.length; ++i) {
+                tabs[i] = arguments[i].firstElementChild;
+            }
+            for (;;) {
+                var height = 0;
+                for (i = 0; i < tabs.length; ++i) {
+                    if (tabs[i] == null) continue;
+                    if (!jQuery(tabs[i]).hasClass("lock-height") && tabs[i].style.height != "") tabs[i].style.height = "auto";
+                    if (tabs[i].offsetHeight > height) height = tabs[i].offsetHeight;
+                }
+                if (height == 0) break;
+                for (i = 0; i < tabs.length; ++i) {
+                    if (tabs[i] != null) {
+                        jQuery(tabs[i]).height(height);
+                        tabs[i] = tabs[i].nextElementSibling;
+                    }
+                }
+            }
         }
     };
     var defSettings = {
         itemId: "id"
     };
     function Populating(settings) {
-        a$.setup(this, defSettings = settings);
+        a$$1.setup(this, defSettings = settings);
         this.target = $(settings.target);
         this.length = 0;
         this.clearItems();
@@ -307,18 +708,20 @@
         for (var i = 0, l = this.items.length; i < l; ++i) callback.call(els[i], this.items[i]);
     };
     var defSettings$1 = {
-        errorMessage: "Error retrieving data!"
+        errorMessage: "Error retrieving data!",
+        loadingImgUrl: "images/ajax-loader.gif"
     };
     function Loading(settings) {
-        a$.setup(this, defSettings$1, settings);
+        a$$1.setup(this, defSettings$1, settings);
+        this.target = settings && settings.target;
     }
     Loading.prototype.__expects = [ "populate" ];
     Loading.prototype.init = function(manager) {
-        a$.pass(this, Loading, "init", manager);
+        a$$1.pass(this, Loading, "init", manager);
         this.manager = manager;
     };
     Loading.prototype.beforeRequest = function() {
-        $$1(this.target).html($$1("<img>").attr("src", "images/ajax-loader.gif"));
+        $$1(this.target).html('<img src="' + this.loadingImgUrl + '">');
     };
     Loading.prototype.afterResponse = function(data) {
         if (!data) $$1(this.target).html(this.errorMessage); else {
@@ -331,11 +734,11 @@
         classes: null
     };
     function ItemRendering(settings) {
-        a$.setup(this, defSettings$2, settings);
+        a$$1.setup(this, defSettings$2, settings);
         this.target = $(settings.target);
     }
     ItemRendering.prototype.renderItem = function(info) {
-        return jT.fillTemplate(template, info).addClass(this.classes);
+        return jT$1.fillTemplate(template, info).addClass(this.classes);
     };
     var ajaxDefaults = {
         async: true,
@@ -351,7 +754,8 @@
         ajaxSettings: null
     };
     function Communicating(settings) {
-        a$.setup(this, defSettings$3, settings);
+        a$$1.setup(this, defSettings$3, settings);
+        if (!_$1.endsWith(this.serverUrl, "/")) this.serverUrl += "/";
         this.listeners = {};
         this.error = null;
         this.pendingRequests = [];
@@ -374,15 +778,13 @@
             isPrivate = false;
         }
         servlet = servlet || this.servlet || "";
-        var self = this, cancel = null, ajaxOpts = _$1.defaults(this.prepareQuery(servlet), {
-            service: typeof servlet === "object" ? servlet.url : servlet
-        }, this.ajaxSettings);
+        var self = this, cancel = null, ajaxOpts = _$1.defaults(this.prepareQuery(servlet), this.ajaxSettings);
         if (!isPrivate) {
             _$1.each(self.listeners, (function(l) {
-                if (a$.act(l, l.beforeRequest, ajaxOpts, self) === false) cancel = l;
+                if (a$$1.act(l, l.beforeRequest, ajaxOpts, self) === false) cancel = l;
             }));
             if (cancel !== null) {
-                a$.act(cancel, self.onError, null, "Request cancelled", cancel, self);
+                a$$1.act(cancel, self.onError, null, "Request cancelled", cancel, self);
                 return;
             }
         }
@@ -390,34 +792,41 @@
             if (typeof callback === "function") callback(null, jqXHR);
             if (!isPrivate) {
                 _$1.each(self.listeners, (function(l) {
-                    a$.act(l, l.afterResponse, null, jqXHR, ajaxOpts, self);
+                    a$$1.act(l, l.afterResponse, null, jqXHR, ajaxOpts, self);
                 }));
-                a$.act(self, self.onError, jqXHR, ajaxOpts);
+                a$$1.act(self, self.onError, jqXHR, ajaxOpts);
             }
         };
         ajaxOpts.success = function(response, status, jqXHR) {
-            var data = a$.act(self, "parseResponse", response) || response;
+            var data = a$$1.act(self, "parseResponse", response) || response;
             if (typeof callback === "function") callback(data, response, jqXHR);
             if (!isPrivate) {
                 _$1.each(self.listeners, (function(l) {
-                    a$.act(l, l.afterResponse, data, jqXHR, ajaxOpts, self);
+                    a$$1.act(l, l.afterResponse, data, jqXHR, ajaxOpts, self);
                 }));
-                a$.act(self, self.onSuccess, data, jqXHR, ajaxOpts);
+                a$$1.act(self, self.onSuccess, data, jqXHR, ajaxOpts);
             }
         };
         ajaxOpts.complete = function() {
             self.inRequest = false;
             if (self.pendingRequests.length > 0) self.doRequest.apply(self, self.pendingRequests.shift());
         };
-        a$.broadcast(self, "onPrepare", ajaxOpts);
-        a$.act(self, self.onPrepare, ajaxOpts);
+        a$$1.broadcast(self, "onPrepare", ajaxOpts);
+        a$$1.act(self, self.onPrepare, ajaxOpts);
         return self.connector(ajaxOpts);
+    };
+    Communicating.prototype.buildUrl = function(servlet, params) {
+        return this.serverUrl + this.addUrlParameters(servlet || "", params);
+    };
+    Communicating.prototype.addUrlParameters = function(baseUrl, params) {
+        if (!params || !params.length) return baseUrl; else if (typeof params !== "string") params = params.join("&") || "";
+        return baseUrl + (baseUrl.indexOf("?") > 0 ? "&" : "?") + params;
     };
     Communicating.prototype.init = function() {
         var self = this;
-        a$.pass(self, Communicating, "init");
+        a$$1.pass(self, Communicating, "init");
         _$1.each(this.listeners, (function(l) {
-            a$.act(l, l.init, self);
+            a$$1.act(l, l.init, self);
         }));
     };
     Communicating.prototype.addListeners = function(one) {
@@ -462,19 +871,19 @@
         delay: 300
     };
     function Delaying(settings) {
-        a$.setup(this, defSettings$4, settings);
+        a$$1.setup(this, defSettings$4, settings);
         this.delayTimer = null;
     }
     Delaying.prototype.doRequest = function(a, b, c, d) {
         var self = this, doInvoke = function() {
-            a$.pass(self, Delaying, "doRequest", a, b, c, d);
+            a$$1.pass(self, Delaying, "doRequest", a, b, c, d);
             self.delayTimer = null;
         };
         if (this.delay == null || this.delay < 10) return doInvoke(); else if (this.delayTimer != null) clearTimeout(this.delayTimer);
         this.delayTimer = setTimeout(doInvoke, this.delay);
     };
     function Authenticating(settings) {
-        a$.setup(this, Authenticating.prototype, settings);
+        a$$1.setup(this, Authenticating.prototype, settings);
         if (settings.authMethod === "Basic") {
             _$1.extend(this.ajaxSettings, {
                 headers: {
@@ -495,11 +904,11 @@
         onSpyResponse: null
     };
     function Spying(settings) {
-        a$.setup(this, defSettings$5, settings);
+        a$$1.setup(this, defSettings$5, settings);
         this.manager = null;
     }
     Spying.prototype.init = function(manager) {
-        a$.pass(this, Spying, "init", manager);
+        a$$1.pass(this, Spying, "init", manager);
         this.manager = manager;
     };
     Spying.prototype.doSpying = function(settings, callback) {
@@ -521,14 +930,14 @@
         before: null
     };
     function AccordionExpander(settings) {
-        a$.setup(this, defSettings$6, settings);
+        a$$1.setup(this, defSettings$6, settings);
         this.target = $$1(settings.target);
         this.header = null;
         this.id = settings.id;
         if (this.automatic) settings.target = this.makeExpansion();
     }
     AccordionExpander.prototype.renderExpansion = function(info) {
-        return jT.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
+        return jT$1.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
     };
     AccordionExpander.prototype.makeExpansion = function(before, info) {
         if (!!this.header) return;
@@ -565,7 +974,7 @@
         activeFacets: null
     };
     function Autocompleter(settings) {
-        a$.setup(this, defSettings$7, settings);
+        a$$1.setup(this, defSettings$7, settings);
         this.target = $$1(settings.target);
         this.id = settings.id;
         this.lookupMap = settings.lookupMap || {};
@@ -575,7 +984,7 @@
     }
     Autocompleter.prototype.__expects = [ "addValue", "doSpying" ];
     Autocompleter.prototype.init = function(manager) {
-        a$.pass(this, Autocompleter, "init", manager);
+        a$$1.pass(this, Autocompleter, "init", manager);
         this.manager = manager;
         var self = this;
         self.findBox = this.target.find("input").on("change", (function(e) {
@@ -637,189 +1046,11 @@
         this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
         this.requestSent = false;
     };
-    var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>', defSettings$8 = {
-        baseUrl: "",
-        summaryPrimes: [ "RESULTS" ],
-        tagDbs: {},
-        onCreated: null,
-        onClick: null,
-        summaryRenderers: {
-            RESULTS: function(val, topic) {
-                var self = this;
-                return val.map((function(study) {
-                    return study.split(".").map((function(one) {
-                        return self.lookupMap[one] || one;
-                    })).join(".");
-                }));
-            },
-            REFOWNERS: function(val, topic) {
-                return {
-                    topic: "Study Providers",
-                    content: val.map((function(ref) {
-                        return jT.formatString(htmlLink, {
-                            href: "#",
-                            hint: "Freetext search",
-                            target: "_self",
-                            value: ref,
-                            css: "freetext_selector"
-                        });
-                    }))
-                };
-            },
-            REFS: function(val, topic) {
-                return {
-                    topic: "References",
-                    content: val.map((function(ref) {
-                        var link = ref.match(/^doi:(.+)$/);
-                        link = link != null ? "https://www.doi.org/" + link[1] : ref;
-                        return jT.formatString(link.match(/^https?:\/\//) ? htmlLink : plainLink, {
-                            href: link,
-                            hint: "External reference",
-                            target: "ref",
-                            value: ref
-                        });
-                    }))
-                };
-            }
-        }
-    };
-    function SolrItemLister(settings) {
-        a$.setup(this, defSettings$8, settings);
-        this.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
-        this.lookupMap = settings.lookupMap || {};
-        this.target = settings.target;
-        this.id = settings.id;
-    }
-    SolrItemLister.prototype.renderItem = function(doc) {
-        var self = this, el = $$1(this.renderSubstance(doc));
-        if (!el.length) return null;
-        $$1(this.target).append(el);
-        if (typeof this.onClick === "function") $$1("a.command", el[0]).on("click", (function(e) {
-            self.onClick.call(el[0], e, doc, self);
-        }));
-        if (typeof this.onCreated === "function") this.onCreated.call(el, doc, this);
-        $$1("a.more", el[0]).on("click", (function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var $this = $$1(this), $div = $$1(".more-less", $this.parent()[0]);
-            if ($div.is(":visible")) {
-                $div.hide();
-                $this.text("more");
-            } else {
-                $div.show();
-                $this.text("less");
-            }
-            return false;
-        }));
-        return null;
-    };
-    SolrItemLister.prototype.renderSubstance = function(doc) {
-        var summaryhtml = $$1("#summary-item").html(), summarylist = this.buildSummary(doc), baseUrl = this.getBaseUrl(doc), summaryRender = function(summarylist) {
-            return summarylist.map((function(s) {
-                return jT.formatString(summaryhtml, s);
-            })).join("");
-        };
-        var item = {
-            logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
-            link: "#",
-            href: "#",
-            title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") + (doc.substanceType == null ? "" : " " + (this.lookupMap[doc.substanceType] || doc.substanceType)),
-            composition: this.renderComposition(doc, '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>').join("<br/>"),
-            summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
-            item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
-            footer: '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' + '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' + '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
-        };
-        if (summarylist.length > 0) item.summary += '<a href="#" class="more">more</a>' + '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + "</div>";
-        if (doc.content == null) {
-            item.link = baseUrl + doc.s_uuid;
-            item.href = item.link + "/study";
-            item.href_title = "Study";
-            item.href_target = doc.s_uuid;
-        } else {
-            var external = "External database";
-            if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-                item.logo = "images/canano.jpg";
-                item.href_title = "caNanoLab: " + item.link;
-                item.href_target = external = "caNanoLab";
-                item.footer = "";
-            } else {
-                item.logo = "images/external.png";
-                item.href_title = "External: " + item.link;
-                item.href_target = "external";
-            }
-            if (doc.content.length > 0) {
-                item.link = doc.content[0];
-                for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + "</a>";
-            }
-        }
-        return jT.fillTemplate("#result-item", item);
-    };
-    SolrItemLister.prototype.getBaseUrl = function(doc) {
-        if (this.tagDbs[doc.dbtag_hss] !== undefined) {
-            var url = this.tagDbs[doc.dbtag_hss].server, lastChar = url.substr(-1);
-            return url + (lastChar != "/" ? "/substance/" : "substance/");
-        } else {
-            return this.baseUrl;
-        }
-    };
-    SolrItemLister.prototype.renderComposition = function(doc, defValue) {
-        var summary = [], composition = doc._extended_ && doc._extended_.composition;
-        if (!!composition) {
-            var cmap = {};
-            _.each(composition, (function(c) {
-                var ce = cmap[c.component_s], se = [];
-                if (ce === undefined) cmap[c.component_s] = ce = [];
-                _.each(c, (function(v, k) {
-                    var m = k.match(/^(\w+)_[shd]+$/);
-                    k = m && m[1] || k;
-                    if (!k.match(/type|id|component/)) se.push(jT.formatString(htmlLink, {
-                        href: "#",
-                        hint: "Freetext search on '" + k + "'",
-                        target: "_self",
-                        value: v,
-                        css: "freetext_selector"
-                    }));
-                }));
-                ce.push(se.join(", "));
-            }));
-            _.each(cmap, (function(map, type) {
-                var entry = "";
-                for (var i = 0; i < map.length; ++i) {
-                    if (map[i] == "") continue;
-                    entry += i == 0 ? ": " : "; ";
-                    if (map.length > 1) entry += "<strong>[" + (i + 1) + "]</strong>&nbsp;";
-                    entry += map[i];
-                }
-                if (entry === "") entry = ":&nbsp;" + defValue;
-                entry = type + " (" + map.length + ")" + entry;
-                summary.push(entry);
-            }));
-        }
-        return summary;
-    };
-    SolrItemLister.prototype.buildSummary = function(doc) {
-        var self = this, items = [];
-        _.each(doc, (function(val, key) {
-            var name = key.match(/^SUMMARY\.([^_]+)_?[hsd]*$/);
-            if (!name) return;
-            name = name[1];
-            var render = self.summaryRenderers[name] || self.summaryRenderers._, item = typeof render === "function" ? render.call(self, val, name) : val;
-            if (!item) return;
-            if (typeof item !== "object" || Array.isArray(item)) item = {
-                topic: name.toLowerCase(),
-                values: item
-            }; else if (item.topic == null) item.topic = name.toLowerCase();
-            if (!item.content) item.content = Array.isArray(item.values) ? item.values.join(", ") : item.values.toString();
-            var primeIdx = self.summaryPrimes.indexOf(name);
-            if (primeIdx > -1 && primeIdx < items.length) items.splice(primeIdx, 0, item); else items.push(item);
-        }));
-        return items;
-    };
     function buildServiceId(params) {
-        var url = jT.parseURL(params.url);
+        var url = jT$1.parseURL(params.url);
         return url.protocol + "://" + url.host + url.path;
     }
-    var defSettings$9 = {
+    var defSettings$8 = {
         statusDelay: 1500,
         keepMessages: 50,
         lineHeight: "20px",
@@ -828,9 +1059,9 @@
         autoHide: true
     };
     function Logger(settings) {
-        a$.setup(this, defSettings$9, settings);
+        a$$1.setup(this, defSettings$8, settings);
         var root$ = $$1(this.target = settings.target);
-        root$.html(jT.templates["logger-main"]);
+        root$.html(jT$1.templates["logger-main"]);
         root$.addClass("jtox-toolkit jtox-log");
         this.id = root$.attr("id");
         if (typeof this.lineHeight == "number") this.lineHeight = this.lineHeight.toString() + "px";
@@ -883,7 +1114,7 @@
         }
     };
     Logger.prototype.addLine = function(data) {
-        var self = this, el$ = jT.fillTemplate("#jtox-logline", data);
+        var self = this, el$ = jT$1.fillTemplate("#jtox-logline", data);
         el$.height("0px");
         this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
         setTimeout((function() {
@@ -921,7 +1152,7 @@
         }
         delete this.events[params.logId];
         this.setIcon(line$, status);
-        jT.fillTree(line$[0], info);
+        jT$1.fillTree(line$[0], info);
         if (status == "error") console && console.log("Error [" + buildServiceId(params) + "]: " + jhr.statusText);
     };
     Logger.prototype.mountOnHandlers = function(dest) {
@@ -941,7 +1172,7 @@
         };
         return dest;
     };
-    var defSettings$a = {
+    var defSettings$9 = {
         innerWindow: 4,
         outerWindow: 1,
         prevLabel: "&laquo; Previous",
@@ -950,7 +1181,7 @@
         renderHeader() {}
     };
     function Pager(settings) {
-        a$.setup(this, defSettings$a, settings);
+        a$$1.setup(this, defSettings$9, settings);
         this.target = $(settings.target);
         this.id = settings.id;
         this.manager = null;
@@ -1039,32 +1270,32 @@
         }
     };
     Pager.prototype.afterResponse = function(data, jhr, params) {
-        a$.pass(this, Pager, "afterResponse", data, jhr, params);
+        a$$1.pass(this, Pager, "afterResponse", data, jhr, params);
         $(this.target).empty();
         this.renderLinks(this.windowedLinks());
         this.renderHeader(this.pageSize, (this.currentPage - 1) * this.pageSize, this.totalEntries);
     };
-    var defSettings$b = {
+    var defSettings$a = {
         runSelector: ".switcher",
         runMethod: null,
         runTarget: null
     };
     function Passer(settings) {
-        a$.setup(this, defSettings$b, settings);
+        a$$1.setup(this, defSettings$a, settings);
         var self = this, target$ = $$1(self.runSelector, $$1(settings.target)[0]), runTarget = self.runTarget || self;
         target$.on("click", (function(e) {
-            a$.act(runTarget, self.runMethod, this, e);
+            a$$1.act(runTarget, self.runMethod, this, e);
             e.stopPropagation();
         }));
     }
-    var defSettings$c = {
+    var defSettings$b = {
         color: null,
         renderItem: null,
         onUpdated: null,
         subtarget: null
     };
     function Tagger(settings) {
-        a$.setup(this, defSettings$c, settings);
+        a$$1.setup(this, defSettings$b, settings);
         this.target = $$1(settings.target);
         if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
         this.id = settings.id;
@@ -1073,7 +1304,7 @@
     }
     Tagger.prototype.__expects = [ "hasValue", "clickHandler" ];
     Tagger.prototype.init = function(manager) {
-        a$.pass(this, Tagger, "init", manager);
+        a$$1.pass(this, Tagger, "init", manager);
         this.manager = manager;
     };
     Tagger.prototype.populate = function(objectedItems, preserve) {
@@ -1098,14 +1329,14 @@
                 if (selected) el.addClass("selected");
             }
         }
-        a$.act(this, this.onUpdated, total);
+        a$$1.act(this, this.onUpdated, total);
     };
     function buildValueRange(stats, isUnits) {
         var vals = " = ";
         vals += stats.min == null ? "-&#x221E;" : stats.min;
         if (!!stats.avg) vals += "&#x2026;" + stats.avg;
         vals += "&#x2026;" + (stats.max == null ? "&#x221E;" : stats.max);
-        if (isUnits) vals += " " + jT.formatUnits(stats.val).replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;").replace(/<sup>(\d)<\/sup>/g, "^$1");
+        if (isUnits) vals += " " + jT$1.formatUnits(stats.val).replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;").replace(/<sup>(\d)<\/sup>/g, "^$1");
         return vals;
     }
     function InnterTagger(settings) {
@@ -1126,7 +1357,7 @@
         info.color = this.color;
         return info;
     };
-    var InnerTagWidget = a$(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$d = {
+    var InnerTagWidget = a$$1(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$c = {
         automatic: false,
         renderTag: null,
         multivalue: false,
@@ -1134,7 +1365,7 @@
         exclusion: false
     };
     function Pivoter(settings) {
-        a$.setup(this, defSettings$d, settings);
+        a$$1.setup(this, defSettings$c, settings);
         this.target = settings.target;
         this.targets = {};
         this.lastEnabled = 0;
@@ -1142,23 +1373,23 @@
     }
     Pivoter.prototype.__expects = [ "getFaceterEntry", "getPivotEntry", "getPivotCounts", "auxHandler" ];
     Pivoter.prototype.init = function(manager) {
-        a$.pass(this, Pivoter, "init", manager);
+        a$$1.pass(this, Pivoter, "init", manager);
         this.manager = manager;
         this.manager.getListener("current").registerWidget(this, true);
     };
     Pivoter.prototype.addFaceter = function(info, idx) {
-        var f = a$.pass(this, Pivoter, "addFaceter", info, idx);
+        var f = a$$1.pass(this, Pivoter, "addFaceter", info, idx);
         if (typeof info === "object") f.color = info.color;
         if (idx > this.lastEnabled && !info.disabled) this.lastEnabled = idx;
         return f;
     };
     Pivoter.prototype.afterResponse = function(data, jhr, params) {
         var pivot = this.getPivotCounts(data.facets);
-        a$.pass(this, Pivoter, "afterResponse", data, jhr, params);
+        a$$1.pass(this, Pivoter, "afterResponse", data, jhr, params);
         for (var i = 0; i < pivot.length; ++i) {
             var p = pivot[i], pid = p.val.replace(iDificationRegExp, "_"), target = this.targets[pid];
             if (!target) {
-                this.targets[pid] = target = new jT.AccordionExpander($$1.extend(true, {}, this.settings, this.getFaceterEntry(0), {
+                this.targets[pid] = target = new jT$1.AccordionExpander($$1.extend(true, {}, this.settings, this.getFaceterEntry(0), {
                     id: pid,
                     title: p.val
                 }));
@@ -1173,7 +1404,7 @@
     Pivoter.prototype.updateHandler = function(target) {
         var hdr = target.getHeaderText();
         return function(count) {
-            hdr.textContent = jT.updateCounter(hdr.textContent, count);
+            hdr.textContent = jT$1.updateCounter(hdr.textContent, count);
         };
     };
     Pivoter.prototype.prepareTag = function(value) {
@@ -1213,7 +1444,7 @@
             for (var i = 0, fl = bucket.length; i < fl; ++i) {
                 var f = bucket[i], fid = f.val.replace(iDificationRegExp, "_"), cont$;
                 if (target.children().length > 1) cont$ = $$1("#" + fid, target[0]).show(); else {
-                    cont$ = jT.fillTemplate($$1("#tag-facet"), faceter).attr("id", fid);
+                    cont$ = jT$1.fillTemplate($$1("#tag-facet"), faceter).attr("id", fid);
                     f.title = f.val;
                     f.onMain = this.clickHandler(faceter.id + ":" + f.val);
                     f.hint = buildValueRange(f);
@@ -1225,7 +1456,7 @@
         }
         target.append(elements);
     };
-    var defSettings$e = {
+    var defSettings$d = {
         limits: null,
         units: null,
         initial: null,
@@ -1237,7 +1468,7 @@
         format: "%s {{units}}"
     };
     function Slider(settings) {
-        a$.setup(this, defSettings$e, settings);
+        a$$1.setup(this, defSettings$d, settings);
         this.target = $(settings.target);
         this.prepareLimits(settings.limits);
         if (this.initial == null) this.initial = this.isRange ? [ this.limits[0], this.limits[1] ] : (this.limits[0] + this.limits[1]) / 2;
@@ -1260,7 +1491,7 @@
         } else this.target.jRange("setValue", value);
     };
     Slider.prototype.makeSlider = function() {
-        var self = this, enabled = this.limits[1] > this.limits[0], scale = [ jT.formatNumber(this.limits[0], this.precision), this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), jT.formatNumber(this.limits[1], this.precision) ], updateHandler = self.updateHandler(), settings = {
+        var self = this, enabled = this.limits[1] > this.limits[0], scale = [ jT$1.formatNumber(this.limits[0], this.precision), this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), jT$1.formatNumber(this.limits[1], this.precision) ], updateHandler = self.updateHandler(), settings = {
             from: this.limits[0],
             to: this.limits[1],
             step: this.precision,
@@ -1270,7 +1501,7 @@
             disable: !enabled,
             isRange: this.isRange,
             width: this.width,
-            format: jT.formatString(this.format, this) || ""
+            format: jT$1.formatString(this.format, this) || ""
         };
         if (this.color != null) settings.theme = "theme-" + this.color;
         settings.ondragend = function(value) {
@@ -1299,19 +1530,19 @@
     SimpleRanger.prototype.doRequest = function() {
         this.manager.doRequest();
     };
-    var SingleRangeWidget = a$(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, Delaying), defaultParameters$1 = {
+    var SingleRangeWidget = a$$1(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, Delaying), defaultParameters$1 = {
         facet: true,
         rows: 0,
         fl: "id",
         "facet.limit": -1,
         "facet.mincount": 1,
         echoParams: "none"
-    }, defSettings$f = {
+    }, defSettings$e = {
         field: null,
         titleSkips: null
     };
     function Ranger(settings) {
-        a$.setup(this, defSettings$f, settings);
+        a$$1.setup(this, defSettings$e, settings);
         this.slidersTarget = $$1(settings.slidersTarget);
         this.lookupMap = settings.lookupMap || {};
         this.pivotMap = null;
@@ -1320,7 +1551,7 @@
     }
     Ranger.prototype.__expects = [ "getPivotEntry", "getPivotCounts" ];
     Ranger.prototype.init = function(manager) {
-        a$.pass(this, Ranger, "init", manager);
+        a$$1.pass(this, Ranger, "init", manager);
         this.manager = manager;
         var self = this;
         self.applyCommand = $$1("#sliders-controls a.command.apply").on("click", (function(e) {
@@ -1335,7 +1566,7 @@
     };
     Ranger.prototype.afterResponse = function(data, jhr, params) {
         var pivot = this.getPivotCounts(data.facets);
-        a$.pass(this, Ranger, "afterResponse", data, jhr, params);
+        a$$1.pass(this, Ranger, "afterResponse", data, jhr, params);
         if (!this.pivotMap) {
             var qval = this.manager.getParameter("q").value || "";
             if ((!qval || qval == "*:*") && !this.manager.getParameter(this.useJson ? "json.filter" : "fq").value) this.pivotMap = this.buildPivotMap(pivot);
@@ -1410,7 +1641,7 @@
         this.lastPivotValue = value;
         this.slidersTarget.empty().parent().addClass("active");
         for (var i = 0, el = entry.length; i < el; ++i) {
-            var all = entry[i], ref = current[i], setup = {}, w, el$ = jT.fillTemplate("#slider-one");
+            var all = entry[i], ref = current[i], setup = {}, w, el$ = jT$1.fillTemplate("#slider-one");
             this.slidersTarget.append(el$);
             setup.id = all.id;
             setup.targetValue = value;
@@ -1424,7 +1655,7 @@
             setup.automatic = true;
             setup.width = parseInt(this.slidersTarget.width() - $$1("#sliders-controls").width() - 20) / (Math.min(el, 2) + .1);
             setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-            setup.units = ref.id == "unit" ? jT.formatUnits(ref.val) : "";
+            setup.units = ref.id == "unit" ? jT$1.formatUnits(ref.val) : "";
             setup.useJson = this.useJson;
             setup.domain = this.domain;
             setup.sliderRoot = this;
@@ -1443,21 +1674,21 @@
     };
     Ranger.prototype.clearValues = function() {
         this.rangeRemove();
-        a$.pass(this, Ranger, "clearValues");
+        a$$1.pass(this, Ranger, "clearValues");
     };
-    var defSettings$g = {
+    var defSettings$f = {
         switchSelector: ".switcher",
         switchField: null,
         onSwitching: null
     };
     function Switcher(settings) {
-        a$.setup(this, defSettings$g, settings);
+        a$$1.setup(this, defSettings$f, settings);
         var self = this, target$ = $$1(self.switchSelector, $$1(settings.target)[0]), initial = _$1.get(self, self.switchField);
         if (typeof initial === "boolean") target$[0].checked = initial; else target$.val(initial);
         target$.on("change", (function(e) {
             var val = $$1(this).val();
             _$1.set(self, self.switchField, typeof initial === "boolean" ? this.checked || val === "on" : val);
-            a$.act(self, self.onSwitching, e);
+            a$$1.act(self, self.onSwitching, e);
             e.stopPropagation();
         }));
     }
@@ -1469,12 +1700,12 @@
     Texter.prototype.afterResponse = function() {
         $$1(this.target).val("");
     };
-    var defSettings$h = {
+    var defSettings$g = {
         useJson: false,
         renderItem: null
     };
     function SolrQueryReporter(settings) {
-        a$.setup(this, defSettings$h, settings);
+        a$$1.setup(this, defSettings$g, settings);
         this.target = settings.target;
         this.id = settings.id;
         this.manager = null;
@@ -1482,7 +1713,7 @@
         this.fqName = this.useJson ? "json.filter" : "fq";
     }
     SolrQueryReporter.prototype.init = function(manager) {
-        a$.pass(this, SolrQueryReporter, "init", manager);
+        a$$1.pass(this, SolrQueryReporter, "init", manager);
         this.manager = manager;
     };
     SolrQueryReporter.prototype.registerWidget = function(widget, pivot) {
@@ -1534,33 +1765,347 @@
             this.target.empty().addClass("tags").append(links);
         } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
     };
-    _$1.assign(jT, _Tools);
-    jT.Populating = Populating;
-    jT.Loading = Loading;
-    jT.ItemRendering = ItemRendering;
-    jT.Communicating = Communicating;
-    jT.Delaying = Delaying;
-    jT.Authenticating = Authenticating;
-    jT.Spying = Spying;
-    jT.AccordionExpander = AccordionExpander;
-    jT.Autocompleter = Autocompleter;
-    jT.SolrItemLister = SolrItemLister;
-    jT.Logger = Logger;
-    jT.Pager = Pager;
-    jT.Passer = Passer;
-    jT.Pivoter = Pivoter;
-    jT.Ranger = Ranger;
-    jT.Slider = Slider;
-    jT.Switcher = Switcher;
-    jT.Tagger = Tagger;
-    jT.Texter = Texter;
-    jT.SolrQueryReporter = SolrQueryReporter;
-    jT.widget = {
-        SolrResult: a$(Solr.Listing, Populating, SolrItemLister, Loading),
-        SolrPaging: a$(Solr.Paging, Pager),
-        Logger: Logger
+    var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>', defSettings$h = {
+        baseUrl: "",
+        summaryPrimes: [ "RESULTS" ],
+        tagDbs: {},
+        onCreated: null,
+        onClick: null,
+        summaryRenderers: {
+            RESULTS: function(val, topic) {
+                var self = this;
+                return val.map((function(study) {
+                    return study.split(".").map((function(one) {
+                        return self.lookupMap[one] || one;
+                    })).join(".");
+                }));
+            },
+            REFOWNERS: function(val, topic) {
+                return {
+                    topic: "Study Providers",
+                    content: val.map((function(ref) {
+                        return jT$1.formatString(htmlLink, {
+                            href: "#",
+                            hint: "Freetext search",
+                            target: "_self",
+                            value: ref,
+                            css: "freetext_selector"
+                        });
+                    }))
+                };
+            },
+            REFS: function(val, topic) {
+                return {
+                    topic: "References",
+                    content: val.map((function(ref) {
+                        var link = ref.match(/^doi:(.+)$/);
+                        link = link != null ? "https://www.doi.org/" + link[1] : ref;
+                        return jT$1.formatString(link.match(/^https?:\/\//) ? htmlLink : plainLink, {
+                            href: link,
+                            hint: "External reference",
+                            target: "ref",
+                            value: ref
+                        });
+                    }))
+                };
+            }
+        }
     };
-    jT.kit = {};
-    (typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})["jT"] = jT;
-    return jT;
+    function SolrItemLister(settings) {
+        a$$1.setup(this, defSettings$h, settings);
+        this.baseUrl = jT$1.fixBaseUrl(settings.baseUrl) + "/";
+        this.lookupMap = settings.lookupMap || {};
+        this.target = settings.target;
+        this.id = settings.id;
+    }
+    SolrItemLister.prototype.renderItem = function(doc) {
+        var self = this, el = $$1(this.renderSubstance(doc));
+        if (!el.length) return null;
+        $$1(this.target).append(el);
+        if (typeof this.onClick === "function") $$1("a.command", el[0]).on("click", (function(e) {
+            self.onClick.call(el[0], e, doc, self);
+        }));
+        if (typeof this.onCreated === "function") this.onCreated.call(el, doc, this);
+        $$1("a.more", el[0]).on("click", (function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $this = $$1(this), $div = $$1(".more-less", $this.parent()[0]);
+            if ($div.is(":visible")) {
+                $div.hide();
+                $this.text("more");
+            } else {
+                $div.show();
+                $this.text("less");
+            }
+            return false;
+        }));
+        return null;
+    };
+    SolrItemLister.prototype.renderSubstance = function(doc) {
+        var summaryhtml = $$1("#summary-item").html(), summarylist = this.buildSummary(doc), baseUrl = this.getBaseUrl(doc), summaryRender = function(summarylist) {
+            return summarylist.map((function(s) {
+                return jT$1.formatString(summaryhtml, s);
+            })).join("");
+        };
+        var item = {
+            logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
+            link: "#",
+            href: "#",
+            title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") + (doc.substanceType == null ? "" : " " + (this.lookupMap[doc.substanceType] || doc.substanceType)),
+            composition: this.renderComposition(doc, '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>').join("<br/>"),
+            summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
+            item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
+            footer: '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' + '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' + '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
+        };
+        if (summarylist.length > 0) item.summary += '<a href="#" class="more">more</a>' + '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + "</div>";
+        if (doc.content == null) {
+            item.link = baseUrl + doc.s_uuid;
+            item.href = item.link + "/study";
+            item.href_title = "Study";
+            item.href_target = doc.s_uuid;
+        } else {
+            var external = "External database";
+            if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
+                item.logo = "images/canano.jpg";
+                item.href_title = "caNanoLab: " + item.link;
+                item.href_target = external = "caNanoLab";
+                item.footer = "";
+            } else {
+                item.logo = "images/external.png";
+                item.href_title = "External: " + item.link;
+                item.href_target = "external";
+            }
+            if (doc.content.length > 0) {
+                item.link = doc.content[0];
+                for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + "</a>";
+            }
+        }
+        return jT$1.fillTemplate("#result-item", item);
+    };
+    SolrItemLister.prototype.getBaseUrl = function(doc) {
+        if (this.tagDbs[doc.dbtag_hss] !== undefined) {
+            var url = this.tagDbs[doc.dbtag_hss].server, lastChar = url.substr(-1);
+            return url + (lastChar != "/" ? "/substance/" : "substance/");
+        } else {
+            return this.baseUrl;
+        }
+    };
+    SolrItemLister.prototype.renderComposition = function(doc, defValue) {
+        var summary = [], composition = doc._extended_ && doc._extended_.composition;
+        if (!!composition) {
+            var cmap = {};
+            _.each(composition, (function(c) {
+                var ce = cmap[c.component_s], se = [];
+                if (ce === undefined) cmap[c.component_s] = ce = [];
+                _.each(c, (function(v, k) {
+                    var m = k.match(/^(\w+)_[shd]+$/);
+                    k = m && m[1] || k;
+                    if (!k.match(/type|id|component/)) se.push(jT$1.formatString(htmlLink, {
+                        href: "#",
+                        hint: "Freetext search on '" + k + "'",
+                        target: "_self",
+                        value: v,
+                        css: "freetext_selector"
+                    }));
+                }));
+                ce.push(se.join(", "));
+            }));
+            _.each(cmap, (function(map, type) {
+                var entry = "";
+                for (var i = 0; i < map.length; ++i) {
+                    if (map[i] == "") continue;
+                    entry += i == 0 ? ": " : "; ";
+                    if (map.length > 1) entry += "<strong>[" + (i + 1) + "]</strong>&nbsp;";
+                    entry += map[i];
+                }
+                if (entry === "") entry = ":&nbsp;" + defValue;
+                entry = type + " (" + map.length + ")" + entry;
+                summary.push(entry);
+            }));
+        }
+        return summary;
+    };
+    SolrItemLister.prototype.buildSummary = function(doc) {
+        var self = this, items = [];
+        _.each(doc, (function(val, key) {
+            var name = key.match(/^SUMMARY\.([^_]+)_?[hsd]*$/);
+            if (!name) return;
+            name = name[1];
+            var render = self.summaryRenderers[name] || self.summaryRenderers._, item = typeof render === "function" ? render.call(self, val, name) : val;
+            if (!item) return;
+            if (typeof item !== "object" || Array.isArray(item)) item = {
+                topic: name.toLowerCase(),
+                values: item
+            }; else if (item.topic == null) item.topic = name.toLowerCase();
+            if (!item.content) item.content = Array.isArray(item.values) ? item.values.join(", ") : item.values.toString();
+            var primeIdx = self.summaryPrimes.indexOf(name);
+            if (primeIdx > -1 && primeIdx < items.length) items.splice(primeIdx, 0, item); else items.push(item);
+        }));
+        return items;
+    };
+    var htmlRoot = "<table></table>", defSettings$i = {
+        id: null,
+        target: null,
+        shortStars: false,
+        maxStars: 10,
+        selectionHandler: null,
+        sDom: "<Fif>rt",
+        loadOnInit: false,
+        oLanguage: null,
+        configuration: {
+            columns: {
+                model: {
+                    Id: {
+                        iOrder: 0,
+                        sTitle: "Id",
+                        mData: "URI",
+                        sWidth: "50px",
+                        mRender: function(data, type, full) {
+                            return type != "display" ? full.id : '<a target="_blank" href="' + data + '"><span class="ui-icon ui-icon-link jtox-inline"></span> M' + full.id + "</a>";
+                        }
+                    },
+                    Title: {
+                        iOrder: 1,
+                        sTitle: "Title",
+                        mData: "title",
+                        sDefaultContent: "-"
+                    },
+                    Stars: {
+                        iOrder: 2,
+                        sTitle: "Stars",
+                        mData: "stars",
+                        sWidth: "160px"
+                    },
+                    Algorithm: {
+                        iOrder: 3,
+                        sTitle: "Algorithm",
+                        mData: "algorithm"
+                    },
+                    Info: {
+                        iOrder: 4,
+                        sTitle: "Info",
+                        mData: "trainingDataset",
+                        mRender: function(data, type, full) {
+                            return type != "display" || !data ? data : '<a href="' + data + '"><span class="ui-icon ui-icon-calculator"></span>&nbsp;training set</a>';
+                        }
+                    }
+                },
+                algorithm: {
+                    Id: {
+                        iOrder: 0,
+                        sTitle: "Id",
+                        mData: "uri",
+                        sWidth: "150px",
+                        mRender: function(data, type, full) {
+                            return type != "display" ? full.id : '<a target="_blank" href="' + data + '"><span class="ui-icon ui-icon-link jtox-inline"></span> ' + full.id + "</a>";
+                        }
+                    },
+                    Title: {
+                        iOrder: 1,
+                        sTitle: "Title",
+                        mData: "name",
+                        sDefaultContent: "-"
+                    },
+                    Description: {
+                        iOrder: 2,
+                        sTitle: "Description",
+                        sClass: "shortened",
+                        mData: "description",
+                        sDefaultContent: "-"
+                    },
+                    Info: {
+                        iOrder: 3,
+                        sTitle: "Info",
+                        mData: "format",
+                        mRender: function(data, type, full) {
+                            if (type != "display" || !data) return data;
+                            return "<strong>" + data + "</strong>; " + (full.isSupevised ? "<strong>Supervised</strong>; " : "") + '<a target="_blank" href="' + full.implementationOf + '">' + full.implementationOf + "</a>";
+                        }
+                    }
+                }
+            }
+        }
+    };
+    function AmbitModelViewer(settings) {
+        a$$1.setup(this, defSettings$i, settings);
+        this.root$ = $$1(settings && settings.target);
+    }
+    AmbitModelViewer.prototype.__expects = [ "doRequest", "serviceId" ];
+    AmbitModelViewer.prototype.init = function(manager) {
+        var self = this;
+        a$$1.pass(this, AmbitModelViewer, "init", manager);
+        self.manager = manager;
+        this.root$.addClass("jtox-toolkit").append(htmlRoot).addClass("jtox-model");
+        if (self.serviceId === "algorithm") {
+            self.configuration.columns.model.Stars.mRender = function(data, type, full) {
+                return type != "display" ? data : _Helpers.putStars(self, data, "Model star rating (worst) 1 - 10 (best)");
+            };
+            if (self.shortStars) self.configuration.columns.model.Stars.sWidth = "40px";
+            self.configuration.columns.model.Algorithm.mRender = function(data, type) {
+                var name = data.URI.match(/https{0,1}:\/\/.*\/algorithm\/(\w+).*/)[1];
+                if (type != "display") return name;
+                var res = '<a target="_blank" href="' + data.URI + '">' + '<img src="' + manager.baseUrl + data.img + '"/>&nbsp;' + name + "</a>";
+                if (self.algorithmLink) {
+                    res += '<a href="' + ccLib.addParameter(self.modelUri, "algorithm=" + encodeURIComponent(data.URI)) + '"><span class="ui-icon ui-icon-calculator float-right" title="Show models using algorithm ' + name + '"></span></a>';
+                }
+                return res;
+            };
+        }
+        if (!!self.selectionHandler || !!self.onDetails) {
+            _Helpers.putActions(self, self.configuration.columns[self.serviceId].Id);
+            self.configuration.columns[self.serviceId].Id.sWidth = "60px";
+        }
+        if (!self.oLanguage) self.oLanguage = {
+            sLoadingRecords: "No " + this.serviceId + " found.",
+            sZeroRecords: "No " + this.serviceId + " found.",
+            sEmptyTable: "No " + this.serviceId + " available.",
+            sInfo: "Showing _TOTAL_ " + this.serviceId + "(s) (_START_ to _END_)"
+        };
+        self.table = _Helpers.putTable(self, self.root$.children("table")[0], this.serviceId);
+        if (this.loadOnInit) self.doRequest();
+    };
+    AmbitModelViewer.prototype.populate = function(data) {
+        $$1(this.table).dataTable().fnAddData(data);
+    };
+    AmbitModelViewer.prototype.beforeRequest = function(opts) {
+        if (opts.serviceId === self.serviceId) {
+            this.root$.find('input[type="checkbox"]').each((function() {
+                if (this.checked) uri = ccLib.addParameter(uri, "feature_uris[]=" + encodeURIComponent(this.value + "/predicted"));
+            }));
+            $$1(self.table).dataTable().fnClearTable();
+            return uri;
+        }
+    };
+    _$1.assign(jT$1, _Tools, _Helpers);
+    jT$1.Populating = Populating;
+    jT$1.Loading = Loading;
+    jT$1.ItemRendering = ItemRendering;
+    jT$1.Communicating = Communicating;
+    jT$1.Delaying = Delaying;
+    jT$1.Authenticating = Authenticating;
+    jT$1.Spying = Spying;
+    jT$1.AccordionExpander = AccordionExpander;
+    jT$1.Autocompleter = Autocompleter;
+    jT$1.Logger = Logger;
+    jT$1.Pager = Pager;
+    jT$1.Passer = Passer;
+    jT$1.Pivoter = Pivoter;
+    jT$1.Ranger = Ranger;
+    jT$1.Slider = Slider;
+    jT$1.Switcher = Switcher;
+    jT$1.Tagger = Tagger;
+    jT$1.Texter = Texter;
+    jT$1.SolrQueryReporter = SolrQueryReporter;
+    jT$1.SolrItemLister = SolrItemLister;
+    jT$1.AmbitModelViewer = AmbitModelViewer;
+    jT$1.widget = {
+        SolrResult: a$$1(Solr.Listing, Populating, SolrItemLister, Loading),
+        SolrPaging: a$$1(Solr.Paging, Pager),
+        Logger: Logger,
+        AmbitModeller: a$$1(AmbitModelViewer, Ambit.Modelling, Ambit.Tasking),
+        AmbitAlgorithmer: a$$1(AmbitModelViewer, Ambit.Algorithming)
+    };
+    jT$1.kit = {};
+    (typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})["jT"] = jT$1;
+    return jT$1;
 }));

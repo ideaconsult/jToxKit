@@ -2,69 +2,70 @@
 <!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
 <!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
 <!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
-<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
 
-  <title>[jTox] Logging Widget development page</title>
-  <link rel="stylesheet" href="css/LoggingKit.css">
-  <link rel="stylesheet" href="css/Base.css">
-  
-  <link rel="stylesheet" href="../libs/jquery-ui.min.css">
-  <link rel="stylesheet" href="../libs/jquery.range.css" type="text/css">
-  
-  <link rel="stylesheet" href="../www/jtox-kit.css" type="text/css">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+	<title>[jTox] Logging Widget development page</title>
+	<link rel="stylesheet" href="../css/Base.css">
+	<link rel="stylesheet" href="../css/Logger.css">
+
+	<link rel="stylesheet" href="../../www/libs/jquery-ui.min.css">
+	<link rel="stylesheet" href="../../www/libs/jquery.range.css" type="text/css">
 
 </head>
-<body bgcolor="#555">
-  
-<div id="log-ui" class="jtox-kit" data-kit="Logging" data-configuration="Settings" data-solr-url="https://sandbox.ideaconsult.net/solr/enanondm_shard1_replica1/" data-base-url="https://data.enanomapper.net/substance/"/>
-  
+
+<body>
+	<div id="log-ui" class="jtox-kit" data-kit="Logging" data-configuration="Settings"
+		data-solr-url="https://sandbox.ideaconsult.net/solr/enanondm_shard1_replica1/"
+		data-base-url="https://data.enanomapper.net/substance/"></div>
+
 	<div class="jtox-toolkit" data-kit="log" data-right-side="true"></div>
-<div class="jtox-template">
-  <div id="jtox-logger">
+	<div class="jtox-template">
+		<div id="jtox-logger">
 <!--[[ jT.templates['logger-main'] -->
-    <div class="list-wrap">
-      <div class="list-root"></div>
-    </div>
-    <div class="status"><div class="icon jtox-fadable"></div></div>
+			<div class="list-wrap">
+				<div class="list-root"></div>
+			</div>
+			<div class="status">
+				<div class="icon jtox-fadable"></div>
+			</div>
 <!-- // end of #jtox-logger ]]-->
-  </div>
+		</div>
 <!--[[ jT.templates['logger-line'] -->
-  <div id="jtox-logline">
-    <div class="logline">
-	    <div class="icon"></div>
-	    <span class="content data-field" data-field="header">{{header}}</span>
-	    <div class="details data-field" data-field="details">{{details}}</div>
-    </div>
-  </div>
+		<div id="jtox-logline">
+			<div class="logline">
+				<div class="icon"></div>
+				<span class="content data-field" data-field="header">{{header}}</span>
+				<div class="details data-field" data-field="details">{{details}}</div>
+			</div>
+		</div>
 <!-- // end of #jtox-logline ]]-->
-</div>
-<script src="../../www/libs/lodash.js"></script>
-<script src="../../www/libs/jquery.js"></script>
-<script src="../../www/libs/jquery-ui.min.js"></script>
-<script src="../../www/libs/purl.js"></script>
-<script src="../../www/libs/jquery.range-min.js"></script>
+	</div>
+	<script src="../../www/libs/lodash.js"></script>
+	<script src="../../www/libs/jquery.js"></script>
+	<script src="../../www/libs/jquery-ui.min.js"></script>
+	<script src="../../www/libs/purl.js"></script>
+	<script src="../../www/libs/jquery.range-min.js"></script>
 
-<script src="../../www/libs/as-sys.js"></script>
-<script src="../../www/libs/solr-jsx.js"></script>
-<script src="../../www/libs/ambit-jsx.js"></script>
-<script src="../../www/libs/jquery.sticky.js"></script>
+	<script src="../../www/libs/as-sys.js"></script>
+	<script src="../../www/libs/solr-jsx.js"></script>
+	<script src="../../www/libs/ambit-jsx.js"></script>
+	<script src="../../www/libs/jquery.sticky.js"></script>
 
-<script src="../../www/jtox-kit.js"></script>
-<!-- <script src="../www/jtox-kit.kits.js"></script> -->
+	<script src="../../www/jtox-kit.js"></script>
 
-<script src="../widgets/Logger.js"></script>
-
-<script lang="JavaScript">
-
-$(document).ready(function(){
-  jT.initialize();
-});
-
-</script>
+	<script lang="JavaScript">
+		$(document).ready(function () {
+			jT.initialize();
+		});
+	</script>
 
 </body>
+
 </html>

@@ -7,7 +7,7 @@
 
 import a$ from 'as-sys';
 import _ from 'lodash';
-import $ from 'jQuery';
+import $ from 'jquery';
 
 import jT from '../Core';
 

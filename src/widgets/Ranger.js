@@ -8,7 +8,7 @@
  */
 
 import a$ from 'as-sys';
-import $ from 'jQuery';
+import $ from 'jquery';
 import Solr from 'solr-jsx';
 
 import jT from '../Core';

@@ -11,11 +11,11 @@ export default {
 		globals: { 
 			"lodash" : "_",
 			"as-sys": "asSys",
-			"jQuery": "$",
+			"jquery": "$",
 			"solr-jsx": "Solr",
 			"ambit-jsx": "Ambit",
 			"jtox-kit": "jToxKit"
 		}
 	},
-	external: [ "lodash", "as-sys", "jQuery", "solr-jsx", "ambit-jsx" ]
+	external: [ "lodash", "as-sys", "jquery", "solr-jsx", "ambit-jsx" ]
 };

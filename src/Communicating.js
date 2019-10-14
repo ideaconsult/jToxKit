@@ -4,6 +4,7 @@
  * Author: Ivan (Jonan) Georgiev
  * Copyright © 2019, IDEAConsult Ltd. All rights reserved.
  */
+
 import a$ from 'as-sys';
 import _ from 'lodash';
 
@@ -25,6 +26,10 @@ var ajaxDefaults = {
 
 function Communicating(settings) {
 	a$.setup(this, defSettings, settings);
+
+	// Make sure the serverUrl ends with a slash.
+	if (!_.endsWith(this.serverUrl, "/"))
+		this.serverUrl += "/";
 
 	this.listeners = {}; // The set of listeners - based on their 'id'.
 	this.error = null;
@@ -69,11 +74,7 @@ Communicating.prototype.doRequest = function (servlet, isPrivate, callback) {
 
 	var self = this,
 		cancel = null,
-		ajaxOpts = _.defaults(
-			this.prepareQuery(servlet), 
-			{ service: typeof servlet === 'object' ? servlet.url : servlet },
-			this.ajaxSettings
-		);
+		ajaxOpts = _.defaults(this.prepareQuery(servlet), this.ajaxSettings);
 
 	// We don't make these calls on private requests
 	if (!isPrivate) {
@@ -138,6 +139,33 @@ Communicating.prototype.doRequest = function (servlet, isPrivate, callback) {
 	// And make the damn call.
 	return self.connector(ajaxOpts);
 };
+
+/**
+ * Build the final url, from a given servlet and array of parameters.
+ * @param {string} servlet The service/servlet to be queries.
+ * @param {string|array} params List of parameters to be appended to the query. Optional.
+ * @return {string} A full, ready to be used URL.
+ * @description The parameters passed are expected to be escaped and already paired in name=value
+ * form.
+ */
+Communicating.prototype.buildUrl = function (servlet, params) {
+	return this.serverUrl + this.addUrlParameters(servlet || '', params);
+}
+
+/**
+ * 
+ * @param {string} baseUrl The base part of the URL to be added parameters to, can already have parameters.
+ * @param {string|array} params List of parameters to be appended to the query. Optional.
+ * @return {string} The initial URL with appended parameters.
+ * @description The parameters passed are expected to be escaped and already paired in name=value
+ */
+Communicating.prototype.addUrlParameters = function(baseUrl, params) {
+	if (!params || !params.length)
+		return baseUrl;
+	else if (typeof params !== 'string')
+		params = params.join("&") || '';
+	return baseUrl +  (baseUrl.indexOf('?') > 0 ? "&" : "?") + params;
+}
 
 /** Initialize the management and most importantly - the listener's
  */

@@ -38,16 +38,16 @@
 		"kitsname": "jtox-kit.kits"
 	},
 	"dependencies": {
+		"ambit-jsx": "file:../AmbitJsx",
 		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
 		"lodash": "^4.17.15",
-		"solr-jsx": "file:../SolrJsX",
-		"ambit-jsx": "file:../AmbitJsx"
+		"solr-jsx": "file:../SolrJsX"
 	},
 	"devDependencies": {
 		"concat": "^1.0.3",
 		"expectations": "^1.0.0",
 		"jquery": "^3.4.1",
-		"jsdom": "^15.1.1",
+		"jsdom": "^15.2.0",
 		"mocha": "^6.2.1",
 		"rollup": "^1.23.1",
 		"terser": "^4.3.8"
@@ -57,7 +57,7 @@
 		"kits": "cat src/kits/*.js > www/${npm_package_config_kitsname}.js && cat src/kits/*.html | bin/html2js.pl --trim >> www/${npm_package_config_kitsname}.js && terser www/${npm_package_config_kitsname}.js -mc --ie8 --keep-fnames -o www/${npm_package_config_kitsname}.min.js && concat src/css/*.css -o www/${npm_package_name}.css",
 		"build": "npm run core && npm run kits",
 		"test": "npm run prepare && mocha test --require expectations",
-		"archive": "cd www && chmod a-w ${npm_package_name}*.js && zip ${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
+		"archive": "cd www && chmod a-w ${npm_package_name}*.js && zip ../${npm_package_name}.zip ../LICENSE ${npm_package_name}*",
 		"libs": "rsync node_modules/lodash/lodash*.js www/libs && rsync node_modules/as-sys/as-sys*.js www/libs && rsync node_modules/ambit-jsx/ambit-jsx*.js www/libs && rsync node_modules/solr-jsx/solr-jsx*.js www/libs",
 		"prepare": "npm run build && npm run libs && npm run archive",
 		"postpublish": "git push && git tag -am \"Release $npm_package_version.\" ${npm_package_version} && git push --tags"
