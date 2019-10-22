@@ -108,7 +108,7 @@ var
   mainLookupMap = {},
   uiConfiguration = {},
 	defaultSettings = {
-		servlet: "autophrase",
+		servlet: "select",
 		multipleSelection: true,
 		keepAllFacets: true,
 		connector: $,
