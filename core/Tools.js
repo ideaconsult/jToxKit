@@ -123,6 +123,26 @@ jT.ui = {
       "'": '&#039;'
     };
     return str.replace(/[&<>"']/g, function(m) { return map[m]; });
-  }
-  
+  },
+
+	activateDownload: function(aEl, blob, destName, title, autoRemove) {
+		var url = URL.createObjectURL(blob);
+	
+		aEl.style.visibility = "visible";
+		aEl.href = url;
+    aEl.download = destName;
+    aEl.innerHTML = title;
+
+    if (autoRemove === true)
+      aEl.addEventListener('click', function () {
+        setTimeout(function () {
+          aEl.parentNode.removeChild(aEl);
+          window.URL.revokeObjectURL(url);
+        }, 0);
+      });	
+	},
+
+	blobFromBase64: function (data64, mimeType) {
+		return new Blob([data64], { type: mimeType });
+	}
 };
