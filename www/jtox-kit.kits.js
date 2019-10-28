@@ -147,7 +147,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             },
             exportMaxRows: 999999, //2147483647
             exportTypes: [],
-            exportLevels: {},
             exportSolrDefaults: [
                 "facet=false",
                 "echoParams=none"
@@ -570,6 +569,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 butts.button("option", "label", "No target dataset selected...");
             } else if (!this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered") {
                 butts.button("disable").button("option", "label", "No filters selected...");
+            } else if (!this.manager.response.response.numFound && form.export_dataset.value == "filtered") {
+                butts.button("disable").button("option", "label", "No entries match the filters...");
             } else if ($(form).find('input[name=export_dataset]').val()) {
                 var sourceText = $("#export_dataset :radio:checked + label").text().toLowerCase(),
                     formatText = $(form.export_format).data('name').toUpperCase();
@@ -593,7 +594,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             
             this.queries.renderItem = function (query) {
                 el$ = jT.ui.fillTemplate("#query-item", query);
-                el$.data("query", query.definition);
+                el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     var queryDef = $(this).data('query');
 
@@ -602,11 +603,17 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     manager.removeParameters("json.filter");
                     manager.getParameter("q").value = "";
 
-                    queryDef.filters.forEach(function (par) {
-                        manager.getListener(par.handler).addValue(par.value);
+                    queryDef.forEach(function (par) {
+                        if (par.faceter)
+                            manager.getListener(par.faceter).addValue(par.value);
+                        else if (typeof par.parameter === "object")
+                            manager.addParameter(par.parameter);
+                        else
+                            manager.addParameter(par.name, par.value, par.domain);
                     });
 
                     manager.doRequest();
+                    $("#result-tabs").tabs("option", "active", 0);
                 });
                 return el$;
             };
@@ -637,39 +644,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     exFormat = self.exportFormats[$('.data_formats .selected').data('index')],
                     exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
                     server = exType.server || exFormat.server,
-                    fq = self.manager.getParameter("json.filter"),
-                    params = [],
-                    inners = [],
-                    selectedIds = null,
-                    makeParameter = function (par, name) {
-                        var np = {
-                            value: par.value,
-                            name: name || par.name
-                        };
-
-                        // Check if we have a different level and the field in the filter is subject to parenting.
-                        if (par.domain && par.domain.type == 'parent') {
-                            if (!exType.exportLevel)
-                                np.domain = par.domain;
-                            else {
-                                var level = self.exportLevels[exType.exportLevel];
-                                if (!par.value || !!par.value.match(level.fieldsRegExp))
-                                    np.domain = level.domain;
-                            }
-                        }
-
-                        return np;
-                    },
-                    prepareFilters = function () {
-                        for (var i = 0, vl = fq.length; i < vl; i++) {
-                            var par = fq[i];
-
-                            params.push(Solr.stringifyParameter(makeParameter(par, 'fq')));
-                            inners.push(Solr.stringifyValue(par).replace(/"|\\/g, "\\$&"));
-                        }
-
-                        params.push(Solr.stringifyParameter(makeParameter(self.manager.getParameter('q'))) || '*:*');
-                    };
+                    selectedIds = null;
 
                 if (form.export_dataset.value != "filtered") {
                     selectedIds = [];
@@ -679,6 +654,15 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     });
                 }
 
+                var Exporter = new jT.Exporting({
+                    exportDefinition: exType,
+                    idField: exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs',
+                    selectedIds: selectedIds,
+                    useJson: true
+                });
+                
+                Exporter.init(self.manager);
+
                 // Now we have all the filtering parameters in the `params`.
                 if (server == 'ambitUrl') {
                     // If we already have the selected Ids - we don't even need to bother calling Solr.
@@ -686,10 +670,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         form.search.value = selectedIds.join(" ");
                         form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                     } else {
-                        prepareFilters();
-                        params.push('wt=json', 'fl=s_uuid_hs');
                         $.ajax({
-                            url: self.serverUrl + 'select?' + params.join('&'),
+                            url: Exporter.prepareExport(self.serverUrl, ['wt=json', 'fl=s_uuid_hs']),
                             async: false,
                             dataType: "json",
                             success: function (data) {
@@ -705,29 +687,10 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     }
                 } else {
                     // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
-                    prepareFilters();
-                    if (!!selectedIds)
-                        params.push('fq=' + encodeURIComponent((exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs') + ":(" + selectedIds.join(" ") + ")"));
-
-                    // Fill the rest of the Solr parameters for the real Solr call.
-                    Array.prototype.push.apply(params, self.exportSolrDefaults);
-                    if (!!exType.extraParams)
-                        Array.prototype.push.apply(params, exType.extraParams);
-
-                    params.push('fl=' + encodeURIComponent(exType.fields.replace(
-                        "{{filter}}",
-                        inners.length > 1 ? '(' + inners.join(' AND ') + ')' : inners.length > 0 ? inners[0] : exType.defaultFilter
-                    )));
-                    params.push('rows=' + self.exportMaxRows);
-                    //tsv is now handled via proxy , which reads the Solr json format as is
-                    if (mime == "tsv")
-                        //params.push("wt=csv", "csv.separator=%09");
-                        params.push("wt=json", "json2tsv=true");
-                    else
-                        params.push('wt=' + mime);
-
-                    form.action = self[server] + "select?" + params.join('&');
-                    //console.log(form.action);
+                    form.action = Exporter.prepareExport(self[server], self.exportSolrDefaults.concat([
+                        'rows=' + self.exportMaxRows,
+                        mime == "tsv" ? ["wt=json", "json2tsv=true"] : 'wt=' + mime
+                    ]));
                 }
 
                 return true;
