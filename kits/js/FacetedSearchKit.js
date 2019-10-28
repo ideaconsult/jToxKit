@@ -55,6 +55,7 @@
                 "facet=false",
                 "echoParams=none"
             ],
+            savedQueries: [],
             listingFields: [],
             facets: [],
             summaryRenderers: {}
@@ -153,6 +154,7 @@
         this.initDom();
         this.initComm();
         this.initExport();
+        this.initQueries();
     };
 
     jT.ui.FacetedSearch.prototype = {
@@ -304,7 +306,7 @@
                 target: $('#docs'),
                 itemId: "s_uuid",
                 nestLevel: "composition",
-                onClick: function (e, doc, exp, widget) {
+                onClick: function (e, doc) {
                     if (Basket.findItem(doc.s_uuid) < 0) {
                         Basket.addItem(doc);
                         var s = "",
@@ -464,18 +466,55 @@
             Manager.doRequest();
         },
 
-        updateButton: function (form) {
-            b = $("button", form);
+        updateButtons: function (form) {
+            var butts = $("button", form);
 
-            if (!$(form).find('input[name=export_dataset]').val()) {
-                b.button("option", "label", "No target dataset selected...");
+            if ($("#export_dataset").buttonset("option", "disabled")) {
+                butts.button("option", "label", "No target dataset selected...");
             } else if (!this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered") {
-                b.button("disable").button("option", "label", "No filters selected...");
+                butts.button("disable").button("option", "label", "No filters selected...");
             } else if ($(form).find('input[name=export_dataset]').val()) {
-                b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(form.export_format).data('name').toUpperCase());
-            }
+                var sourceText = $("#export_dataset :radio:checked + label").text().toLowerCase(),
+                    formatText = $(form.export_format).data('name').toUpperCase();
 
-            return b;
+                butts.button("enable").each(function () {
+                    var me$ = $(this);
+                    me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
+                });
+
+                // $("button#export_go", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
+            }
+        },
+
+        initQueries: function () {
+            var manager = this.manager;
+
+            this.queries = new(a$(jT.ListWidget))({
+                id: 'queries',
+                target: $('#saved-queries')
+            });
+            
+            this.queries.renderItem = function (query) {
+                el$ = jT.ui.fillTemplate("#query-item", query);
+                el$.data("query", query.definition);
+                el$.on('click', function (e) {
+                    var queryDef = $(this).data('query');
+
+                    // Clear the current search - whatever it is.
+                    manager.removeParameters("fq");
+                    manager.removeParameters("json.filter");
+                    manager.getParameter("q").value = "";
+
+                    queryDef.filters.forEach(function (par) {
+                        manager.getListener(par.handler).addValue(par.value);
+                    });
+
+                    manager.doRequest();
+                });
+                return el$;
+            };
+
+            this.queries.populate(this.savedQueries);
         },
 
         initExport: function () {
@@ -488,7 +527,7 @@
             $("#export_dataset").buttonset();
             $("#export_type").buttonset();
             $("#export_dataset input").on("change", function (e) {
-                self.updateButton(this.form);
+                self.updateButtons(this.form);
             });
             $("#export_tab button").button({
                 disabled: true
@@ -600,34 +639,23 @@
             $("#result-tabs").tabs({
                 activate: function (e, ui) {
                     if (ui.newPanel[0].id == 'export_tab') {
-                        if (self.basket.length) {
-                            $('input#selected_data').prop("checked", true);
-                        }
+                        var qPar = self.manager.getParameter("q").value,
+                            hasFilter = (qPar && qPar.length) > 0 || self.manager.getParameter("json.filter").length > 0,
+                            hasDataset = hasFilter || !!self.basket.length;
 
-                        $("button", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
+                        $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
+                        $("#export_type").buttonset(hasDataset ? "enable" : "disable");
+                        $('div.warning-message')[hasDataset ? "hide" : "show"]();
+                        $('.data_formats').toggleClass('disabled', !hasDataset);
 
-                        var hasFilter = self.manager.getParameter("json.filter").length > 0;
-
-                        $("#selected_data")[0].disabled = self.basket.length < 1;
-                        $("#filtered_data")[0].disabled = !hasFilter;
-                        if (self.basket.length) {
-                            $('.data_formats').removeClass('disabled')
-                            $("#export_type").buttonset("enable");
-                            $('.warning-message').hide();
-                            $("#selected_data")[0].checked = true;
-                        } else {
-
-                            $("#filtered_data")[0].checked = hasFilter;
-                            if (hasFilter || self.manager.getParameter("q").value.length > 0) {
-                                $('.data_formats').removeClass('disabled')
-                                $("#export_type").buttonset("enable");
-                                $('.warning-message').hide();
-                            } else {
-                                $('.data_formats').addClass('disabled')
-                                $("#export_type").buttonset("disable");
-                                $('.warning-message').show();
-                            }
-                        }
+                        $("input#selected_data")
+                            .prop("checked", !!self.basket.length)
+                            .prop("disabled", !self.basket.length)
+                            .toggleClass("disabled", !self.basket.length);
+                            
+                        $("input#filtered_data")
+                            .prop("disabled", !hasFilter)
+                            .toggleClass("disabled", !hasFilter);
 
                         $('.data_formats .jtox-ds-download a').first().trigger("click");
 
@@ -638,8 +666,8 @@
         },
 
         prepareFormats: function () {
-            var exportEl = $("#export_tab div.data_formats");
-            self = this;
+            var exportEl = $("#export_tab div.data_formats"),
+                self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
                 var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
@@ -658,7 +686,7 @@
                         //save readable format name
                         $(form.export_format).data('name', me.data("name"));
 
-                        self.updateButton(form);
+                        self.updateButtons(form);
 
                         $("div", cont[0]).removeClass("selected");
                         cont.addClass("selected");
@@ -693,13 +721,13 @@
             }
         },
 
-        buildXlsxExport: function(buttonEl, downloadName) {
+        buildXlsxReport: function(buttonEl, downloadName) {
             XlsxPopulate.fromDataAsync(data).then(function (workbook) {
                 
                 workbook.populateData(jsonData);
         
                 workbook.outputAsync().then(function (blob) {
-                    jT.ui.activateDownload(buttonEl, blob, downloadName, "Download XLSX report", true);
+                    jT.ui.activateDownload(buttonEl, blob, downloadName, "Download summary report", true);
                 })
             });
         

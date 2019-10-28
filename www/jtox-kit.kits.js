@@ -152,6 +152,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 "facet=false",
                 "echoParams=none"
             ],
+            savedQueries: [],
             listingFields: [],
             facets: [],
             summaryRenderers: {}
@@ -250,6 +251,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         this.initDom();
         this.initComm();
         this.initExport();
+        this.initQueries();
     };
 
     jT.ui.FacetedSearch.prototype = {
@@ -401,7 +403,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 target: $('#docs'),
                 itemId: "s_uuid",
                 nestLevel: "composition",
-                onClick: function (e, doc, exp, widget) {
+                onClick: function (e, doc) {
                     if (Basket.findItem(doc.s_uuid) < 0) {
                         Basket.addItem(doc);
                         var s = "",
@@ -561,18 +563,55 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             Manager.doRequest();
         },
 
-        updateButton: function (form) {
-            b = $("button", form);
+        updateButtons: function (form) {
+            var butts = $("button", form);
 
-            if (!$(form).find('input[name=export_dataset]').val()) {
-                b.button("option", "label", "No target dataset selected...");
+            if ($("#export_dataset").buttonset("option", "disabled")) {
+                butts.button("option", "label", "No target dataset selected...");
             } else if (!this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered") {
-                b.button("disable").button("option", "label", "No filters selected...");
+                butts.button("disable").button("option", "label", "No filters selected...");
             } else if ($(form).find('input[name=export_dataset]').val()) {
-                b.button("enable").button("option", "label", "Download " + $("#export_dataset :radio:checked + label").text().toLowerCase() + " as " + $(form.export_format).data('name').toUpperCase());
-            }
+                var sourceText = $("#export_dataset :radio:checked + label").text().toLowerCase(),
+                    formatText = $(form.export_format).data('name').toUpperCase();
 
-            return b;
+                butts.button("enable").each(function () {
+                    var me$ = $(this);
+                    me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
+                });
+
+                // $("button#export_go", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
+            }
+        },
+
+        initQueries: function () {
+            var manager = this.manager;
+
+            this.queries = new(a$(jT.ListWidget))({
+                id: 'queries',
+                target: $('#saved-queries')
+            });
+            
+            this.queries.renderItem = function (query) {
+                el$ = jT.ui.fillTemplate("#query-item", query);
+                el$.data("query", query.definition);
+                el$.on('click', function (e) {
+                    var queryDef = $(this).data('query');
+
+                    // Clear the current search - whatever it is.
+                    manager.removeParameters("fq");
+                    manager.removeParameters("json.filter");
+                    manager.getParameter("q").value = "";
+
+                    queryDef.filters.forEach(function (par) {
+                        manager.getListener(par.handler).addValue(par.value);
+                    });
+
+                    manager.doRequest();
+                });
+                return el$;
+            };
+
+            this.queries.populate(this.savedQueries);
         },
 
         initExport: function () {
@@ -585,7 +624,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             $("#export_dataset").buttonset();
             $("#export_type").buttonset();
             $("#export_dataset input").on("change", function (e) {
-                self.updateButton(this.form);
+                self.updateButtons(this.form);
             });
             $("#export_tab button").button({
                 disabled: true
@@ -697,34 +736,23 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             $("#result-tabs").tabs({
                 activate: function (e, ui) {
                     if (ui.newPanel[0].id == 'export_tab') {
-                        if (self.basket.length) {
-                            $('input#selected_data').prop("checked", true);
-                        }
+                        var qPar = self.manager.getParameter("q").value,
+                            hasFilter = (qPar && qPar.length) > 0 || self.manager.getParameter("json.filter").length > 0,
+                            hasDataset = hasFilter || !!self.basket.length;
 
-                        $("button", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
+                        $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
+                        $("#export_type").buttonset(hasDataset ? "enable" : "disable");
+                        $('div.warning-message')[hasDataset ? "hide" : "show"]();
+                        $('.data_formats').toggleClass('disabled', !hasDataset);
 
-                        var hasFilter = self.manager.getParameter("json.filter").length > 0;
-
-                        $("#selected_data")[0].disabled = self.basket.length < 1;
-                        $("#filtered_data")[0].disabled = !hasFilter;
-                        if (self.basket.length) {
-                            $('.data_formats').removeClass('disabled')
-                            $("#export_type").buttonset("enable");
-                            $('.warning-message').hide();
-                            $("#selected_data")[0].checked = true;
-                        } else {
-
-                            $("#filtered_data")[0].checked = hasFilter;
-                            if (hasFilter || self.manager.getParameter("q").value.length > 0) {
-                                $('.data_formats').removeClass('disabled')
-                                $("#export_type").buttonset("enable");
-                                $('.warning-message').hide();
-                            } else {
-                                $('.data_formats').addClass('disabled')
-                                $("#export_type").buttonset("disable");
-                                $('.warning-message').show();
-                            }
-                        }
+                        $("input#selected_data")
+                            .prop("checked", !!self.basket.length)
+                            .prop("disabled", !self.basket.length)
+                            .toggleClass("disabled", !self.basket.length);
+                            
+                        $("input#filtered_data")
+                            .prop("disabled", !hasFilter)
+                            .toggleClass("disabled", !hasFilter);
 
                         $('.data_formats .jtox-ds-download a').first().trigger("click");
 
@@ -735,8 +763,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         },
 
         prepareFormats: function () {
-            var exportEl = $("#export_tab div.data_formats");
-            self = this;
+            var exportEl = $("#export_tab div.data_formats"),
+                self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
                 var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
@@ -755,7 +783,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         //save readable format name
                         $(form.export_format).data('name', me.data("name"));
 
-                        self.updateButton(form);
+                        self.updateButtons(form);
 
                         $("div", cont[0]).removeClass("selected");
                         cont.addClass("selected");
@@ -790,13 +818,13 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             }
         },
 
-        buildXlsxExport: function(buttonEl, downloadName) {
+        buildXlsxReport: function(buttonEl, downloadName) {
             XlsxPopulate.fromDataAsync(data).then(function (workbook) {
                 
                 workbook.populateData(jsonData);
         
                 workbook.outputAsync().then(function (blob) {
-                    jT.ui.activateDownload(buttonEl, blob, downloadName, "Download XLSX report", true);
+                    jT.ui.activateDownload(buttonEl, blob, downloadName, "Download summary report", true);
                 })
             });
         
@@ -1734,6 +1762,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<ul>" +
 "<li><a href=\"#hits_tab\">Hits list</a></li>" +
 "<li><a href=\"#basket_tab\">Selection</a></li>" +
+"<li><a href=\"#queries_tab\">Saved Queries</a></li>" +
 "<li class=\"jtox-ds-export\"><a href=\"#export_tab\">Export</a></li>" +
 "</ul>" +
 "<div id=\"hits_tab\">" +
@@ -1758,15 +1787,20 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<section id=\"basket-docs\" class=\"item-list\"></section>" +
 "<div style=\"padding-top: 70px;\"></div>" +
 "</div>" +
+"<div id=\"queries_tab\">" +
+"<section id=\"saved-queries\" class=\"item-list\"></section>" +
+"<div style=\"padding-top: 70px;\"></div>" +
+"</div>" +
 "<div id=\"export_tab\">" +
 "<form target=\"_blank\" method=\"post\">" +
-"<input type=\"hidden\" name=\"search\"/>" +
+"<input type=\"hidden\" name=\"search\" />" +
 "" +
 "<h6>Select dataset to export</h6>" +
 "<div id=\"export_dataset\">" +
-"<input type=\"radio\" value=\"filtered\" name=\"export_dataset\" id=\"filtered_data\" checked=\"checked\"/>" +
+"<input type=\"radio\" value=\"filtered\" name=\"export_dataset\" id=\"filtered_data\"" +
+"checked=\"checked\" />" +
 "<label for=\"filtered_data\">Filtered entries</label>" +
-"<input type=\"radio\" value=\"selected\" name=\"export_dataset\" id=\"selected_data\"/>" +
+"<input type=\"radio\" value=\"selected\" name=\"export_dataset\" id=\"selected_data\" />" +
 "<label for=\"selected_data\">Selected entries</label>" +
 "</div>" +
 "" +
@@ -1774,13 +1808,21 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<div id=\"export_type\"></div>" +
 "" +
 "<h6>Select output format</h6>" +
-"<input type=\"hidden\" name=\"export_format\" id=\"export_format\"/>" +
+"<input type=\"hidden\" name=\"export_format\" id=\"export_format\" />" +
 "<div class=\"data_formats\"></div>" +
 "" +
-"<br/>" +
-"<button type=\"submit\" name=\"export_go\" data-prefix=\"Download\">?</button>" +
-"<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>Warning:</strong>Please either add entries to the selection or specify a query</p></div>" +
+"<br />" +
+"<button id=\"export_go\" type=\"submit\" name=\"export_go\" data-format=\"Download {{source}} as {{format}}\">?</button>" +
 "" +
+"<br />" +
+"<button id=\"report_go\" type=\"button\" name=\"report_go\" data-format=\"Generate summary report for {{source}}\">?</button>" +
+"" +
+"<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\">" +
+"<p><span class=\"ui-icon ui-icon-alert\"" +
+"style=\"float: left; margin-right: .3em;\"></span>" +
+"<strong>Warning: </strong>" +
+"Please, either add entries to the selection or some filters to the query.</p>" +
+"</div>" +
 "</form>" +
 "</div>" +
 "</div>" +
@@ -1794,9 +1836,10 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<section id=\"result-item\">" +
 "<article id=\"{{item_id}}\" class=\"item\">" +
 "<header>{{title}}" +
-"<a href=\"{{href}}\" title=\"{{href_title}}\" target=\"{{href_target}}\"><span class=\"ui-icon ui-icon-extlink\" style=\"float:right;margin:0;\"></span></a>" +
+"<a href=\"{{href}}\" title=\"{{href_title}}\" target=\"{{href_target}}\"><span" +
+"class=\"ui-icon ui-icon-extlink\" style=\"float:right;margin:0;\"></span></a>" +
 "</header>" +
-"<a href=\"{{link}}\" title=\"{{link}}\" class=\"avatar\" target=\"_blank\"><img jt-src=\"{{logo}}\"/></a>" +
+"<a href=\"{{link}}\" title=\"{{link}}\" class=\"avatar\" target=\"_blank\"><img jt-src=\"{{logo}}\" /></a>" +
 "<div class=\"composition\">{{composition}}</div>" +
 "{{summary}}" +
 "<footer class=\"links\">" +
@@ -1819,29 +1862,40 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<ul class=\"tags tag-group folded\"></ul>" +
 "</div>" +
 "" +
+"<section id=\"query-item\">" +
+"<article id=\"{{id}}\" class=\"item\">" +
+"<header>{{title}}</header>" +
+"<div class=\"composition\">" +
+"{{description}}" +
+"<a href=\"#\" title=\"Apply the query\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
+"</div>" +
+"</article>" +
+"</section>" +
+"" +
 "<div id=\"tab-topcategory\">" +
 "<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}</h3>" +
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
 "<div>" +
-"<input type=\"text\" placeholder=\"Filter_\" class=\"widget-filter\"/>" +
-"<input type=\"button\" class=\"switcher\" value=\"OR\"/>" +
+"<input type=\"text\" placeholder=\"Filter_\" class=\"widget-filter\" />" +
+"<input type=\"button\" class=\"switcher\" value=\"OR\" />" +
 "</div>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
 "</div>" +
 "</div>" +
 "" +
 "<div id=\"slider-one\">" +
-"<input type=\"hidden\"/>" +
+"<input type=\"hidden\" />" +
 "</div>" +
 "" +
 "<div id=\"export-type\">" +
-"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" id=\"{{name}}\"/>" +
+"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" id=\"{{name}}\" />" +
 "<label for=\"{{name}}\">{{name}}</label>" +
 "</div>" +
 "" +
 "<div id=\"export-format\">" +
 "<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
-"<a target=\"_blank\" data-name=\"{{name}}\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\" jt-src=\"{{icon}}\"/></a>" +
+"<a target=\"_blank\" data-name=\"{{name}}\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\"" +
+"jt-src=\"{{icon}}\" /></a>" +
 "</div>" +
 "</div>" +
 ""; // end of #faceted-search-templates 
