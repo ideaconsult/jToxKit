@@ -48,14 +48,15 @@
                     limit: 10000
                 }
             },
-            exportMaxRows: 999999, //2147483647
             exportTypes: [],
             exportSolrDefaults: [
-                "facet=false",
-                "echoParams=none"
+                { name: "facet", value: "false" },
+                { name: "echoParams", value: "none" },
+                { name: 'rows', value: 999999 } //2147483647
             ],
             savedQueries: [],
             listingFields: [],
+            reportDefinition: {},
             facets: [],
             summaryRenderers: {}
         },
@@ -539,6 +540,17 @@
             $("#export_tab button").button({
                 disabled: true
             });
+            $("#report_go").on("click", function (e) {
+                var butEl = $(this),
+                    oldText = butEl.button("option", "label");
+
+                butEl.button("option", "label", "Generating the report...");
+
+                self.buildSummaryReport(function (blob) {
+                    butEl.button("option", "label", oldText);
+                    jT.ui.activateDownload(null, blob, "Report-" + (new Date().toISOString().replace(":", "_"))+ ".xlsx", true);
+                });
+            });
 
             $("#export_tab form").on("submit", function (e) {
                 var form = this,
@@ -547,7 +559,16 @@
                     exFormat = self.exportFormats[$('.data_formats .selected').data('index')],
                     exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
                     server = exType.server || exFormat.server,
-                    selectedIds = null;
+                    selectedIds = null,
+                    formAmbitUrl = function () { 
+                        form.search.value = selectedIds.join(" ");
+                        form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
+                    },
+                    Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
+                        exportDefinition: exType,
+                        idField: exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs',
+                        useJson: true
+                    });
 
                 if (form.export_dataset.value != "filtered") {
                     selectedIds = [];
@@ -557,43 +578,31 @@
                     });
                 }
 
-                var Exporter = new jT.Exporting({
-                    exportDefinition: exType,
-                    idField: exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs',
-                    selectedIds: selectedIds,
-                    useJson: true
-                });
-                
                 Exporter.init(self.manager);
 
                 // Now we have all the filtering parameters in the `params`.
                 if (server == 'ambitUrl') {
                     // If we already have the selected Ids - we don't even need to bother calling Solr.
-                    if (!!selectedIds) {
-                        form.search.value = selectedIds.join(" ");
-                        form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
-                    } else {
-                        $.ajax({
-                            url: Exporter.prepareExport(self.serverUrl, ['wt=json', 'fl=s_uuid_hs']),
-                            async: false,
-                            dataType: "json",
-                            success: function (data) {
-                                var ids = [];
-                                $.each(data.response.docs, function (index, value) {
-                                    ids.push(value.s_uuid_hs);
-                                });
+                    if (!!selectedIds)
+                        formAmbitUrl();
+                    else $.ajax({
+                        url: Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl),
+                        async: false,
+                        dataType: "json",
+                        success: function (data) {
+                            var ids = [];
+                            $.each(data.response.docs, function (index, value) {
+                                ids.push(value.s_uuid_hs);
+                            });
 
-                                form.search.value = ids.join(" ");
-                                form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
-                            }
-                        });
-                    }
+                            formAmbitUrl();
+                        }
+                    });
                 } else {
                     // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
-                    form.action = Exporter.prepareExport(self[server], self.exportSolrDefaults.concat([
-                        'rows=' + self.exportMaxRows,
-                        mime == "tsv" ? ["wt=json", "json2tsv=true"] : 'wt=' + mime
-                    ]));
+                    form.action = Exporter.prepareExport(self.exportSolrDefaults.concat([
+                        mime == "tsv" ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true }] : { name: 'wt', value: mime }
+                    ]), selectedIds).getAjax(self[server]);
                 }
 
                 return true;
@@ -684,16 +693,146 @@
             }
         },
 
-        buildXlsxReport: function(buttonEl, downloadName) {
-            XlsxPopulate.fromDataAsync(data).then(function (workbook) {
+        buildSummaryReport: function(callback) {
+            var Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
+                    exportDefinition: this.reportDefinition,
+                    useJson: true
+                }), 
+                endpointMap = [],
+                getValues = function (studyArr) {
+                    if (!studyArr)
+                        return ["", "", "", ""];
                 
-                workbook.populateData(jsonData);
-        
-                workbook.outputAsync().then(function (blob) {
-                    jT.ui.activateDownload(buttonEl, blob, downloadName, "Download summary report", true);
-                })
+                    var vals = [[], [], [], []], v;
+                    _.each(studyArr, function (study) {
+                        vals[0].push(study["E.method_s"] || "");
+                        vals[3].push(mainLookupMap[study.reference_owner_s] || study.reference_owner_s);
+                        
+                        if ((v = _.trim(buildValue(study)))) 
+                            vals[1].push(v);
+                        
+                        if ((v = _.trim(buildError(study))))
+                            vals[2].push(v);
+                    });
+                    
+                    return _.map(vals, function (one) { return _.uniq(one).join(", "); });
+                }, 
+                getEndpoints = function(childDocs) {
+                    var res = new Array(endpointMap.length);
+                    _.fill(res, null);
+                    _.each(childDocs, function (doc) {
+                        if (doc.type_s !== "study")
+                            return;
+                
+                        var mapId = (doc.endpointcategory_s || "") + ":" + (doc.guidance_s || "") + ":" + (doc.effectendpoint_s || ""),
+                            rowIdx = endpointMap.indexOf(mapId);
+                
+                        (res[rowIdx] = (res[rowIdx] || [])).push(doc);
+                    });
+                
+                    return res;
+                },
+                buildSubstanceIds = function (substance) {
+                    var idMap = {};
+                
+                    _.each(substance._childDocuments_, function (doc) {
+                        if (doc.type_s !== "composition")
+                            return;
+                
+                        (idMap[doc.component_s] = (idMap[doc.component_s] || [])).push(doc.CASRN_s);
+                    });
+                
+                    var allKeys = _.keys(idMap);
+                    return [
+                        allKeys.join("\n"),
+                        _.map(idMap, function (arr, type) { return (allKeys.length > 1 ? type + ": " : "") + arr.join(","); }).join("\n"),
+                        "", ""
+                    ];
+                },
+                buildValue = function (study) {
+                    var units = study.unit_s || "",
+                        resArr = [
+                            study.effectendpoint_type_s || "",
+                            study.textValue_s || ""
+                        ];
+                
+                    if (study.loValue_d != null && study.upValue_d != null)
+                        resArr.push(
+                            (study.loQualifier_s == ">=" ? "[" : "(") +
+                            jT.ui.nicifyNumber(study.loValue_d) + units + " : " + jT.ui.nicifyNumber(study.upValue_d) + units +
+                            (study.upQualifier_s == "<=" ? "]" : ")"));
+                    else if (study.loValue_d != null)
+                        resArr.push(study.loQualifier_s || "", jT.ui.nicifyNumber(study.loValue_d), units);
+                    else
+                        resArr.push(study.upQualifier_s || "", jT.ui.nicifyNumber(study.upValue_d), units);
+                
+                    return _.compact(resArr).join(" ");
+                },
+                buildEndpointMap = function (facet) {
+                    var handleMissing = function (facet) {
+                            if (facet.missing != null && facet.missing.count > 0) {
+                                facet.missing.val = "";
+                                facet.buckets.unshift(facet.missing);
+                            }
+                            return facet.buckets;
+                        },
+                        facetNames = ["endpointcategory", "guidance", "effectendpoint"],
+                        iterateFacet = function (facet, names) {
+                            if (names.length >= facetNames.length) {
+                                endpointMap.push(names.join(":"));
+                                return;
+                            }
+                
+                            var idx = names.length,
+                                buckets = handleMissing(facet[facetNames[idx]]);
+                
+                            for (var i = 0;i < buckets.length; ++i)
+                                iterateFacet(buckets[i], names.concat([buckets[i].val]));
+                        };
+                    
+                    iterateFacet(facet, []);
+                },
+                buildError = function (study) { return (study.errQualifier_s || "") + " " + (jT.ui.nicifyNumber(study.err_d, 3) || "") };
+
+
+            Exporter.init(this.manager);
+
+            Promise.all([
+                jT.ui.promiseXHR({
+                    url: this.reportDefinition.template,
+                    settings: { responseType: "arraybuffer" }
+                }),
+                $.ajax(Exporter.prepareExport().getAjax(this.solrUrl))
+            ]).then(function (results) {
+                var wbData = results[0],
+                    queryData = results[1];
+
+                buildEndpointMap(queryData.facets);
+
+                XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
+                    new XlsxDataPopulate({
+                        callbacksMap: { 
+                            lookup: function (val) { return mainLookupMap[val] || val; },
+                            substanceProps: function () { 
+                                return [ "Method", "Value", "Std. Dev", "Data source"]},
+                            substanceIds: buildSubstanceIds,
+                            getEndpoints: getEndpoints,
+                            getValues: getValues,
+                            toxicColor: function (data) { 
+                                return { 
+                                    high: "CC0000",
+                                    medium: "00CCCC",
+                                    low: "00CC00" 
+                                }[data] || (data !== undefined ? "CCCCCC" : data)
+                            } 
+                        }
+                    }).processData(workbook, queryData);
+
+                    workbook.outputAsync().then(callback)
+                });
+            }, function (error) {
+                console.log("Report generation failed: " + error);
             });
-        
         }
     };
 

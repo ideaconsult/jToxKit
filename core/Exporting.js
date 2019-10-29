@@ -11,31 +11,26 @@
 };
 
 Exporting.prototype = {
-    useJson: null,     // whether we're in JSON mode or URL string one. Defaults to manager's one.
+    __expects: [ "addParameter", "prepareQuery" ],
+    useJson: false,     // whether we're in JSON mode or URL string one. Defaults to manager's one.
     servlet: null,      // the servlet to be used. Defaults to manager's one.
     exportDefinition: { // Definition of additional parameters
         extraParams: [],
         defaultFilter: null,
-        fields: "",
         domain: "",
         fieldsRegExp: null
     },
     idField: 'id',  // The field to be considered ID when provided with id list.
-    selectedIds: null, // The list of ids to be searched for.
 
     init: function (manager) {
         a$.pass(this, Exporting, "init", manager);
 
         this.manager = manager;
         this.servlet = this.servlet || manager.servlet || "select";
-
-        if (this.useJson === null)
-            this.useJson = manager.useJson;
-        
         this.fqName = this.useJson ? "json.filter" : "fq";
     },
 
-    makeParameter: function (par, name) {
+    transformParameter: function (par, name) {
         var np = {
             value: par.value,
             name: name || par.name
@@ -52,46 +47,56 @@ Exporting.prototype = {
         return np;
     },
 
-    prepareFilters: function () {
-        var params = [],
+    prepareFilters: function (selectedIds) {
+        var innerParams = [],
             fqPar = this.manager.getParameter(this.fqName);
-        
-        this.innerParams = [];
 
         for (var i = 0, vl = fqPar.length; i < vl; i++) {
             var par = fqPar[i];
 
-            params.push(Solr.stringifyParameter(this.makeParameter(par, 'fq')));
-            this.innerParams.push(Solr.stringifyValue(par).replace(/"|\\/g, "\\$&"));
+            this.addParameter(this.transformParameter(par, this.fqName));
+            innerParams.push(Solr.stringifyValue(par).replace(/"|\\/g, "\\$&"));
         }
 
-        params.push(Solr.stringifyParameter(this.makeParameter(this.manager.getParameter('q'))) || '*:*');
-        return params;
+        this.addParameter(this.transformParameter(this.manager.getParameter('q')));
+
+        if (!!selectedIds)
+            this.addParameter(this.fqName, this.idField + ":(" + selectedIds.join(" ") + ")");
+
+        return innerParams;
     },
     
-    prepareExport: function(server, auxParams) {
-        var params = this.prepareFilters().concat(auxParams, this.exportDefinition.extraParams || []),
-            inFilter = this.innerParams.length > 1 
-                ? '(' + this.innerParams.join(' AND ') + ')' 
-                : this.innerParams.length > 0 
-                    ? this.innerParams[0] 
+    prepareExport: function(auxParams, selectedIds) {
+        var innerParams = this.prepareFilters(selectedIds),
+            inFilter = innerParams.length > 1 
+                ? '(' + innerParams.join(' AND ') + ')' 
+                : innerParams.length > 0 
+                    ? innerParams[0] 
                     : this.exportDefinition.defaultFilter;
+            
+        auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
+        for (var i = 0, pl = auxParams.length; i < pl; ++i) {
+            var np = this.transformParameter(auxParams[i]);
+            
+            if (typeof np.value === 'string')
+                np.value = np.value.replace("{{filter}}", inFilter);
 
-        if (!!this.selectedIds)
-            params.push('fq=' + encodeURIComponent(this.idField + ":(" + this.selectedIds.join(" ") + ")"));
+            this.addParameter(np);
+        }
 
-        // Fill the rest of the Solr parameters for the real Solr call.
-        if (!!this.exportDefinition.extraParams)
-            Array.prototype.push.apply(params, this.exportDefinition.extraParams);
-
-        params.push('fl=' + encodeURIComponent(this.exportDefinition.fields.replace("{{filter}}", inFilter)));
-
-        return this.exportURL = (server + this.servlet + "?" + params.join('&'));
+        return this; // For chaining.
     },
 
-    doRequest: function (callback) {
-        // TODO: ...
-        this.manager.doRequest(callback);
+    getAjax: function (serverUrl, ajaxSettings) {
+        var urlPrefix = serverUrl + this.servlet,
+            settings = a$.extend({}, this.manager.ajaxSettings, ajaxSettings, this.prepareQuery());
+
+        if (urlPrefix.indexOf('?') > 0 && settings.url && settings.url.startsWith('?'))
+            settings.url = '&' + settings.url.substr(1);
+        
+        settings.url =  urlPrefix + (settings.url || "");
+    
+        return settings;
     }
 };
 

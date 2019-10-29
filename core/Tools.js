@@ -37,6 +37,21 @@ jT.ui = {
       prec = parseInt(1.0 / prec);
     return Math.round(num * prec) / prec;
   },
+
+  nicifyNumber: function (num, prec) {
+    if (num == null)
+      return "";
+  
+    var maxPrec = Math.pow(10, prec || 9),
+      rounded, prec;
+    for (prec = 10; prec < maxPrec; prec *= 10) {
+      rounded = Math.round(num * prec);
+      if (Math.abs(rounded - num * prec) < .1)
+        break;
+    }
+    
+    return parseInt(rounded) / prec;
+  },
   
 	formatUnits: function (str) {
 		// change the exponential
@@ -125,22 +140,62 @@ jT.ui = {
     return str.replace(/[&<>"']/g, function(m) { return map[m]; });
   },
 
-	activateDownload: function(aEl, blob, destName, title, autoRemove) {
-		var url = URL.createObjectURL(blob);
-	
-		aEl.style.visibility = "visible";
-		aEl.href = url;
-    aEl.download = destName;
-    aEl.innerHTML = title;
+	activateDownload: function (aEl, blob, destName, autoRemove) {
+    var url = URL.createObjectURL(blob),
+      selfClick = false;
+    
+    if (!aEl) {
+      aEl = document.createElement('a');
+      selfClick = autoRemove = true;
+    }
+    else
+      aEl.style.visibility = "visible";
 
-    if (autoRemove === true)
-      aEl.addEventListener('click', function () {
-        setTimeout(function () {
-          aEl.parentNode.removeChild(aEl);
-          window.URL.revokeObjectURL(url);
-        }, 0);
-      });	
+	  aEl.href = url;
+	  aEl.download = destName;
+
+	  if (autoRemove === true)
+	    aEl.addEventListener('click', function () {
+	      setTimeout(function () {
+          if (aEl.parentElement)
+	          aEl.parentElement.removeChild(aEl);
+	        window.URL.revokeObjectURL(url);
+	      }, 0);
+      });
+      
+    if (selfClick)
+      aEl.click();  
 	},
+  
+  promiseXHR: function (ajax) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      
+      xhr.open(ajax.method || "GET", ajax.url, true);
+      if (ajax.headers) {
+        Object.keys(ajax.headers).forEach(function (key) {
+          xhr.setRequestHeader(key, ajax.headers[key]);
+        });
+      }
+
+      Object.keys(ajax.settings).forEach(function (key) {
+        xhr[key] = ajax.settings[key];
+      });
+      
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) 
+          return;
+
+        // Process the response
+        if ((xhr.status == 0 && !!xhr.response) || (xhr.status >= 200 && xhr.status < 300))
+          resolve(xhr.response, xhr.statusText, xhr);
+        else
+          reject(xhr, xhr.statusText, xhr.responseText);
+      };
+
+      xhr.send(ajax.body || ajax.data);
+    });
+  },
 
 	blobFromBase64: function (data64, mimeType) {
 		return new Blob([data64], { type: mimeType });
