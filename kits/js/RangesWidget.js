@@ -40,6 +40,7 @@
     this.lookupMap = settings.lookupMap || {};
     this.pivotMap = null;
     this.rangeWidgets = [];
+    this.rangeCapable = {};
     if (!Array.isArray(this.titleSkips))
       this.titleSkips = [ this.titleSkips ];
   };
@@ -128,6 +129,8 @@
                 'val': info.val,
                 'count': info.count
               });
+
+              self.rangeCapable[self.parseValue(valId).id] = true;
             }
             // ... or just traverse and go deeper.
             else {
@@ -234,9 +237,10 @@
     },
     
     auxHandler: function (value) {
-      var self = this;
+      var self = this,
+        p = this.parseValue(value);
       
-      return function (event) {
+      return !this.rangeCapable[p.id] ? undefined : function (event) {
         event.stopPropagation();
 
         self.rangeRemove();

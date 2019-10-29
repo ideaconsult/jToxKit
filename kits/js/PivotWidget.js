@@ -122,7 +122,7 @@
         color: this.faceters[p.id].color,
         count: "i",
         onMain: this.unclickHandler(value),
-        onAux: this.getFaceterEntry(0).id !== p.id ? this.auxHandler(value) : null
+        onAux: this.auxHandler(value)
       };
     },
     
