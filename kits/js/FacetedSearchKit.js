@@ -404,7 +404,7 @@
                 nesting: "type_s:substance",
                 domain: {
                     type: "parent",
-                    "which": "type_s:substance"
+                    which: "type_s:substance"
                 }
             }));
 

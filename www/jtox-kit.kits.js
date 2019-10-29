@@ -43,17 +43,17 @@ CurrentSearchWidgeting.prototype = {
     // now scan all the filter parameters for set values
     for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
 	    var f = fq[i],
-	        vals = null;
+          vals = null,
+          w;
 	    
       for (var wid in self.facetWidgets) {
-  	    var w = self.manager.getListener(wid),
-  	        vals = w.fqParse(f);
-  	        if (!!vals)
-  	          break;
+  	    w = self.manager.getListener(wid);
+        vals = w.fqParse(f);
+  	    if (!!vals)
+  	      break;
   	  }
   	  
-  	  if (vals == null)
-  	    continue;
+  	  if (vals == null) continue;
   	    
   	  if (!Array.isArray(vals))
   	    vals = [ vals ];
@@ -501,7 +501,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 nesting: "type_s:substance",
                 domain: {
                     type: "parent",
-                    "which": "type_s:substance"
+                    which: "type_s:substance"
                 }
             }));
 
@@ -1248,7 +1248,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         color: this.faceters[p.id].color,
         count: "i",
         onMain: this.unclickHandler(value),
-        onAux: this.auxHandler(value)
+        onAux: this.getFaceterEntry(0).id !== p.id ? this.auxHandler(value) : null
       };
     },
     
