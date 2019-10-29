@@ -12,7 +12,8 @@
 
 Exporting.prototype = {
     __expects: [ "addParameter", "prepareQuery" ],
-    useJson: false,     // whether we're in JSON mode or URL string one. Defaults to manager's one.
+    useJson: false,     // whether we're in JSON mode or URL string one.
+    expectJson: false,  // what is the provided manager's mode.
     servlet: null,      // the servlet to be used. Defaults to manager's one.
     exportDefinition: { // Definition of additional parameters
         extraParams: [],
@@ -49,7 +50,7 @@ Exporting.prototype = {
 
     prepareFilters: function (selectedIds) {
         var innerParams = [],
-            fqPar = this.manager.getParameter(this.fqName);
+            fqPar = this.manager.getParameter(this.expectJson ? "json.filter" : "fq");
 
         for (var i = 0, vl = fqPar.length; i < vl; i++) {
             var par = fqPar[i];

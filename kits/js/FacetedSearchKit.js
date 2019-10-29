@@ -567,7 +567,8 @@
                     Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
                         exportDefinition: exType,
                         idField: exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs',
-                        useJson: true
+                        useJson: false,
+                        expectJson: true
                     });
 
                 if (form.export_dataset.value != "filtered") {
@@ -585,8 +586,7 @@
                     // If we already have the selected Ids - we don't even need to bother calling Solr.
                     if (!!selectedIds)
                         formAmbitUrl();
-                    else $.ajax({
-                        url: Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl),
+                    else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
                         async: false,
                         dataType: "json",
                         success: function (data) {
@@ -597,12 +597,12 @@
 
                             formAmbitUrl();
                         }
-                    });
+                    }));
                 } else {
                     // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
                     form.action = Exporter.prepareExport(self.exportSolrDefaults.concat([
                         mime == "tsv" ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true }] : { name: 'wt', value: mime }
-                    ]), selectedIds).getAjax(self[server]);
+                    ]), selectedIds).getAjax(self[server]).url;
                 }
 
                 return true;
@@ -696,7 +696,8 @@
         buildSummaryReport: function(callback) {
             var Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
                     exportDefinition: this.reportDefinition,
-                    useJson: true
+                    useJson: true,
+                    expectJson: true
                 }), 
                 endpointMap = [],
                 getValues = function (studyArr) {
