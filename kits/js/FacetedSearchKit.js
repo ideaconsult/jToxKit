@@ -601,9 +601,11 @@
                     }));
                 } else {
                     // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
-                    form.action = Exporter.prepareExport(self.exportSolrDefaults.concat([
-                        mime == "tsv" ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true }] : { name: 'wt', value: mime }
-                    ]), selectedIds).getAjax(self[server]).url;
+                    form.action = Exporter.prepareExport(self.exportSolrDefaults.concat(
+                        mime == "tsv" || mime == "csv" 
+                            ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true }] 
+                            : [ { name: 'wt', value: mime } ]
+                    ), selectedIds).getAjax(self[server]).url;
                 }
 
                 return true;
