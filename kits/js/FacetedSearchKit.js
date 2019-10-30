@@ -493,7 +493,7 @@
 
             this.queries = new(a$(jT.ListWidget))({
                 id: 'queries',
-                target: $('#saved-queries')
+                target: $('#predefined-queries')
             });
             
             this.queries.renderItem = function (query) {

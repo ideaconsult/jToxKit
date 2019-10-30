@@ -590,7 +590,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
             this.queries = new(a$(jT.ListWidget))({
                 id: 'queries',
-                target: $('#saved-queries')
+                target: $('#predefined-queries')
             });
             
             this.queries.renderItem = function (query) {
@@ -1893,7 +1893,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<ul>" +
 "<li><a href=\"#hits_tab\">Hits list</a></li>" +
 "<li><a href=\"#basket_tab\">Selection</a></li>" +
-"<li><a href=\"#queries_tab\">Saved Queries</a></li>" +
+"<li><a href=\"#queries_tab\">Predefined Queries</a></li>" +
 "<li class=\"jtox-ds-export\"><a href=\"#export_tab\">Export</a></li>" +
 "</ul>" +
 "<div id=\"hits_tab\">" +
@@ -1919,7 +1919,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<div style=\"padding-top: 70px;\"></div>" +
 "</div>" +
 "<div id=\"queries_tab\">" +
-"<section id=\"saved-queries\" class=\"item-list\"></section>" +
+"<section id=\"predefined-queries\" class=\"item-list\"></section>" +
 "<div style=\"padding-top: 70px;\"></div>" +
 "</div>" +
 "<div id=\"export_tab\">" +
