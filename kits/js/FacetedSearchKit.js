@@ -546,9 +546,10 @@
 
                 butEl.button("option", "label", "Generating the report...");
 
-                self.buildSummaryReport(function (blob) {
-                    butEl.button("option", "label", oldText);
-                    jT.ui.activateDownload(null, blob, "Report-" + (new Date().toISOString().replace(":", "_"))+ ".xlsx", true);
+                self.buildSummaryReport(function (blob, error) {
+                    butEl.button("option", "label", blob ? oldText : error || oldText);
+                    if (blob)
+                        jT.ui.activateDownload(null, blob, "Report-" + (new Date().toISOString().replace(":", "_"))+ ".xlsx", true);
                 });
             });
 
@@ -793,8 +794,11 @@
                     
                     iterateFacet(facet, []);
                 },
-                buildError = function (study) { return (study.errQualifier_s || "") + " " + (jT.ui.nicifyNumber(study.err_d, 3) || "") };
-
+                buildError = function (study) { return (study.errQualifier_s || "") + " " + (jT.ui.nicifyNumber(study.err_d, 3) || "") },
+                errFn = function (err) {
+                    console.log(JSON.stringify(err).substr(0, 256));
+                    callback(null, typeof err === "string" ? err : "Error occurred!"); 
+                };
 
             Exporter.init(this.manager);
 
@@ -829,11 +833,9 @@
                         }
                     }).processData(workbook, queryData);
 
-                    workbook.outputAsync().then(callback)
-                });
-            }, function (error) {
-                console.log("Report generation failed: " + error);
-            });
+                    workbook.outputAsync().then(callback, errFn)
+                }, errFn);
+            }, errFn);
         }
     };
 
