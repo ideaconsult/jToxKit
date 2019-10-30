@@ -729,7 +729,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             .prop("disabled", !hasFilter)
                             .toggleClass("disabled", !hasFilter);
 
-                        $('.data_formats .jtox-ds-download a').first().trigger("click");
+                            $('.data_formats .jtox-ds-download a').first().trigger("click");
+                            $('.data_formats .jtox-ds-download a').first().trigger("click");
 
                         $("#export_dataset").buttonset("refresh");
                     }
@@ -771,26 +772,30 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
         prepareTypes: function () {
             var exportEl = $("#export_tab div#export_type"),
-                self = this;
+                self = this,
+                updateTypes = function (idx) {
+                    $('.data_formats a').addClass('disabled');
+
+                    self.exportTypes[idx].formats.split(",").forEach(function (item) {
+                        $('.data_formats a[data-name=' + item + ']').removeClass('disabled')
+                    });
+
+                    $('.data_formats a:visible').not('.disabled').first().trigger('click');
+                };
 
             for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
                 this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
                 var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
                 el.data("index", i);
                 exportEl.append(el);
-
-                $("input[name=export_type]").on("change", function (e) {
-                    var me = $(this);
-                    $('.data_formats a').addClass('disabled');
-
-                    self.exportTypes[me.data("index")].formats.split(",").forEach(function (item) {
-                        $('.data_formats a[data-name=' + item + ']').removeClass('disabled')
-                    });
-
-                    $('.data_formats a:visible').not('.disabled').first().trigger('click');
-                    return false;
-                });
             }
+            
+            $("input[name=export_type]").on("change", function (e) {  
+                updateTypes($(this).data("index")); 
+                return false; 
+            });
+            
+            updateTypes(0);
         },
 
         buildSummaryReport: function(callback) {
