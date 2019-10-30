@@ -560,25 +560,16 @@
                     exFormat = self.exportFormats[$('.data_formats .selected').data('index')],
                     exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
                     server = exType.server || exFormat.server,
-                    selectedIds = null,
+                    selectedIds = self.getSelectedIds(form),
                     formAmbitUrl = function () { 
                         form.search.value = selectedIds.join(" ");
                         form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                     },
                     Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
                         exportDefinition: exType,
-                        idField: exType.exportLevel == "study" ? 's_uuid_s' : 's_uuid_hs',
                         useJson: false,
                         expectJson: true
                     });
-
-                if (form.export_dataset.value != "filtered") {
-                    selectedIds = [];
-
-                    self.basket.enumerateItems(function (d) {
-                        selectedIds.push(d.s_uuid);
-                    });
-                }
 
                 Exporter.init(self.manager);
 
@@ -602,8 +593,8 @@
                 } else {
                     // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
                     form.action = Exporter.prepareExport(self.exportSolrDefaults.concat(
-                        mime == "tsv" || mime == "csv" 
-                            ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true }] 
+                        mime == "tsv"
+                            ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true } ]
                             : [ { name: 'wt', value: mime } ]
                     ), selectedIds).getAjax(self[server]).url;
                 }
@@ -639,6 +630,22 @@
                     }
                 }
             });
+        },
+
+        getSelectedIds: function (form) {
+            var selectedIds = null;
+
+            if (!form)
+                form = $("#export_tab form")[0];
+
+            if (form.export_dataset.value != "filtered") {
+                selectedIds = [];
+
+                this.basket.enumerateItems(function (d) {
+                    selectedIds.push(d.s_uuid);
+                });
+            }
+            return selectedIds;
         },
 
         prepareFormats: function () {
@@ -697,7 +704,7 @@
                 updateTypes($(this).data("index")); 
                 return false; 
             });
-            
+
             updateTypes(0);
         },
 
@@ -708,6 +715,7 @@
                     expectJson: true
                 }), 
                 endpointMap = [],
+                selectedIds = this.getSelectedIds(),
                 getValues = function (studyArr) {
                     if (!studyArr)
                         return ["", "", "", ""];
@@ -779,6 +787,9 @@
                 },
                 buildEndpointMap = function (facet) {
                     var handleMissing = function (facet) {
+                            if (!facet)
+                                return [];
+
                             if (facet.missing != null && facet.missing.count > 0) {
                                 facet.missing.val = "";
                                 facet.buckets.unshift(facet.missing);
@@ -804,7 +815,7 @@
                 buildError = function (study) { return (study.errQualifier_s || "") + " " + (jT.ui.nicifyNumber(study.err_d, 3) || "") },
                 errFn = function (err) {
                     console.log(JSON.stringify(err).substr(0, 256));
-                    callback(null, typeof err === "string" ? err : "Error occurred!"); 
+                    callback(null, typeof err === "string" ? "Err: " + err : "Error occurred!"); 
                 };
 
             Exporter.init(this.manager);
@@ -814,7 +825,7 @@
                     url: this.reportDefinition.template,
                     settings: { responseType: "arraybuffer" }
                 }),
-                $.ajax(Exporter.prepareExport().getAjax(this.solrUrl))
+                $.ajax(Exporter.prepareExport(null, selectedIds).getAjax(this.solrUrl))
             ]).then(function (results) {
                 var wbData = results[0],
                     queryData = results[1];
@@ -822,25 +833,29 @@
                 buildEndpointMap(queryData.facets);
 
                 XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
-                    new XlsxDataPopulate({
-                        callbacksMap: { 
-                            lookup: function (val) { return mainLookupMap[val] || val; },
-                            substanceProps: function () { 
-                                return [ "Method", "Value", "Std. Dev", "Data source"]},
-                            substanceIds: buildSubstanceIds,
-                            getEndpoints: getEndpoints,
-                            getValues: getValues,
-                            toxicColor: function (data) { 
-                                return { 
-                                    high: "CC0000",
-                                    medium: "00CCCC",
-                                    low: "00CC00" 
-                                }[data] || (data !== undefined ? "CCCCCC" : data)
-                            } 
-                        }
-                    }).processData(workbook, queryData);
+                    try {
+                        new XlsxDataPopulate({
+                            callbacksMap: { 
+                                lookup: function (val) { return mainLookupMap[val] || val; },
+                                substanceProps: function () { 
+                                    return [ "Method", "Value", "Std. Dev", "Data source"]},
+                                substanceIds: buildSubstanceIds,
+                                getEndpoints: getEndpoints,
+                                getValues: getValues,
+                                toxicColor: function (data) { 
+                                    return { 
+                                        high: "CC0000",
+                                        medium: "00CCCC",
+                                        low: "00CC00" 
+                                    }[data] || (data !== undefined ? "CCCCCC" : data)
+                                } 
+                            }
+                        }).processData(workbook, queryData);
 
-                    workbook.outputAsync().then(callback, errFn)
+                        workbook.outputAsync().then(callback, errFn)
+                    } catch (e) {
+                        errFn(e.message);
+                    }
                 }, errFn);
             }, errFn);
         }

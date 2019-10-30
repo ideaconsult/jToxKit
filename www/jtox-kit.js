@@ -653,9 +653,9 @@ Exporting.prototype = {
         extraParams: [],
         defaultFilter: null,
         domain: "",
-        fieldsRegExp: null
+        fieldsRegExp: null,
+        idField: 'id',  // The field to be considered ID when provided with id list.
     },
-    idField: 'id',  // The field to be considered ID when provided with id list.
 
     init: function (manager) {
         a$.pass(this, Exporting, "init", manager);
@@ -696,7 +696,7 @@ Exporting.prototype = {
         this.addParameter(this.transformParameter(this.manager.getParameter('q')));
 
         if (!!selectedIds)
-            this.addParameter(this.fqName, this.idField + ":(" + selectedIds.join(" ") + ")");
+            this.addParameter(this.fqName, this.exportDefinition.idField + ":(" + selectedIds.join(" ") + ")");
 
         return innerParams;
     },
