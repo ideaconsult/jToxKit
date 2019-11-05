@@ -19,12 +19,11 @@
   <link rel="stylesheet" href="../libs/jquery-ui.min.css">
   <link rel="stylesheet" href="../libs/jquery.range.css" type="text/css">
   
-  
   <title>[jTox] Faceted Search Kit dev-page</title>
 </head>
 
 <body>
-<div id="search-ui" class="jtox-kit" data-kit="FacetedSearch" data-configuration="Settings" data-solr-url="https://sandbox.ideaconsult.net/solr/enanondm_shard1_replica1/" data-base-url="https://data.enanomapper.net/substance/"/>
+<div id="search-ui" class="jtox-kit" data-kit="FacetedSearch" data-solr-url="http://127.0.0.1:8983/solr/nanoreg1/" data-base-url="http://localhost:8080/ambit2/"/>
 
 <div class="jtox-template">
 <!--[[ jToxKit.ui.templates['faceted-search-kit'] -->
@@ -72,7 +71,7 @@
           <h6>Select dataset to export</h6>
       		<div id="export_dataset">
             <input type="radio" value="filtered" name="export_dataset" id="filtered_data" checked="checked"/>
-            <label for="filtered_data">Filtered entries</label>
+            <label for="filtered_data">Matched hits</label>
             <input type="radio" value="selected" name="export_dataset" id="selected_data"/>
             <label for="selected_data">Selected entries</label>
           </div>

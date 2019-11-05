@@ -11,7 +11,7 @@ var
   mainLookupMap = {},
   uiConfiguration = {},
 	defaultSettings = {
-		servlet: "autophrase",
+		servlet: "select",
 		multipleSelection: true,
 		keepAllFacets: true,
 		connector: $,
@@ -254,17 +254,16 @@ jT.ui.FacetedSearch.prototype = {
   	  grid: [10, 10],
   	  handles: "e",
   	  start: function(e, ui) {
-  		resSize = { width: resDiv.width(), height: resDiv.height() };
+  			resSize = { width: resDiv.width(), height: resDiv.height() };
   	  },
   	  resize: function(e, ui) {
-  		self.accordion.accordion( "refresh" );
-  		$('#query-sticky-wrapper').width( self.accordion.width());
-  		$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
-  		resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
+				self.accordion.accordion( "refresh" );
+				$('#query-sticky-wrapper').width( self.accordion.width());
+				$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
   	  }
   	});
   	
-  	$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
+		$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
   },
   
   /** The actual widget and communication initialization routine!

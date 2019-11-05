@@ -31,7 +31,7 @@ jT.AutocompleteWidget = function (settings) {
 jT.AutocompleteWidget.prototype = {
   __expects: [ "addValue", "doSpying" ],
 
-  servlet: "autophrase",      // what phrase to use on the internal queries
+  servlet: "select",          // what phrase to use on the internal queries
   urlFeed: null,              // which URL parameter to use for initial setup
   useJson: false,             // Whether to use JSON-style parameter setup
   maxResults: 30,             // maximum results in the Autocomplete box

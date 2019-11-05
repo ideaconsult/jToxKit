@@ -108,7 +108,7 @@ var
   mainLookupMap = {},
   uiConfiguration = {},
 	defaultSettings = {
-		servlet: "autophrase",
+		servlet: "select",
 		multipleSelection: true,
 		keepAllFacets: true,
 		connector: $,
@@ -351,17 +351,16 @@ jT.ui.FacetedSearch.prototype = {
   	  grid: [10, 10],
   	  handles: "e",
   	  start: function(e, ui) {
-  		resSize = { width: resDiv.width(), height: resDiv.height() };
+  			resSize = { width: resDiv.width(), height: resDiv.height() };
   	  },
   	  resize: function(e, ui) {
-  		self.accordion.accordion( "refresh" );
-  		$('#query-sticky-wrapper').width( self.accordion.width());
-  		$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
-  		resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
+				self.accordion.accordion( "refresh" );
+				$('#query-sticky-wrapper').width( self.accordion.width());
+				$(this).width(function(i, w) { return w - 7; }); // minus the total padding of parent elements
   	  }
   	});
   	
-  	$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
+		$(".query-left#query").sticky({topSpacing: this.topSpacing, widthFromWrapper:false });
   },
   
   /** The actual widget and communication initialization routine!
@@ -1701,7 +1700,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<h6>Select dataset to export</h6>" +
 "<div id=\"export_dataset\">" +
 "<input type=\"radio\" value=\"filtered\" name=\"export_dataset\" id=\"filtered_data\" checked=\"checked\"/>" +
-"<label for=\"filtered_data\">Filtered entries</label>" +
+"<label for=\"filtered_data\">Matched hits</label>" +
 "<input type=\"radio\" value=\"selected\" name=\"export_dataset\" id=\"selected_data\"/>" +
 "<label for=\"selected_data\">Selected entries</label>" +
 "</div>" +
