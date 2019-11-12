@@ -1374,13 +1374,12 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     this.lookupMap = settings.lookupMap || {};
     this.pivotMap = null;
     this.rangeWidgets = [];
-    this.rangeCapable = {};
     if (!Array.isArray(this.titleSkips))
       this.titleSkips = [ this.titleSkips ];
   };
   
   jT.RangeWidgeting.prototype = {
-    __expects: [ "getPivotEntry", "getPivotCounts" ],
+    __expects: [ "getPivotEntry", "getPivotCounts", "parseValue" ],
     field: null,
     titleSkips: null,
     
@@ -1414,57 +1413,55 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
       else if (!this.updateRequest)
         this.rangeRemove();
       else if (this.rangeWidgets.length > 0) {
-        var pivotMap = this.buildPivotMap(pivot), w, ref;
+        var pivotMap = this.buildPivotMap(pivot);
         
-        for (var i = 0, wl = this.rangeWidgets.length;i < wl; ++i) {
-          w = this.rangeWidgets[i];
-          ref = pivotMap[w.targetValue];
+        for (var i = 0;i < this.rangeWidgets.length; ++i) {
+          var w = this.rangeWidgets[i],
+            ref = pivotMap[w.targetValue];
           w.updateSlider([ ref[i].min, ref[i].max ]);
         }
       }
       
       this.updateRequest = false;
     },
+
+    getPivotFromId: function (pId) {
+      var pInfo = null;
+      for (var i = 0; (pInfo = this.getPivotEntry(i)).id != pId; ++i);
+      return pInfo;
+    },
     
     buildPivotMap: function (pivot) {
       var self = this,
-          map = {};
+          map = {},
           traverser = function (base, idx, pattern, valId) {
             var p = self.getPivotEntry(idx),
-                pid = p.id,
-                color = p.color,
-                info;
+                info, next;
             
             // Make the Id first
-            if (p.ranging && !p.disabled)
-              valId = pid + ":" + base.val;
+            if (!p.disabled)
+              valId = p.id + ":" + base.val;
               
             // Now deal with the pattern
             pattern += (!base.val ? ("-" + p.field + ":*") : (p.field + ":" + Solr.escapeValue(base.val))) + " ";
             info = base;
               
-            p = self.getPivotEntry(idx + 1);
-            if (p != null)
-              base = base[p.id].buckets;
+            next = self.getPivotEntry(idx + 1);
+            if (next != null)
+              base = base[next.id].buckets;
 
             // If we're at the bottom - add some entries...
-            if (p == null || !base.length) {
-              var arr = map[valId];
-              if (arr === undefined)
-                map[valId] = arr = [];
-              
-              arr.push({
-                'id': pid,
+            if (next == null || !base.length) {
+              (map[valId] = map[valId] || []).push({
+                'id': p.id,
                 'pattern': pattern,
-                'color': color,
+                'color': p.color,
                 'min': info.min,
                 'max': info.max,
                 'avg': info.avg,
                 'val': info.val,
                 'count': info.count
               });
-
-              self.rangeCapable[self.parseValue(valId).id] = true;
             }
             // ... or just traverse and go deeper.
             else {
@@ -1486,7 +1483,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         this.rangeWidgets[i].clearValues();
 
       this.rangeWidgets = [];
-      this.lastPivotMap = this.lastPivotValue = null;
+      this.lastPivotValue = null;
     },
     
     buildTitle: function (info, skip) {
@@ -1508,9 +1505,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
       return outs.join("/") + " <i>(" + info.count + ")</i>";
     },
     
-    ensurePivotMap: function (value) {
+    ensurePivotMap: function (cb) {
       if (this.pivotMap != null)
-        return true;
+        return cb(this.pivotMap);
         
       var fqName = this.useJson ? "json.filter" : "fq",
           self = this;
@@ -1524,8 +1521,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
           man.mergeParameters(defaultParameters);
         },
         function (data) {
-          self.pivotMap = self.buildPivotMap(self.getPivotCounts(data.facets));
-          self.openRangers(value);
+          cb(self.pivotMap = self.buildPivotMap(self.getPivotCounts(data.facets)));
         }
       );
       
@@ -1533,55 +1529,57 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     },
     
     openRangers: function (value) {
-      var entry = this.pivotMap[value],
-          pivotMap = this.lastPivotMap = this.buildPivotMap(this.getPivotCounts()),
-          current = pivotMap[value];
+      var allVals = this.pivotMap[value],
+          localMap = this.buildPivotMap(this.getPivotCounts()),
+          current = localMap[value];
       
       this.lastPivotValue = value;
       this.slidersTarget.empty().parent().addClass("active");
 
-      for (var i = 0, el = entry.length; i < el; ++i) {
-        var all = entry[i],
-            ref = current[i],
-            setup = {}, w,
-            el$ = jT.ui.fillTemplate("#slider-one");
+      for (var i = 0, rangeCnt = current.length; i < rangeCnt; ++i) {
+        var ref = current[i],
+            full = allVals.find(function (e) { return e.pattern === ref.pattern }) || ref,
+            el$ = jT.ui.fillTemplate("#slider-one"),
+            setup = {
+              id: ref.id,
+              targetValue: value,
+              color: full.color,
+              field: this.field,
+              limits: [ full.min, full.max ],
+              initial: [ ref.min, ref.max ],
+              target: el$,
+              isRange: true,
+              valuePattern: ref.pattern + "{{v}}",
+              automatic: true,
+              title: this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/),
+              units: ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "",
+              useJson: this.useJson,
+              domain: this.domain,
+              sliderRoot: this
+            };
 
         this.slidersTarget.append(el$);
+        setup.width = parseInt(this.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(rangeCnt, 2) + 0.1);
 
-        setup.id = all.id;
-        setup.targetValue = value;          
-        setup.color = all.color;
-        setup.field = this.field;
-        setup.limits = [ all.min, all.max ];
-        setup.initial = [ ref.min, ref.max ];
-        setup.target = el$;
-        setup.isRange = true;
-        setup.valuePattern = all.pattern + "{{v}}";
-        setup.automatic = true;
-        setup.width = parseInt(this.slidersTarget.width() - $("#sliders-controls").width() - 20) / (Math.min(el, 2) + 0.1);
-        setup.title = this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/);
-        setup.units = ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "";
-        setup.useJson = this.useJson;
-        setup.domain = this.domain;
-        setup.sliderRoot = this;
-          
-        this.rangeWidgets.push(w = new SingleRangeWidget(setup));
+        var w = new SingleRangeWidget(setup);
+        this.rangeWidgets.push(w);
         w.init(this.manager);
       }
     },
     
     auxHandler: function (value) {
       var self = this,
-        p = this.parseValue(value);
+        pInfo = this.getPivotFromId(this.parseValue(value).id) || {};
       
-      return !this.rangeCapable[p.id] ? undefined : function (event) {
+      return !pInfo.ranging ? undefined : function (event) {
         event.stopPropagation();
+        var prevValue = self.lastPivotValue;
 
         self.rangeRemove();
 
         // we've clicked out pivot button - clearing was enough.
-        if (value != self.lastPivotValue && self.ensurePivotMap(value))
-          self.openRangers(value);
+        if (value != prevValue)
+          self.ensurePivotMap(function () { self.openRangers(value); });
         
         return false;
       };
