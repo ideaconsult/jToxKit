@@ -379,7 +379,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     $(this).width(function (i, w) {
                         return w - 7;
                     }); // minus the total padding of parent elements
-                    resDiv.width(resSize.width + ui.originalSize.width - ui.size.width);
                 }
             });
 
