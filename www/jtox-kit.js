@@ -690,7 +690,7 @@ Exporting.prototype = {
             var par = fqPar[i];
 
             this.addParameter(this.transformParameter(par, this.fqName));
-            innerParams.push(Solr.stringifyValue(par).replace(/"|\\/g, "\\$&"));
+            innerParams.push(Solr.stringifyValue(par));
         }
 
         this.addParameter(this.transformParameter(this.manager.getParameter('q')));
@@ -707,14 +707,18 @@ Exporting.prototype = {
                 ? '(' + innerParams.join(' AND ') + ')' 
                 : innerParams.length > 0 
                     ? innerParams[0] 
-                    : this.exportDefinition.defaultFilter;
+                    : this.exportDefinition.defaultFilter,
+            escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
             
         auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
         for (var i = 0, pl = auxParams.length; i < pl; ++i) {
             var np = this.transformParameter(auxParams[i]);
             
+            
             if (typeof np.value === 'string')
-                np.value = np.value.replace("{{filter}}", inFilter);
+                np.value = np.value
+                    .replace("{{filter}}", inFilter)
+                    .replace("{{filter-escaped}}", escapedInFilter)
 
             this.addParameter(np);
         }
