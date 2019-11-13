@@ -51,7 +51,8 @@
   },
   "dependencies": {
     "as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-    "solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git"
+    "solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git",
+    "xlsx-populate": "^1.20.1"
   },
   "devDependencies": {
     "uglify-js": "latest",

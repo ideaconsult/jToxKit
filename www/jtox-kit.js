@@ -8,7 +8,7 @@
 // Define this as a main object to put everything in
 var jToxKit = { version: "2.2.3" };
 
-(function (jT, a$) {
+(function (jT, a$, Solr) {
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
   
@@ -50,6 +50,21 @@ jT.ui = {
     if (prec < 1)
       prec = parseInt(1.0 / prec);
     return Math.round(num * prec) / prec;
+  },
+
+  nicifyNumber: function (num, prec) {
+    if (num == null)
+      return "";
+  
+    var maxPrec = Math.pow(10, prec || 9),
+      rounded, prec;
+    for (prec = 10; prec < maxPrec; prec *= 10) {
+      rounded = Math.round(num * prec);
+      if (Math.abs(rounded - num * prec) < .1)
+        break;
+    }
+    
+    return parseInt(rounded) / prec;
   },
   
 	formatUnits: function (str) {
@@ -137,8 +152,68 @@ jT.ui = {
       "'": '&#039;'
     };
     return str.replace(/[&<>"']/g, function(m) { return map[m]; });
-  }
+  },
+
+	activateDownload: function (aEl, blob, destName, autoRemove) {
+    var url = URL.createObjectURL(blob),
+      selfClick = false;
+    
+    if (!aEl) {
+      aEl = document.createElement('a');
+      selfClick = autoRemove = true;
+    }
+    else
+      aEl.style.visibility = "visible";
+
+	  aEl.href = url;
+	  aEl.download = destName;
+
+	  if (autoRemove === true)
+	    aEl.addEventListener('click', function () {
+	      setTimeout(function () {
+          if (aEl.parentElement)
+	          aEl.parentElement.removeChild(aEl);
+	        window.URL.revokeObjectURL(url);
+	      }, 0);
+      });
+      
+    if (selfClick)
+      aEl.click();  
+	},
   
+  promiseXHR: function (ajax) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      
+      xhr.open(ajax.method || "GET", ajax.url, true);
+      if (ajax.headers) {
+        Object.keys(ajax.headers).forEach(function (key) {
+          xhr.setRequestHeader(key, ajax.headers[key]);
+        });
+      }
+
+      Object.keys(ajax.settings).forEach(function (key) {
+        xhr[key] = ajax.settings[key];
+      });
+      
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) 
+          return;
+
+        // Process the response
+        if ((xhr.status == 0 && !!xhr.response) || (xhr.status >= 200 && xhr.status < 300))
+          resolve(xhr.response, xhr.statusText, xhr);
+        else
+          reject(xhr, xhr.statusText, xhr.responseText);
+      };
+
+      xhr.send(ajax.body || ajax.data);
+    });
+  },
+
+	blobFromBase64: function (data64, mimeType) {
+		return new Blob([data64], { type: mimeType });
+	}
 };
 /** jToxKit - chem-informatics multi toolkit.
   * Data translation basic skills.
@@ -557,6 +632,114 @@ jT.TaskPolling.prototype = {
 	}
 };
 
+/** jToxKit - chem-informatics multi-tool-kit.
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2019, IDEAConsult Ltd. All rights reserved.
+  */
+
+ function Exporting(settings) {
+    a$.extend(true, this, a$.common(settings, this));
+
+    this.manager = null;
+};
+
+Exporting.prototype = {
+    __expects: [ "addParameter", "prepareQuery" ],
+    useJson: false,     // whether we're in JSON mode or URL string one.
+    expectJson: false,  // what is the provided manager's mode.
+    servlet: null,      // the servlet to be used. Defaults to manager's one.
+    exportDefinition: { // Definition of additional parameters
+        extraParams: [],
+        defaultFilter: null,
+        domain: "",
+        fieldsRegExp: null,
+        idField: 'id',  // The field to be considered ID when provided with id list.
+    },
+
+    init: function (manager) {
+        a$.pass(this, Exporting, "init", manager);
+
+        this.manager = manager;
+        this.servlet = this.servlet || manager.servlet || "select";
+        this.fqName = this.useJson ? "json.filter" : "fq";
+    },
+
+    transformParameter: function (par, name) {
+        var np = {
+            value: par.value,
+            name: name || par.name
+        };
+
+        // Check if we have a different level and the field in the filter is subject to parenting.
+        if (par.domain && par.domain.type == 'parent') {
+            if (!this.exportDefinition.domain)
+                np.domain = par.domain;
+            else if (!par.value || !!par.value.match(this.exportDefinition.fieldsRegExp))
+                np.domain = this.exportDefinition.domain;
+        }
+
+        return np;
+    },
+
+    prepareFilters: function (selectedIds) {
+        var innerParams = [],
+            fqPar = this.manager.getParameter(this.expectJson ? "json.filter" : "fq");
+
+        for (var i = 0, vl = fqPar.length; i < vl; i++) {
+            var par = fqPar[i];
+
+            this.addParameter(this.transformParameter(par, this.fqName));
+            innerParams.push(Solr.stringifyValue(par));
+        }
+
+        this.addParameter(this.transformParameter(this.manager.getParameter('q')));
+
+        if (!!selectedIds)
+            this.addParameter(this.fqName, this.exportDefinition.idField + ":(" + selectedIds.join(" ") + ")");
+
+        return innerParams;
+    },
+    
+    prepareExport: function(auxParams, selectedIds) {
+        var innerParams = this.prepareFilters(selectedIds),
+            inFilter = innerParams.length > 1 
+                ? '(' + innerParams.join(' AND ') + ')' 
+                : innerParams.length > 0 
+                    ? innerParams[0] 
+                    : this.exportDefinition.defaultFilter,
+            escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
+            
+        auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
+        for (var i = 0, pl = auxParams.length; i < pl; ++i) {
+            var np = this.transformParameter(auxParams[i]);
+            
+            
+            if (typeof np.value === 'string')
+                np.value = np.value
+                    .replace("{{filter}}", inFilter)
+                    .replace("{{filter-escaped}}", escapedInFilter)
+
+            this.addParameter(np);
+        }
+
+        return this; // For chaining.
+    },
+
+    getAjax: function (serverUrl, ajaxSettings) {
+        var urlPrefix = serverUrl + this.servlet,
+            settings = a$.extend({}, this.manager.ajaxSettings, ajaxSettings, this.prepareQuery());
+
+        if (urlPrefix.indexOf('?') > 0 && settings.url && settings.url.startsWith('?'))
+            settings.url = '&' + settings.url.substr(1);
+        
+        settings.url =  urlPrefix + (settings.url || "");
+    
+        return settings;
+    }
+};
+
+jT.Exporting = Exporting;
 
   /** ... and finish with some module / export definition for according platforms
     */
@@ -567,4 +750,4 @@ jT.TaskPolling.prototype = {
     if ( typeof define === "function" && define.amd )
       define(jToxKit);
   }
-})(jToxKit, asSys);
+})(jToxKit, asSys, Solr);

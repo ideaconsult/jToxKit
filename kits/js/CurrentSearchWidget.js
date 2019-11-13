@@ -43,17 +43,17 @@ CurrentSearchWidgeting.prototype = {
     // now scan all the filter parameters for set values
     for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
 	    var f = fq[i],
-	        vals = null;
+          vals = null,
+          w;
 	    
       for (var wid in self.facetWidgets) {
-  	    var w = self.manager.getListener(wid),
-  	        vals = w.fqParse(f);
-  	        if (!!vals)
-  	          break;
+  	    w = self.manager.getListener(wid);
+        vals = w.fqParse(f);
+  	    if (!!vals)
+  	      break;
   	  }
   	  
-  	  if (vals == null)
-  	    continue;
+  	  if (vals == null) continue;
   	    
   	  if (!Array.isArray(vals))
   	    vals = [ vals ];
