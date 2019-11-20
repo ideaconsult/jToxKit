@@ -97,7 +97,7 @@ Finally, as can be deduces from above, the configuring is provided via variable 
 
 * if `data-config-file` is provided, an attempt is made to retrieve a JSON object from there.
 
-
+### Configuration file
 
 The actual configuration heavily depends on the kit, being embedded. So, for the only (at the time of this writing) kit, an exemplary configuration looks like this:
 
@@ -234,6 +234,48 @@ var Settings = {
 ```
 
 The idea is to have full capability of assembling kits from other kits and/or widgets, just based on this `<div>` embedding principle and proper configuration. It is still not quite operational, but it will be.
+
+### Predefined filters
+
+As part of the configuration one can setup arbitrary number of predefined queries (filters), e.g.:
+
+```javascript
+savedQueries: [
+  { 
+    id: "pchem-all",
+    title: "P-Chem",
+    description: "Physcicochemical studies",
+    filters: [{ 
+      faceter: "studies",
+      value: "topcategory:P-CHEM"
+    }]
+  }, {
+    id: "demo-query",
+    title: "P-Chem",
+    description: "Query Setup Demo",
+    filters: [{
+      // Simple faceter reference
+      faceter: "reference_year",
+      value: "2018"
+    }, {
+      // Pivot faceter reference
+      faceter: "studies",
+      value: "topcategory:P-CHEM"
+    }, {
+      // Solr request parameter reference
+      name: "json.filter",
+      value: "substanceType_s:NNm"
+    }]
+  }
+]
+```
+
+Aside from miscellaneous stuff like `id`, `name`, etc. the key part of defining the actual filters has three possible forms:
+
+* **Referring a simple faceter**, by specifying the  `faceter` property, making direct reference to  `facets` part of the configuration. The `value` property provided corresponds to the value this _particular_ faceter is expecting/manipulating.
+* **Referring a pivot faceter**, relies on the `faceter` property again, but since the pivot is added as a faceter, with id `studies` - this needs to be specified. It is important that, because of the nested, and multi-field nature of this faceter, the value needs to specify which of the pivot entries it is referred. Pay attention that this is _not_ a data field (again), but a pivot entry id, i.e. the `value` is of the format:
+   `<pivot id>:<filter value>`
+* **Solr query parameter** can be manipulated if `name` property is used, instead of `faceter`. In such case the `value` is directly added to Solr request’s parameter with a given name. If `fq`/`json.filter` is used, this means that this time, a full data field name need to be specified (along with the value).
 
 ## <a id="rebuilding">(Re)building</a>
 
