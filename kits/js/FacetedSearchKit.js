@@ -742,7 +742,7 @@
                     queryData = results[1];
 
                 if (typeof reportDefinition.onData === 'function')
-                    reportDefinition.onData(queryData.facets);
+                    reportDefinition.onData(queryData);
 
                 XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
                     try {
