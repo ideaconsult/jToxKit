@@ -218,7 +218,7 @@ XlsxDataPopulate.prototype.applyDataStyle = function (cell, data, template) {
             if (_.startsWith(pair.name, ":")) {
                 var handler = self._opts.callbacksMap[pair.name.substr(1)];
                 if (typeof handler === 'function')
-                    handler(data, cell, self._opts);
+                    handler.call(self._opts, data, cell);
             } else {
                 var val = self.extractValues(data, pair.extractor);
                 if (val)
@@ -249,7 +249,7 @@ XlsxDataPopulate.prototype.extractValues = function (root, extractor) {
     else if (!handler)
         return root.join(this._opts.joinText || ",");
 
-    return !handler ? root : handler(root, null, this._opts);            
+    return !handler ? root : handler.call(this._opts, root);
 };
 
 /**
@@ -280,7 +280,7 @@ XlsxDataPopulate.prototype.extractData = function (root, iterators, idx) {
     data = _.get(root, parsedIter.path, root);
     
     if (typeof parsedIter.handler === 'function')
-        data = parsedIter.handler.call(null, data, null, this._opts);
+        data = parsedIter.handler.call(this._opts, data);
 
     if (idx < iterators.length - 1) {
         data = _.map(data, function (inRoot) { return self.extractData(inRoot, iterators, idx + 1); });
