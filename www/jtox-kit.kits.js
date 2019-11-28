@@ -649,6 +649,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 });
             });
 
+            var reportSelection = $("#report_select");
+            $.each(self.summaryReports, function (idx, def) {
+                reportSelection.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
+            });
+
             $("#export_tab form").on("submit", function (e) {
                 var form = this,
                     mime = form.export_format.value,
@@ -809,7 +814,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     callbacksMap: { 
                         lookup: function (val) { return mainLookupMap[val] || val; }
                     }
-                }, this.summaryReports[0].definition)
+                }, this.summaryReports[$("#report_select")[0].selectedIndex].definition)
                 Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
                     exportDefinition: reportDefinition,
                     useJson: true,
@@ -1834,6 +1839,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<button id=\"export_go\" type=\"submit\" name=\"export_go\" data-format=\"Download {{source}} as {{format}}\">?</button>" +
 "" +
 "<br />" +
+"<select id=\"report_select\" style=\"width: auto;\"></select>" +
 "<button id=\"report_go\" type=\"button\" name=\"report_go\" data-format=\"Generate summary report for {{source}}\">?</button>" +
 "" +
 "<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\">" +

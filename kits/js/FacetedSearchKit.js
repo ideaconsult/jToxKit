@@ -552,6 +552,11 @@
                 });
             });
 
+            var reportSelection = $("#report_select");
+            $.each(self.summaryReports, function (idx, def) {
+                reportSelection.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
+            });
+
             $("#export_tab form").on("submit", function (e) {
                 var form = this,
                     mime = form.export_format.value,
@@ -712,7 +717,7 @@
                     callbacksMap: { 
                         lookup: function (val) { return mainLookupMap[val] || val; }
                     }
-                }, this.summaryReports[0].definition)
+                }, this.summaryReports[$("#report_select")[0].selectedIndex].definition)
                 Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
                     exportDefinition: reportDefinition,
                     useJson: true,
