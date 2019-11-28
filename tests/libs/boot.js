@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2018 Pivotal Labs
+Copyright (c) 2008-2019 Pivotal Labs
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -73,21 +73,21 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   var filterSpecs = !!queryString.getParam("spec");
 
-  var stoppingOnSpecFailure = queryString.getParam("failFast");
-  env.stopOnSpecFailure(stoppingOnSpecFailure);
-
-  var throwingExpectationFailures = queryString.getParam("throwFailures");
-  env.throwOnExpectationFailure(throwingExpectationFailures);
+  var config = {
+    failFast: queryString.getParam("failFast"),
+    oneFailurePerSpec: queryString.getParam("oneFailurePerSpec"),
+    hideDisabled: queryString.getParam("hideDisabled")
+  };
 
   var random = queryString.getParam("random");
 
   if (random !== undefined && random !== "") {
-    env.randomizeTests(random);
+    config.random = random;
   }
 
   var seed = queryString.getParam("seed");
   if (seed) {
-    env.seed(seed);
+    config.seed = seed;
   }
 
   /**
@@ -118,9 +118,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     filterString: function() { return queryString.getParam("spec"); }
   });
 
-  env.specFilter = function(spec) {
+  config.specFilter = function(spec) {
     return specFilter.matches(spec.getFullName());
   };
+
+  env.configure(config);
 
   /**
    * Setting up timing functions to be able to be overridden. Certain browsers (Safari, IE 8, phantomjs) require this hack.

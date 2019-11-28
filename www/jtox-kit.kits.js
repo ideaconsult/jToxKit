@@ -805,7 +805,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         },
 
         buildSummaryReport: function(callback) {
-            var reportDefinition = this.summaryReports[0].definition,
+            var reportDefinition = $.extend(true, {
+                    callbacksMap: { 
+                        lookup: function (val) { return mainLookupMap[val] || val; }
+                    }
+                }, this.summaryReports[0].definition)
                 Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
                     exportDefinition: reportDefinition,
                     useJson: true,
@@ -834,12 +838,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
                 XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
                     try {
-                        new XlsxDataPopulate({
-                            callbacksMap: $.extend({ 
-                                lookup: function (val) { return mainLookupMap[val] || val; }
-                            }, reportDefinition.callbacksMap)
-                        }).processData(workbook, queryData);
-
+                        new XlsxDataPopulate(reportDefinition).processData(workbook, queryData);
                         workbook.outputAsync().then(callback, errFn)
                     } catch (e) {
                         errFn(e.message);
