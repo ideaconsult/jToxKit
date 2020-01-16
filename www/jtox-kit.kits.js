@@ -153,7 +153,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             ],
             savedQueries: [],
             listingFields: [],
-            reportDefinition: {},
+            summaryReports: [],
             facets: [],
             summaryRenderers: {}
         },
@@ -649,6 +649,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 });
             });
 
+            var reportSelection = $("#report_select");
+            $.each(self.summaryReports, function (idx, def) {
+                reportSelection.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
+            });
+
             $("#export_tab form").on("submit", function (e) {
                 var form = this,
                     mime = form.export_format.value,
@@ -805,110 +810,17 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         },
 
         buildSummaryReport: function(callback) {
-            var Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
-                    exportDefinition: this.reportDefinition,
+            var reportDefinition = $.extend(true, {
+                    callbacksMap: { 
+                        lookup: function (val) { return mainLookupMap[val] || val; }
+                    }
+                }, this.summaryReports[$("#report_select")[0].selectedIndex].definition)
+                Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
+                    exportDefinition: reportDefinition,
                     useJson: true,
                     expectJson: true
                 }), 
-                endpointMap = [],
                 selectedIds = this.getSelectedIds(),
-                getValues = function (studyArr) {
-                    if (!studyArr)
-                        return ["", "", "", ""];
-                
-                    var vals = [[], [], [], []], v;
-                    _.each(studyArr, function (study) {
-                        vals[0].push(study["E.method_s"] || "");
-                        vals[3].push(mainLookupMap[study.reference_owner_s] || study.reference_owner_s);
-                        
-                        if ((v = _.trim(buildValue(study)))) 
-                            vals[1].push(v);
-                        
-                        if ((v = _.trim(buildError(study))))
-                            vals[2].push(v);
-                    });
-                    
-                    return _.map(vals, function (one) { return _.uniq(one).join(", "); });
-                }, 
-                getEndpoints = function(childDocs) {
-                    var res = new Array(endpointMap.length);
-                    _.fill(res, null);
-                    _.each(childDocs, function (doc) {
-                        if (doc.type_s !== "study")
-                            return;
-                
-                        var mapId = (doc.endpointcategory_s || "") + ":" + (doc.guidance_s || "") + ":" + (doc.effectendpoint_s || ""),
-                            rowIdx = endpointMap.indexOf(mapId);
-                
-                        (res[rowIdx] = (res[rowIdx] || [])).push(doc);
-                    });
-                
-                    return res;
-                },
-                buildSubstanceIds = function (substance) {
-                    var idMap = {};
-                
-                    _.each(substance._childDocuments_, function (doc) {
-                        if (doc.type_s !== "composition")
-                            return;
-                
-                        (idMap[doc.component_s] = (idMap[doc.component_s] || [])).push(doc.CASRN_s);
-                    });
-                
-                    var allKeys = _.keys(idMap);
-                    return [
-                        allKeys.join("\n"),
-                        _.map(idMap, function (arr, type) { return (allKeys.length > 1 ? type + ": " : "") + arr.join(","); }).join("\n"),
-                        "", ""
-                    ];
-                },
-                buildValue = function (study) {
-                    var units = study.unit_s || "",
-                        resArr = [
-                            study.effectendpoint_type_s || "",
-                            study.textValue_s || ""
-                        ];
-                
-                    if (study.loValue_d != null && study.upValue_d != null)
-                        resArr.push(
-                            (study.loQualifier_s == ">=" ? "[" : "(") +
-                            jT.ui.nicifyNumber(study.loValue_d) + units + " : " + jT.ui.nicifyNumber(study.upValue_d) + units +
-                            (study.upQualifier_s == "<=" ? "]" : ")"));
-                    else if (study.loValue_d != null)
-                        resArr.push(study.loQualifier_s || "", jT.ui.nicifyNumber(study.loValue_d), units);
-                    else
-                        resArr.push(study.upQualifier_s || "", jT.ui.nicifyNumber(study.upValue_d), units);
-                
-                    return _.compact(resArr).join(" ");
-                },
-                buildEndpointMap = function (facet) {
-                    var handleMissing = function (facet) {
-                            if (!facet)
-                                return [];
-
-                            if (facet.missing != null && facet.missing.count > 0) {
-                                facet.missing.val = "";
-                                facet.buckets.unshift(facet.missing);
-                            }
-                            return facet.buckets;
-                        },
-                        facetNames = ["endpointcategory", "guidance", "effectendpoint"],
-                        iterateFacet = function (facet, names) {
-                            if (names.length >= facetNames.length) {
-                                endpointMap.push(names.join(":"));
-                                return;
-                            }
-                
-                            var idx = names.length,
-                                buckets = handleMissing(facet[facetNames[idx]]);
-                
-                            for (var i = 0;i < buckets.length; ++i)
-                                iterateFacet(buckets[i], names.concat([buckets[i].val]));
-                        };
-                    
-                    iterateFacet(facet, []);
-                },
-                buildError = function (study) { return (study.errQualifier_s || "") + " " + (jT.ui.nicifyNumber(study.err_d, 3) || "") },
                 errFn = function (err) {
                     console.log(JSON.stringify(err).substr(0, 256));
                     callback(null, typeof err === "string" ? "Err: " + err : "Error occurred!"); 
@@ -918,7 +830,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
             Promise.all([
                 jT.ui.promiseXHR({
-                    url: this.reportDefinition.template,
+                    url: reportDefinition.template,
                     settings: { responseType: "arraybuffer" }
                 }),
                 $.ajax(Exporter.prepareExport(null, selectedIds).getAjax(this.solrUrl))
@@ -926,28 +838,12 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 var wbData = results[0],
                     queryData = results[1];
 
-                buildEndpointMap(queryData.facets);
+                if (typeof reportDefinition.onData === 'function')
+                    reportDefinition.onData(queryData);
 
                 XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
                     try {
-                        new XlsxDataPopulate({
-                            callbacksMap: { 
-                                lookup: function (val) { return mainLookupMap[val] || val; },
-                                substanceProps: function () { 
-                                    return [ "Method", "Value", "Std. Dev", "Data source"]},
-                                substanceIds: buildSubstanceIds,
-                                getEndpoints: getEndpoints,
-                                getValues: getValues,
-                                toxicColor: function (data) { 
-                                    return { 
-                                        high: "CC0000",
-                                        medium: "00CCCC",
-                                        low: "00CC00" 
-                                    }[data] || (data !== undefined ? "CCCCCC" : data)
-                                } 
-                            }
-                        }).processData(workbook, queryData);
-
+                        new XlsxDataPopulate(reportDefinition).processData(workbook, queryData);
                         workbook.outputAsync().then(callback, errFn)
                     } catch (e) {
                         errFn(e.message);
@@ -1943,6 +1839,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<button id=\"export_go\" type=\"submit\" name=\"export_go\" data-format=\"Download {{source}} as {{format}}\">?</button>" +
 "" +
 "<br />" +
+"<select id=\"report_select\" style=\"width: auto;\"></select>" +
 "<button id=\"report_go\" type=\"button\" name=\"report_go\" data-format=\"Generate summary report for {{source}}\">?</button>" +
 "" +
 "<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\">" +

@@ -12,18 +12,10 @@
   ],
   "homepage": "https://io.github.com/ideaconsult/jToxKit/wiki",
   "license": "MIT",
-  "author": [
-    {
-      "name": "Ivan (Jonan) Georgiev",
-      "homepage": "http://jonan.info/"
-    },
-    {
-      "name": "Nina Jeliazkova"
-    },
-    {
-      "name": "Tsvetan Manolov"
-    }
-  ],
+  "author": {
+    "name": "Ivan (Jonan) Georgiev",
+    "homepage": "http://jonan.info/"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/ideaconsult/jToxKit"
@@ -50,8 +42,8 @@
     "main": "www/jtox-kit.js"
   },
   "dependencies": {
-    "as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
-    "solr-jsx": "git+ssh://git@github.com/ideaconsult/SolrJsX.git",
+    "as-sys": "file:../as-sys",
+    "solr-jsx": "file:../solr-jsx",
     "xlsx-populate": "^1.20.1"
   },
   "devDependencies": {
