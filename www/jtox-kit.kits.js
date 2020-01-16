@@ -843,7 +843,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
                 XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
                     try {
-                        new XlsxDataPopulate(reportDefinition).processData(workbook, queryData);
+                        new XlsxDataFill(
+                            new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
+                            reportDefinition
+                        ).fillData(queryData);
+
                         workbook.outputAsync().then(callback, errFn)
                     } catch (e) {
                         errFn(e.message);
