@@ -18,6 +18,8 @@ Exporting.prototype = {
     exportDefinition: { // Definition of additional parameters
         extraParams: [],
         defaultFilter: null,
+        manualFilter: false, // Handles the `fq` parameter manually.
+        inheritDomain: true, // Whether to inherit the domain from original query.
         domain: "",
         fieldsRegExp: null,
         idField: 'id',  // The field to be considered ID when provided with id list.
@@ -38,7 +40,7 @@ Exporting.prototype = {
         };
 
         // Check if we have a different level and the field in the filter is subject to parenting.
-        if (par.domain && par.domain.type == 'parent') {
+        if (this.exportDefinition.inheritDomain && par.domain && par.domain.type == 'parent') {
             if (!this.exportDefinition.domain)
                 np.domain = par.domain;
             else if (!par.value || !!par.value.match(this.exportDefinition.fieldsRegExp))
@@ -55,9 +57,13 @@ Exporting.prototype = {
         for (var i = 0, vl = fqPar.length; i < vl; i++) {
             var par = fqPar[i];
 
-            this.addParameter(this.transformParameter(par, this.fqName));
+            if (!this.exportDefinition.manualFilter)
+                this.addParameter(this.transformParameter(par, this.fqName));
             innerParams.push(Solr.stringifyValue(par));
         }
+
+        // No other job here, if we're in manual filter mode
+        if (this.exportDefinition.manualFilter) return innerParams;
 
         this.addParameter(this.transformParameter(this.manager.getParameter('q')));
 
