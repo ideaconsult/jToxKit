@@ -1003,7 +1003,8 @@ article a.more {
 
 article.item footer {
 	margin-top: 10px;
-	min-height: 10px;
+  min-height: 10px;
+  background-color: inherit;
 }
 
 article.item footer a {
@@ -1067,6 +1068,7 @@ article div.one-summary .topic {
   position: relative;
   font-weight: normal;
   font-size: 80%;
+  background-color: inherit;
 }
 
 #sliders {
