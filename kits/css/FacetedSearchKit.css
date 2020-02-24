@@ -149,19 +149,19 @@ article.item footer a {
 	margin-right: 10px;
 }
 
-footer a.command {
+article.item footer a.command {
 	float: right;	
 	opacity: 0.5;
 	display: none;
 }
 
-footer a.command:hover {
+article.item footer a.command:hover {
 	opacity: 1.0;
 }
 
-footer.add .command.add,
-footer.remove .command.remove,
-footer.none .command.none {
+article.item footer.add .command.add,
+article.item footer.remove .command.remove,
+article.item footer.none .command.none {
 	display: inline-block;
 }
 

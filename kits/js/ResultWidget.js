@@ -9,12 +9,15 @@ jT.ItemListWidget = function (settings) {
 
   this.lookupMap = settings.lookupMap || {};
 	this.target = settings.target;
-	this.id = settings.id;
+  this.id = settings.id;
+  if (!this.imagesRoot.match(/(\/|\\)$/))
+    this.imagesRoot += '/'
 };
 
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
+  imagesRoot: "images/",
   tagDbs: {},
   onCreated: null,
   onClick: null,
@@ -95,7 +98,7 @@ jT.ItemListWidget.prototype = {
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
        var item = { 
-          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
+          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || (this.imagesRoot + "logo.png"),
           link: "#",
           href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
@@ -127,25 +130,14 @@ jT.ItemListWidget.prototype = {
       item.href_target = doc.s_uuid;
     } 
     else {
-      var external = "External database";
-      
-      if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-        item.logo = "images/canano.jpg";
-        item.href_title = "caNanoLab: " + item.link;
-        item.href_target = external = "caNanoLab";
-        item.footer = '';
-      }
-      else {
-        item.logo = "images/external.png";
-        item.href_title = "External: " + item.link;
-        item.href_target = "external";
-      }
+      item.href_title = "External: " + item.link;
+      item.href_target = "external";
       
       if (doc.content.length > 0) {
         item.link = doc.content[0]; 
 
         for (var i = 0, l = doc.content.length; i < l; i++)
-          item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + '</a>';
+          item.footer += '<a href="' + doc.content[i] + '" target="external">External database</a>';
       }
     } 
     
@@ -265,7 +257,7 @@ jT.ResultWidgeting.prototype = {
   
 	beforeRequest : function() {
 		$(this.target).html(
-				$('<img>').attr('src', 'images/ajax-loader.gif'));
+				$('<img>').attr('src', this.imagesRoot + 'ajax-loader.gif'));
 	},
 	
 	afterFailure: function(jhr, params) {

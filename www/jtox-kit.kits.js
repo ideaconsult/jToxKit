@@ -566,11 +566,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             var butts = $("button", form);
 
             if ($("#export_dataset").buttonset("option", "disabled")) {
-                butts.button("option", "label", "No target dataset selected...");
-            } else if (!this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered") {
-                butts.button("disable").button("option", "label", "No filters selected...");
-            } else if (!this.manager.response.response.numFound && form.export_dataset.value == "filtered") {
-                butts.button("disable").button("option", "label", "No entries match the filters...");
+                butts
+                    .button("option", "label", "No target dataset selected...")
+                    .button("disable");
             } else if ($(form).find('input[name=export_dataset]').val()) {
                 var sourceText = $("#export_dataset :radio:checked + label").text().toLowerCase(),
                     formatText = $(form.export_format).data('name').toUpperCase();
@@ -579,8 +577,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     var me$ = $(this);
                     me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
                 });
-
-                // $("button#export_go", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
             }
         },
 
@@ -708,7 +704,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     if (ui.newPanel[0].id == 'export_tab') {
                         var qPar = self.manager.getParameter("q").value,
                             hasFilter = (qPar && qPar.length) > 0 || self.manager.getParameter("json.filter").length > 0,
-                            hasDataset = hasFilter || !!self.basket.length;
+                            hasBasket = !!self.basket.length,
+                            hasDataset = hasFilter || hasBasket;
 
                         $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
                         $("#export_type").buttonset(hasDataset ? "enable" : "disable");
@@ -716,18 +713,20 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         $('.data_formats').toggleClass('disabled', !hasDataset);
 
                         $("input#selected_data")
-                            .prop("checked", !!self.basket.length)
-                            .prop("disabled", !self.basket.length)
-                            .toggleClass("disabled", !self.basket.length);
+                            .prop("checked", hasBasket)
+                            .prop("disabled", !hasBasket)
+                            .toggleClass("disabled", !hasBasket);
                             
                         $("input#filtered_data")
+                            .prop("checked", hasFilter && !hasBasket)
                             .prop("disabled", !hasFilter)
                             .toggleClass("disabled", !hasFilter);
 
-                            $('.data_formats .jtox-ds-download a').first().trigger("click");
-                            $('.data_formats .jtox-ds-download a').first().trigger("click");
+                        $('.data_formats .jtox-ds-download a').first().trigger("click");
+                        $('.data_formats .jtox-ds-download a').first().trigger("click");
 
                         $("#export_dataset").buttonset("refresh");
+                        self.updateButtons(self.form);
                     }
                 }
             });
@@ -1504,12 +1503,15 @@ jT.ItemListWidget = function (settings) {
 
   this.lookupMap = settings.lookupMap || {};
 	this.target = settings.target;
-	this.id = settings.id;
+  this.id = settings.id;
+  if (!this.imagesRoot.match(/(\/|\\)$/))
+    this.imagesRoot += '/'
 };
 
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
+  imagesRoot: "images/",
   tagDbs: {},
   onCreated: null,
   onClick: null,
@@ -1590,7 +1592,7 @@ jT.ItemListWidget.prototype = {
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
         }
        var item = { 
-          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
+          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || (this.imagesRoot + "logo.png"),
           link: "#",
           href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
@@ -1622,25 +1624,14 @@ jT.ItemListWidget.prototype = {
       item.href_target = doc.s_uuid;
     } 
     else {
-      var external = "External database";
-      
-      if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-        item.logo = "images/canano.jpg";
-        item.href_title = "caNanoLab: " + item.link;
-        item.href_target = external = "caNanoLab";
-        item.footer = '';
-      }
-      else {
-        item.logo = "images/external.png";
-        item.href_title = "External: " + item.link;
-        item.href_target = "external";
-      }
+      item.href_title = "External: " + item.link;
+      item.href_target = "external";
       
       if (doc.content.length > 0) {
         item.link = doc.content[0]; 
 
         for (var i = 0, l = doc.content.length; i < l; i++)
-          item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + '</a>';
+          item.footer += '<a href="' + doc.content[i] + '" target="external">External database</a>';
       }
     } 
     
@@ -1760,7 +1751,7 @@ jT.ResultWidgeting.prototype = {
   
 	beforeRequest : function() {
 		$(this.target).html(
-				$('<img>').attr('src', 'images/ajax-loader.gif'));
+				$('<img>').attr('src', this.imagesRoot + 'ajax-loader.gif'));
 	},
 	
 	afterFailure: function(jhr, params) {
