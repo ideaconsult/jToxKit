@@ -41,7 +41,9 @@
 		"ambit-jsx": "file:../AmbitJsx",
 		"as-sys": "git+ssh://git@github.com/thejonan/asSys.js.git",
 		"lodash": "^4.17.15",
-		"solr-jsx": "file:../SolrJsX"
+		"solr-jsx": "file:../SolrJsX",
+		"xlsx-datafill": "^0.9.3",
+		"xlsx-populate": "^1.20.1"
 	},
 	"devDependencies": {
 		"concat": "^1.0.3",

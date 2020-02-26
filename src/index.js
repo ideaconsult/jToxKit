@@ -20,6 +20,7 @@ import _Comm from './Communicating';
 import _Delay from './Delaying';
 import _Auth from './Authenticating';
 import _Spying from "./Spying";
+import _Export from "./Exporting";
 
 _.assign(jT, _Tools, _Helpers);
 
@@ -30,6 +31,7 @@ jT.Communicating = _Comm;
 jT.Delaying = _Delay;
 jT.Authenticating = _Auth;
 jT.Spying = _Spying;
+jT.Exporting = _Export;
 
 import _Accord from './widgets/AccordionExpander';
 import _Auto from './widgets/Autocompleter';

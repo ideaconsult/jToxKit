@@ -1,0 +1,119 @@
+/** jToxKit - chem-informatics multi-tool-kit.
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2019-2020, IDEAConsult Ltd. All rights reserved.
+  */
+
+import a$ from 'as-sys';
+
+var defSettings = {
+    expectJson: false,  // what is the provided manager's mode.
+    useJson: false,     // whether we're in JSON mode or URL string one.
+    servlet: null,      // the servlet to be used. Defaults to manager's one.
+    exportDefinition: { // Definition of additional parameters
+        extraParams: [],
+        defaultFilter: null,
+        manualFilter: false, // Handles the `fq` parameter manually.
+        inheritDomain: true, // Whether to inherit the domain from original query.
+        domain: "",
+        fieldsRegExp: null,
+        idField: 'id',  // The field to be considered ID when provided with id list.
+    }
+};
+
+function Exporting(settings) {
+    a$.setup(this, defSettings, settings);
+
+    this.manager = null;
+};
+
+Exporting.prototype.__expects = [ "addParameter", "prepareQuery" ];
+
+Exporting.prototype.init = function (manager) {
+    a$.pass(this, Exporting, "init", manager);
+
+    this.manager = manager;
+    this.servlet = this.servlet || manager.servlet || "select";
+    this.fqName = this.useJson ? "json.filter" : "fq";
+};
+
+Exporting.prototype.transformParameter = function (par, name) {
+    var np = {
+        value: par.value,
+        name: name || par.name
+    };
+
+    // Check if we have a different level and the field in the filter is subject to parenting.
+    if (this.exportDefinition.inheritDomain && par.domain && par.domain.type == 'parent') {
+        if (!this.exportDefinition.domain)
+            np.domain = par.domain;
+        else if (!par.value || !!par.value.match(this.exportDefinition.fieldsRegExp))
+            np.domain = this.exportDefinition.domain;
+    }
+
+    return np;
+};
+
+Exporting.prototype.prepareFilters = function (selectedIds) {
+    var innerParams = [],
+        fqPar = this.manager.getParameter(this.expectJson ? "json.filter" : "fq");
+
+    for (var i = 0, vl = fqPar.length; i < vl; i++) {
+        var par = fqPar[i];
+
+        if (!this.exportDefinition.manualFilter)
+            this.addParameter(this.transformParameter(par, this.fqName));
+
+        innerParams.push(Solr.stringifyValue(par));
+    }
+
+    // No other job here, if we're in manual filter mode
+    if (this.exportDefinition.manualFilter)
+        return innerParams;
+
+    this.addParameter(this.transformParameter(this.manager.getParameter('q')));
+
+    if (!!selectedIds)
+        this.addParameter(this.fqName, this.exportDefinition.idField + ":(" + selectedIds.join(" ") + ")");
+
+    return innerParams;
+};
+
+Exporting.prototype.prepareExport = function(auxParams, selectedIds) {
+    var innerParams = this.prepareFilters(selectedIds),
+        inFilter = innerParams.length > 1 
+            ? '(' + innerParams.join(' AND ') + ')' 
+            : innerParams.length > 0 
+                ? innerParams[0] 
+                : this.exportDefinition.defaultFilter,
+        escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
+        
+    auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
+    for (var i = 0, pl = auxParams.length; i < pl; ++i) {
+        var np = this.transformParameter(auxParams[i]);
+        
+        
+        if (typeof np.value === 'string')
+            np.value = np.value
+                .replace("{{filter}}", inFilter)
+                .replace("{{filter-escaped}}", escapedInFilter)
+
+        this.addParameter(np);
+    }
+
+    return this; // For chaining.
+};
+
+Exporting.prototype.getAjax = function (serverUrl, ajaxSettings) {
+    var urlPrefix = serverUrl + this.servlet,
+        settings = a$.extend({}, this.manager.ajaxSettings, ajaxSettings, this.prepareQuery());
+
+    if (urlPrefix.indexOf('?') > 0 && settings.url && settings.url.startsWith('?'))
+        settings.url = '&' + settings.url.substr(1);
+    
+    settings.url =  urlPrefix + (settings.url || "");
+
+    return settings;
+};
+
+export default Exporting;
