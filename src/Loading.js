@@ -11,13 +11,20 @@ import $ from 'jquery';
 
 var defSettings = {
 	errorMessage: "Error retrieving data!",
-	loadingImgUrl: "images/ajax-loader.gif"
+	imagesRoot: "images/",
+	loadingImgUrl: null,
 };
 
 // Keep in mind that the field should be the same in all entries.
 function Loading(settings) {
 	a$.setup(this, defSettings, settings);
 	this.target = settings && settings.target;
+
+	if (!this.imagesRoot.match(/(\/|\\)$/))
+    	this.imagesRoot += '/'
+
+	if (!settings.loadingImgUrl)
+		this.loadingImgUrl = this.imagesRoot + "ajax-loader.gif";
 };
 
 Loading.prototype.__expects = ["populate"];

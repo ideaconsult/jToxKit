@@ -11,8 +11,8 @@ sub { vertical-align: sub; }
 i { font-style: italic; }
 
 span.units { 
-	font-size: 80% !important;
-	margin-left: 2px !important;
+  font-size: 80% !important;
+  margin-left: 2px !important;
 }
 
 a:hover,
@@ -62,8 +62,8 @@ section.item-list article.item .avatar img {
 }
 
 .container {
-	position: relative;
-	height: 100%;
+  position: relative;
+  height: 100%;
 }
 
 /* query-container */
@@ -81,7 +81,7 @@ div.query-container>div {
   margin-right: 4px;
   vertical-align: top;
   overflow: hidden;
-
+  
 }
 
 div.query-container>div.query-left, .sticky-wrapper {
@@ -133,7 +133,7 @@ div.ui-tabs-panel.ui-widget-content {
 }
 
 div.item-list header {
-	margin-bottom: 10px;	
+  margin-bottom: 10px;	
 }
 
 article a.more {
@@ -141,37 +141,38 @@ article a.more {
 }
 
 article.item footer {
-	margin-top: 10px;
-	min-height: 10px;
+  margin-top: 10px;
+  min-height: 10px;
+  background-color: inherit;
 }
 
 article.item footer a {
-	margin-right: 10px;
+  margin-right: 10px;
 }
 
-footer a.command {
-	float: right;	
-	opacity: 0.5;
-	display: none;
+article.item footer a.command {
+  float: right;	
+  opacity: 0.5;
+  display: none;
 }
 
-footer a.command:hover {
-	opacity: 1.0;
+article.item footer a.command:hover {
+  opacity: 1.0;
 }
 
-footer.add .command.add,
-footer.remove .command.remove,
-footer.none .command.none {
-	display: inline-block;
+article.item footer.add .command.add,
+article.item footer.remove .command.remove,
+article.item footer.none .command.none {
+  display: inline-block;
 }
 
 article div.one-summary {
-	margin-top: 10px;
+  margin-top: 10px;
 }
 
 article div.one-summary .topic { 
-	text-transform: capitalize;
-	font-weight: bold;
+  text-transform: capitalize;
+  font-weight: bold;
 }
 
 /* tagcloud */
@@ -206,6 +207,7 @@ article div.one-summary .topic {
   position: relative;
   font-weight: normal;
   font-size: 80%;
+  background-color: inherit;
 }
 
 #sliders {
@@ -233,7 +235,7 @@ article div.one-summary .topic {
 }
 
 /* Some coloring of the sliders
-  */
+*/
 div.slider-container .back-bar {
   height: 5px;
   border-radius: 2px;
@@ -280,7 +282,7 @@ div.slider-container .scale ins {
 
 div.slider-container .back-bar .focused { color: #333; }
 div.slider-container .scale span { border-left: 1px solid #e5e5e5; }
-    
+
 div.slider-container.theme-green .back-bar div.selected-bar {
   background-color: #65bb34;
   background-image: -webkit-linear-gradient(top, #71ca3f, #5aa72e);
@@ -306,7 +308,7 @@ div.slider-container.theme-orange .back-bar div.selected-bar {
 }
 
 /* More general tags stuff
-  */
+*/
 .tags li.tag_open a span {
   padding: 0 7px 0 6px;
   max-width: 40px;
@@ -354,7 +356,7 @@ div.slider-container.theme-orange .back-bar div.selected-bar {
 }
 
 #accordion div.ui-accordion-content::-webkit-scrollbar {
-	display: none !important;
+  display: none !important;
 }
 
 #accordion div.ui-accordion-content {
@@ -366,26 +368,26 @@ div.slider-container.theme-orange .back-bar div.selected-bar {
 
 #accordion>h3>span.ui-icon-search,
 #accordion>h3>span.ui-icon-search.ui-icon.unused {
-	display: none;
+  display: none;
 }
 
 #accordion>h3.ui-state-active>span.ui-icon-search {
-	display: inline-block;
+  display: inline-block;
 }
 
 #accordion>h3>span.ui-icon-search {
-	float: right;
-	opacity: 0.4;
+  float: right;
+  opacity: 0.4;
 }
 
 #accordion>h3>span.ui-icon-search:hover {
-	opacity: 1.0;
+  opacity: 1.0;
 }
 
 #accordion ul.tag-group {
   padding: 4px 0px 0px 0px;
-	margin-bottom: 2px;
-	box-sizing: border-box;  
+  margin-bottom: 2px;
+  box-sizing: border-box;  
   width: 100%;
   border: #aaa solid 1px;
   border-radius: 7px;
@@ -427,18 +429,18 @@ div.slider-container.theme-orange .back-bar div.selected-bar {
 #accordion ul.tag-group.static.folded.reference::before { content: "Reference +"; }
 
 .jtox-panel:hover {
-	background: #ddd; /* Old browsers */
-	background: -moz-linear-gradient(top, rgba(255,255,255,.2) 0%, rgba(200,200,200,.2) 100%); /* FF3.6+ */
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,.2)), color-stop(100%,rgba(200,200,200,.2))); /* Chrome,Safari4+ */
-	background: -webkit-linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* Chrome10+,Safari5.1+ */
-	background: -o-linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* Opera11.10+ */
-	background: -ms-linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* IE10+ */
-	background: linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* W3C */
+  background: #ddd; /* Old browsers */
+  background: -moz-linear-gradient(top, rgba(255,255,255,.2) 0%, rgba(200,200,200,.2) 100%); /* FF3.6+ */
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,.2)), color-stop(100%,rgba(200,200,200,.2))); /* Chrome,Safari4+ */
+  background: -webkit-linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* Chrome10+,Safari5.1+ */
+  background: -o-linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* Opera11.10+ */
+  background: -ms-linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* IE10+ */
+  background: linear-gradient(top, rgba(255,255,255,.2) 0%,rgba(200,200,200,.2) 100%); /* W3C */
 }
 
 div.ui-accordion-content.ui-widget-content {
-	padding:1px; 
-	margin:1px;	
+  padding:1px; 
+  margin:1px;	
 }
 
 div.widget-content.widget-root input.switcher {

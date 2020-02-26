@@ -19,6 +19,7 @@ var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{
 		tagDbs: {},
 		onCreated: null,
 		onClick: null,
+		imagesRoot: "images/",
 		summaryRenderers: {
 			"RESULTS": function (val, topic) {
 				var self = this;
@@ -69,6 +70,8 @@ function SolrItemLister(settings) {
 	this.lookupMap = settings.lookupMap || {};
 	this.target = settings.target;
 	this.id = settings.id;
+	if (!this.imagesRoot.match(/(\/|\\)$/))
+    	this.imagesRoot += '/'
 };
 
 SolrItemLister.prototype.renderItem = function (doc) {
@@ -121,7 +124,7 @@ SolrItemLister.prototype.renderSubstance = function (doc) {
 			}).join("");
 		}
 	var item = {
-		logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
+		logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || (this.imagesRoot + "logo.png"),
 		link: "#",
 		href: "#",
 		title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") +
@@ -151,26 +154,16 @@ SolrItemLister.prototype.renderSubstance = function (doc) {
 		item.href_title = "Study";
 		item.href_target = doc.s_uuid;
 	} else {
-		var external = "External database";
-
-		if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-			item.logo = "images/canano.jpg";
-			item.href_title = "caNanoLab: " + item.link;
-			item.href_target = external = "caNanoLab";
-			item.footer = '';
-		} else {
-			item.logo = "images/external.png";
-			item.href_title = "External: " + item.link;
-			item.href_target = "external";
-		}
-
+		item.href_title = "External: " + item.link;
+		item.href_target = "external";
+		
 		if (doc.content.length > 0) {
-			item.link = doc.content[0];
-
-			for (var i = 0, l = doc.content.length; i < l; i++)
-				item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + '</a>';
+		  item.link = doc.content[0]; 
+  
+		  for (var i = 0, l = doc.content.length; i < l; i++)
+			item.footer += '<a href="' + doc.content[i] + '" target="external">External database</a>';
 		}
-	}
+	  }
 
 	return jT.fillTemplate("#result-item", item);
 };
