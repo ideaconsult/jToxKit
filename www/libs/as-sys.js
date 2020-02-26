@@ -16,13 +16,6 @@
     for (var i = 1, al = arr.length; i < al; ++i) if (callback(a0, arr[i]) === false) return false;
     return true;
   };
-  var fnName = function(fn) {
-    if (!fn) return undefined;
-    if (typeof fn !== "function") return fn.toString(); else if (fn.name !== undefined) return fn.name; else {
-      var s = fn.toString().match(/function ([^\(]+)/);
-      return s != null ? s[1] : "";
-    }
-  };
   var a$ = function() {
     var skillmap = [], growingArgs, expected = null, skills = Array.prototype.slice.call(arguments, 0);
     var A = function() {
@@ -36,11 +29,7 @@
     for (var i = 0, a; i < skills.length; ++i) {
       a = skills[i];
       if (skillmap.indexOf(a) > -1) continue;
-      if (typeof a !== "function" || !a.prototype) throw {
-        name: "Missing skill",
-        message: "The skill-set listed [" + fnName(a) + "] is missing.",
-        skill: s
-      };
+      if (typeof a !== "function" || !a.prototype) throw "The skill listed [" + a + "] is not provided.";
       if (!!a.prototype.__depends) {
         growingArgs = [ i, 0 ];
         for (var s, j = 0, el = a.prototype.__depends.length; j < el; ++j) {
@@ -68,11 +57,7 @@
     }
     if (!!expected) {
       _.each(expected, function(v, m) {
-        if (!A.prototype[m]) throw {
-          name: "Unmatched expectation",
-          message: "The expected method [" + m + "] was not found among provided skills.",
-          method: m
-        };
+        if (!A.prototype[m]) throw "The expected method [" + m + "] was not found among provided skills.";
       });
     }
     Object.defineProperties(A.prototype, {
@@ -84,14 +69,13 @@
     });
     return A;
   };
-  a$.VERSION = "1.0.3";
+  a$.VERSION = "1.0.4";
   a$.equal = function() {
     return multiScan(arguments, _.isEqual);
   };
   a$.similar = function() {
     return multiScan(arguments, similarObjs);
   };
-  a$.title = fnName;
   a$.setup = function(agent, defaults) {
     for (var i = 1, defKeys = _.keys(defaults); i < arguments.length; ++i) _.merge(agent, _.pick(arguments[i], defKeys));
     return agent;

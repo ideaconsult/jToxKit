@@ -149,7 +149,7 @@ Communicating.prototype.doRequest = function (servlet, isPrivate, callback) {
  * form.
  */
 Communicating.prototype.buildUrl = function (servlet, params) {
-	return this.serverUrl + this.addUrlParameters(servlet || '', params);
+	return (this.serverUrl || "") + this.addUrlParameters(servlet || '', params);
 }
 
 /**
@@ -169,9 +169,9 @@ Communicating.prototype.addUrlParameters = function(baseUrl, params) {
 
 /** Initialize the management and most importantly - the listener's
  */
-Communicating.prototype.init = function () {
+Communicating.prototype.init = function (manager) {
 	var self = this;
-	a$.pass(self, Communicating, "init");
+	a$.pass(self, Communicating, "init", manager);
 	_.each(this.listeners, function (l) {
 		// Inform the listener that it has been added.
 		a$.act(l, l.init, self);

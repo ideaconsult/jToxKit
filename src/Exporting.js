@@ -5,6 +5,7 @@
   */
 
 import a$ from 'as-sys';
+import _ from 'lodash';
 
 var defSettings = {
     expectJson: false,  // what is the provided manager's mode.
@@ -104,16 +105,8 @@ Exporting.prototype.prepareExport = function(auxParams, selectedIds) {
     return this; // For chaining.
 };
 
-Exporting.prototype.getAjax = function (serverUrl, ajaxSettings) {
-    var urlPrefix = serverUrl + this.servlet,
-        settings = a$.extend({}, this.manager.ajaxSettings, ajaxSettings, this.prepareQuery());
-
-    if (urlPrefix.indexOf('?') > 0 && settings.url && settings.url.startsWith('?'))
-        settings.url = '&' + settings.url.substr(1);
-    
-    settings.url =  urlPrefix + (settings.url || "");
-
-    return settings;
+Exporting.prototype.getAjax = function (ajaxSettings) {
+    return _.extend({}, this.manager.ajaxSettings, ajaxSettings, this.prepareQuery());
 };
 
 export default Exporting;

@@ -13,7 +13,8 @@
             servlet: "select",
             multipleSelection: true,
             keepAllFacets: true,
-			connector: $.ajax,
+            connector: $.ajax,
+            loggerEl: null,
             onPrepare: function (settings) {
                 var qidx = settings.url.indexOf("?");
 
@@ -165,7 +166,7 @@
                 collapsible: true,
                 animate: 200,
                 active: false,
-                activate: function (event, ui) {
+                activate: function (e, ui) {
                     if (!!ui.newPanel && !!ui.newPanel[0]) {
                         var header = ui.newHeader[0],
                             panel = ui.newPanel[0],
@@ -461,7 +462,8 @@
                 });
             }
 
-			Manager.addListeners(jT.initKit($("#log-ui")));
+            if (this.loggerEl)
+			    Manager.addListeners(jT.initKit($(this.loggerEl)));
 
             // now get the search parameters passed via URL
             Manager.doRequest();
@@ -529,6 +531,12 @@
             this.prepareFormats();
             this.prepareTypes();
 
+            // Prepare the reports
+            var report$ = $("#report_select");
+            $.each(self.summaryReports, function (idx, def) {
+                report$.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
+            });
+
             $("#export_dataset").buttonset();
             $("#export_type").buttonset();
             $("#export_dataset input").on("change", function (e) {
@@ -550,11 +558,6 @@
                 });
             });
 
-            var reportSelection = $("#report_select");
-            _.each(self.summaryReports, function (idx, def) {
-                reportSelection.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
-            });
-
             $("#export_tab form").on("submit", function (e) {
                 var form = this,
                     mime = form.export_format.value,
@@ -567,10 +570,11 @@
                         form.search.value = selectedIds.join(" ");
                         form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                     },
-                    Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
+                    Exporter = new (a$(jT.Communicating, jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
                         exportDefinition: exType,
                         useJson: false,
-                        expectJson: true
+                        expectJson: true,
+                        serverUrl: server == 'ambitUrl' ? self.serverUrl : self[server]
                     });
 
                 Exporter.init(self.manager);
@@ -580,7 +584,7 @@
                     // If we already have the selected Ids - we don't even need to bother calling Solr.
                     if (!!selectedIds)
                         formAmbitUrl();
-                    else self.connector(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
+                    else self.connector(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax({
                         async: false,
                         dataType: "json",
                         success: function (data) {
@@ -598,7 +602,7 @@
                         mime == "tsv"
                             ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true } ]
                             : [ { name: 'wt', value: mime } ]
-                    ), selectedIds).getAjax(self[server]).url;
+                    ), selectedIds).getAjax().url;
                 }
 
                 return true;
@@ -719,10 +723,11 @@
                         lookup: function (val) { return mainLookupMap[val] || val; }
                     }
                 }, this.summaryReports[$("#report_select")[0].selectedIndex].definition)
-                Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
+                Exporter =new (a$(jT.Exporting, jT.Communicating, Solr.Configuring, Solr.QueryingJson))({
                     exportDefinition: reportDefinition,
                     useJson: true,
-                    expectJson: true
+                    expectJson: true,
+                    serverUrl: this.solrUrl
                 }), 
                 selectedIds = this.getSelectedIds(),
                 errFn = function (err) {
@@ -737,7 +742,7 @@
                     url: reportDefinition.template,
                     settings: { responseType: "arraybuffer" }
                 }),
-                this.connector(Exporter.prepareExport(null, selectedIds).getAjax(this.solrUrl))
+                this.connector(Exporter.prepareExport(null, selectedIds).getAjax())
             ]).then(function (results) {
                 var wbData = results[0],
                     queryData = results[1];

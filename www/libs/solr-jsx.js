@@ -346,6 +346,7 @@
         };
     };
     var defSettings$5 = {
+        servlet: null,
         resetPage: true,
         privateRequest: false,
         customResponse: null
@@ -354,13 +355,14 @@
         a$$1.setup(this, defSettings$5, settings);
         this.manager = null;
     }
+    Eventing.prototype.__expects = [ "addValue", "removeValue" ];
     Eventing.prototype.init = function(manager) {
         a$$1.pass(this, Eventing, "init", manager);
         this.manager = manager;
     };
     Eventing.prototype.doRequest = function() {
         if (this.resetPage) this.manager.addParameter("start", 0);
-        this.manager.doRequest(null, self.privateRequest, self.customResponse);
+        this.manager.doRequest(this.servlet, self.privateRequest, self.customResponse);
     };
     Eventing.prototype.updateHandler = function() {
         var self = this, args = arguments;

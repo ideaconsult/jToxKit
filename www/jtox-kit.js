@@ -2,7 +2,7 @@
 (function(global, factory) {
     typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("lodash"), require("as-sys"), require("solr-jsx"), require("ambit-jsx"), require("jquery")) : typeof define === "function" && define.amd ? define([ "lodash", "as-sys", "solr-jsx", "ambit-jsx", "jquery" ], factory) : (global = global || self, 
     global.jToxKit = factory(global._, global.asSys, global.Solr, global.Ambit, global.$));
-})(this, (function(_$1, a$$1, Solr, Ambit, $$1) {
+})(this, (function(_$1, a$$1, Solr$1, Ambit, $$1) {
     "use strict";
     var jT$1 = {
         version: "3.0.0",
@@ -115,6 +115,46 @@
             return _$1.map(data, (function(val) {
                 val[field];
             })).join(sep);
+        },
+        activateDownload: function(aEl, blob, destName, autoRemove) {
+            var url = URL.createObjectURL(blob), selfClick = false;
+            if (!aEl) {
+                aEl = document.createElement("a");
+                selfClick = autoRemove = true;
+            } else aEl.style.visibility = "visible";
+            aEl.href = url;
+            aEl.download = destName;
+            if (autoRemove === true) aEl.addEventListener("click", (function() {
+                setTimeout((function() {
+                    if (aEl.parentElement) aEl.parentElement.removeChild(aEl);
+                    window.URL.revokeObjectURL(url);
+                }), 0);
+            }));
+            if (selfClick) aEl.click();
+        },
+        promiseXHR: function(ajax) {
+            return new Promise((function(resolve, reject) {
+                var xhr = new XMLHttpRequest;
+                xhr.open(ajax.method || "GET", ajax.url, true);
+                if (ajax.headers) {
+                    Object.keys(ajax.headers).forEach((function(key) {
+                        xhr.setRequestHeader(key, ajax.headers[key]);
+                    }));
+                }
+                Object.keys(ajax.settings).forEach((function(key) {
+                    xhr[key] = ajax.settings[key];
+                }));
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState !== 4) return;
+                    if (xhr.status == 0 && !!xhr.response || xhr.status >= 200 && xhr.status < 300) resolve(xhr.response, xhr.statusText, xhr); else reject(xhr, xhr.statusText, xhr.responseText);
+                };
+                xhr.send(ajax.body || ajax.data);
+            }));
+        },
+        blobFromBase64: function(data64, mimeType) {
+            return new Blob([ data64 ], {
+                type: mimeType
+            });
         }
     };
     var _Tools = {
@@ -709,11 +749,14 @@
     };
     var defSettings$1 = {
         errorMessage: "Error retrieving data!",
-        loadingImgUrl: "images/ajax-loader.gif"
+        imagesRoot: "images/",
+        loadingImgUrl: null
     };
     function Loading(settings) {
         a$$1.setup(this, defSettings$1, settings);
         this.target = settings && settings.target;
+        if (!this.imagesRoot.match(/(\/|\\)$/)) this.imagesRoot += "/";
+        if (!settings.loadingImgUrl) this.loadingImgUrl = this.imagesRoot + "ajax-loader.gif";
     }
     Loading.prototype.__expects = [ "populate" ];
     Loading.prototype.init = function(manager) {
@@ -816,15 +859,15 @@
         return self.connector(ajaxOpts);
     };
     Communicating.prototype.buildUrl = function(servlet, params) {
-        return this.serverUrl + this.addUrlParameters(servlet || "", params);
+        return (this.serverUrl || "") + this.addUrlParameters(servlet || "", params);
     };
     Communicating.prototype.addUrlParameters = function(baseUrl, params) {
         if (!params || !params.length) return baseUrl; else if (typeof params !== "string") params = params.join("&") || "";
         return baseUrl + (baseUrl.indexOf("?") > 0 ? "&" : "?") + params;
     };
-    Communicating.prototype.init = function() {
+    Communicating.prototype.init = function(manager) {
         var self = this;
-        a$$1.pass(self, Communicating, "init");
+        a$$1.pass(self, Communicating, "init", manager);
         _$1.each(this.listeners, (function(l) {
             a$$1.act(l, l.init, self);
         }));
@@ -923,6 +966,66 @@
         man.popParameters();
     };
     var defSettings$6 = {
+        expectJson: false,
+        useJson: false,
+        servlet: null,
+        exportDefinition: {
+            extraParams: [],
+            defaultFilter: null,
+            manualFilter: false,
+            inheritDomain: true,
+            domain: "",
+            fieldsRegExp: null,
+            idField: "id"
+        }
+    };
+    function Exporting(settings) {
+        a$$1.setup(this, defSettings$6, settings);
+        this.manager = null;
+    }
+    Exporting.prototype.__expects = [ "addParameter", "prepareQuery" ];
+    Exporting.prototype.init = function(manager) {
+        a$$1.pass(this, Exporting, "init", manager);
+        this.manager = manager;
+        this.servlet = this.servlet || manager.servlet || "select";
+        this.fqName = this.useJson ? "json.filter" : "fq";
+    };
+    Exporting.prototype.transformParameter = function(par, name) {
+        var np = {
+            value: par.value,
+            name: name || par.name
+        };
+        if (this.exportDefinition.inheritDomain && par.domain && par.domain.type == "parent") {
+            if (!this.exportDefinition.domain) np.domain = par.domain; else if (!par.value || !!par.value.match(this.exportDefinition.fieldsRegExp)) np.domain = this.exportDefinition.domain;
+        }
+        return np;
+    };
+    Exporting.prototype.prepareFilters = function(selectedIds) {
+        var innerParams = [], fqPar = this.manager.getParameter(this.expectJson ? "json.filter" : "fq");
+        for (var i = 0, vl = fqPar.length; i < vl; i++) {
+            var par = fqPar[i];
+            if (!this.exportDefinition.manualFilter) this.addParameter(this.transformParameter(par, this.fqName));
+            innerParams.push(Solr.stringifyValue(par));
+        }
+        if (this.exportDefinition.manualFilter) return innerParams;
+        this.addParameter(this.transformParameter(this.manager.getParameter("q")));
+        if (!!selectedIds) this.addParameter(this.fqName, this.exportDefinition.idField + ":(" + selectedIds.join(" ") + ")");
+        return innerParams;
+    };
+    Exporting.prototype.prepareExport = function(auxParams, selectedIds) {
+        var innerParams = this.prepareFilters(selectedIds), inFilter = innerParams.length > 1 ? "(" + innerParams.join(" AND ") + ")" : innerParams.length > 0 ? innerParams[0] : this.exportDefinition.defaultFilter, escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
+        auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
+        for (var i = 0, pl = auxParams.length; i < pl; ++i) {
+            var np = this.transformParameter(auxParams[i]);
+            if (typeof np.value === "string") np.value = np.value.replace("{{filter}}", inFilter).replace("{{filter-escaped}}", escapedInFilter);
+            this.addParameter(np);
+        }
+        return this;
+    };
+    Exporting.prototype.getAjax = function(ajaxSettings) {
+        return _$1.extend({}, this.manager.ajaxSettings, ajaxSettings, this.prepareQuery());
+    };
+    var defSettings$7 = {
         automatic: true,
         title: null,
         classes: null,
@@ -930,7 +1033,7 @@
         before: null
     };
     function AccordionExpander(settings) {
-        a$$1.setup(this, defSettings$6, settings);
+        a$$1.setup(this, defSettings$7, settings);
         this.target = $$1(settings.target);
         this.header = null;
         this.id = settings.id;
@@ -966,7 +1069,7 @@
         "facet.mincount": 1,
         echoParams: "none"
     };
-    var defSettings$7 = {
+    var defSettings$8 = {
         servlet: "select",
         urlFeed: null,
         useJson: false,
@@ -974,7 +1077,7 @@
         activeFacets: null
     };
     function Autocompleter(settings) {
-        a$$1.setup(this, defSettings$7, settings);
+        a$$1.setup(this, defSettings$8, settings);
         this.target = $$1(settings.target);
         this.id = settings.id;
         this.lookupMap = settings.lookupMap || {};
@@ -1050,7 +1153,7 @@
         var url = jT$1.parseURL(params.url);
         return url.protocol + "://" + url.host + url.path;
     }
-    var defSettings$8 = {
+    var defSettings$9 = {
         statusDelay: 1500,
         keepMessages: 50,
         lineHeight: "20px",
@@ -1059,7 +1162,7 @@
         autoHide: true
     };
     function Logger(settings) {
-        a$$1.setup(this, defSettings$8, settings);
+        a$$1.setup(this, defSettings$9, settings);
         var root$ = $$1(this.target = settings.target);
         root$.html(jT$1.templates["logger-main"]);
         root$.addClass("jtox-toolkit jtox-log");
@@ -1172,7 +1275,7 @@
         };
         return dest;
     };
-    var defSettings$9 = {
+    var defSettings$a = {
         innerWindow: 4,
         outerWindow: 1,
         prevLabel: "&laquo; Previous",
@@ -1181,7 +1284,7 @@
         renderHeader() {}
     };
     function Pager(settings) {
-        a$$1.setup(this, defSettings$9, settings);
+        a$$1.setup(this, defSettings$a, settings);
         this.target = $(settings.target);
         this.id = settings.id;
         this.manager = null;
@@ -1275,27 +1378,27 @@
         this.renderLinks(this.windowedLinks());
         this.renderHeader(this.pageSize, (this.currentPage - 1) * this.pageSize, this.totalEntries);
     };
-    var defSettings$a = {
+    var defSettings$b = {
         runSelector: ".switcher",
         runMethod: null,
         runTarget: null
     };
     function Passer(settings) {
-        a$$1.setup(this, defSettings$a, settings);
+        a$$1.setup(this, defSettings$b, settings);
         var self = this, target$ = $$1(self.runSelector, $$1(settings.target)[0]), runTarget = self.runTarget || self;
         target$.on("click", (function(e) {
             a$$1.act(runTarget, self.runMethod, this, e);
             e.stopPropagation();
         }));
     }
-    var defSettings$b = {
+    var defSettings$c = {
         color: null,
         renderItem: null,
         onUpdated: null,
         subtarget: null
     };
     function Tagger(settings) {
-        a$$1.setup(this, defSettings$b, settings);
+        a$$1.setup(this, defSettings$c, settings);
         this.target = $$1(settings.target);
         if (!!this.subtarget) this.target = this.target.find(this.subtarget).eq(0);
         this.id = settings.id;
@@ -1357,7 +1460,7 @@
         info.color = this.color;
         return info;
     };
-    var InnerTagWidget = a$$1(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$c = {
+    var InnerTagWidget = a$$1(Tagger, InnterTagger), iDificationRegExp = /\W/g, defSettings$d = {
         automatic: false,
         renderTag: null,
         multivalue: false,
@@ -1365,7 +1468,7 @@
         exclusion: false
     };
     function Pivoter(settings) {
-        a$$1.setup(this, defSettings$c, settings);
+        a$$1.setup(this, defSettings$d, settings);
         this.target = settings.target;
         this.targets = {};
         this.lastEnabled = 0;
@@ -1456,7 +1559,7 @@
         }
         target.append(elements);
     };
-    var defSettings$d = {
+    var defSettings$e = {
         limits: null,
         units: null,
         initial: null,
@@ -1468,7 +1571,7 @@
         format: "%s {{units}}"
     };
     function Slider(settings) {
-        a$$1.setup(this, defSettings$d, settings);
+        a$$1.setup(this, defSettings$e, settings);
         this.target = $(settings.target);
         this.prepareLimits(settings.limits);
         if (this.initial == null) this.initial = this.isRange ? [ this.limits[0], this.limits[1] ] : (this.limits[0] + this.limits[1]) / 2;
@@ -1530,19 +1633,19 @@
     SimpleRanger.prototype.doRequest = function() {
         this.manager.doRequest();
     };
-    var SingleRangeWidget = a$$1(Solr.Ranging, Solr.Patterning, Slider, SimpleRanger, Delaying), defaultParameters$1 = {
+    var SingleRangeWidget = a$$1(Solr$1.Ranging, Solr$1.Patterning, Slider, SimpleRanger, Delaying), defaultParameters$1 = {
         facet: true,
         rows: 0,
         fl: "id",
         "facet.limit": -1,
         "facet.mincount": 1,
         echoParams: "none"
-    }, defSettings$e = {
+    }, defSettings$f = {
         field: null,
         titleSkips: null
     };
     function Ranger(settings) {
-        a$$1.setup(this, defSettings$e, settings);
+        a$$1.setup(this, defSettings$f, settings);
         this.slidersTarget = $$1(settings.slidersTarget);
         this.lookupMap = settings.lookupMap || {};
         this.pivotMap = null;
@@ -1584,7 +1687,7 @@
         var self = this, map = {}, traverser = function(base, idx, pattern, valId) {
             var p = self.getPivotEntry(idx), pid = p.id, color = p.color, info;
             if (p.ranging && !p.disabled) valId = pid + ":" + base.val;
-            pattern += (!base.val ? "-" + p.field + ":*" : p.field + ":" + Solr.escapeValue(base.val)) + " ";
+            pattern += (!base.val ? "-" + p.field + ":*" : p.field + ":" + Solr$1.escapeValue(base.val)) + " ";
             info = base;
             p = self.getPivotEntry(idx + 1);
             if (p != null) base = base[p.id].buckets;
@@ -1676,13 +1779,13 @@
         this.rangeRemove();
         a$$1.pass(this, Ranger, "clearValues");
     };
-    var defSettings$f = {
+    var defSettings$g = {
         switchSelector: ".switcher",
         switchField: null,
         onSwitching: null
     };
     function Switcher(settings) {
-        a$$1.setup(this, defSettings$f, settings);
+        a$$1.setup(this, defSettings$g, settings);
         var self = this, target$ = $$1(self.switchSelector, $$1(settings.target)[0]), initial = _$1.get(self, self.switchField);
         if (typeof initial === "boolean") target$[0].checked = initial; else target$.val(initial);
         target$.on("change", (function(e) {
@@ -1700,12 +1803,12 @@
     Texter.prototype.afterResponse = function() {
         $$1(this.target).val("");
     };
-    var defSettings$g = {
+    var defSettings$h = {
         useJson: false,
         renderItem: null
     };
     function SolrQueryReporter(settings) {
-        a$$1.setup(this, defSettings$g, settings);
+        a$$1.setup(this, defSettings$h, settings);
         this.target = settings.target;
         this.id = settings.id;
         this.manager = null;
@@ -1733,9 +1836,10 @@
             }).addClass("tag_fixed"));
         }
         for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
-            var f = fq[i], vals = null;
+            var f = fq[i], vals = null, w;
             for (var wid in self.facetWidgets) {
-                var w = self.manager.getListener(wid), vals = w.fqParse(f);
+                w = self.manager.getListener(wid);
+                vals = w.fqParse(f);
                 if (!!vals) break;
             }
             if (vals == null) continue;
@@ -1765,12 +1869,13 @@
             this.target.empty().addClass("tags").append(links);
         } else this.target.removeClass("tags").html("<li>No filters selected!</li>");
     };
-    var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>', defSettings$h = {
+    var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{{css}}">{{value}}</a>', plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>', defSettings$i = {
         baseUrl: "",
         summaryPrimes: [ "RESULTS" ],
         tagDbs: {},
         onCreated: null,
         onClick: null,
+        imagesRoot: "images/",
         summaryRenderers: {
             RESULTS: function(val, topic) {
                 var self = this;
@@ -1812,11 +1917,12 @@
         }
     };
     function SolrItemLister(settings) {
-        a$$1.setup(this, defSettings$h, settings);
+        a$$1.setup(this, defSettings$i, settings);
         this.baseUrl = jT$1.fixBaseUrl(settings.baseUrl) + "/";
         this.lookupMap = settings.lookupMap || {};
         this.target = settings.target;
         this.id = settings.id;
+        if (!this.imagesRoot.match(/(\/|\\)$/)) this.imagesRoot += "/";
     }
     SolrItemLister.prototype.renderItem = function(doc) {
         var self = this, el = $$1(this.renderSubstance(doc));
@@ -1848,7 +1954,7 @@
             })).join("");
         };
         var item = {
-            logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
+            logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || this.imagesRoot + "logo.png",
             link: "#",
             href: "#",
             title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") + (doc.substanceType == null ? "" : " " + (this.lookupMap[doc.substanceType] || doc.substanceType)),
@@ -1864,20 +1970,11 @@
             item.href_title = "Study";
             item.href_target = doc.s_uuid;
         } else {
-            var external = "External database";
-            if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-                item.logo = "images/canano.jpg";
-                item.href_title = "caNanoLab: " + item.link;
-                item.href_target = external = "caNanoLab";
-                item.footer = "";
-            } else {
-                item.logo = "images/external.png";
-                item.href_title = "External: " + item.link;
-                item.href_target = "external";
-            }
+            item.href_title = "External: " + item.link;
+            item.href_target = "external";
             if (doc.content.length > 0) {
                 item.link = doc.content[0];
-                for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + "</a>";
+                for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">External database</a>';
             }
         }
         return jT$1.fillTemplate("#result-item", item);
@@ -1943,7 +2040,7 @@
         }));
         return items;
     };
-    var htmlRoot = "<table></table>", defSettings$i = {
+    var htmlRoot = "<table></table>", defSettings$j = {
         id: null,
         target: null,
         shortStars: false,
@@ -2027,7 +2124,7 @@
         }
     };
     function AmbitModelViewer(settings) {
-        a$$1.setup(this, defSettings$i, settings);
+        a$$1.setup(this, defSettings$j, settings);
         this.root$ = $$1(settings && settings.target);
     }
     AmbitModelViewer.prototype.__expects = [ "doRequest", "serviceId" ];
@@ -2084,6 +2181,7 @@
     jT$1.Delaying = Delaying;
     jT$1.Authenticating = Authenticating;
     jT$1.Spying = Spying;
+    jT$1.Exporting = Exporting;
     jT$1.AccordionExpander = AccordionExpander;
     jT$1.Autocompleter = Autocompleter;
     jT$1.Logger = Logger;
@@ -2099,8 +2197,8 @@
     jT$1.SolrItemLister = SolrItemLister;
     jT$1.AmbitModelViewer = AmbitModelViewer;
     jT$1.widget = {
-        SolrResult: a$$1(Solr.Listing, Populating, SolrItemLister, Loading),
-        SolrPaging: a$$1(Solr.Paging, Pager),
+        SolrResult: a$$1(Solr$1.Listing, Populating, SolrItemLister, Loading),
+        SolrPaging: a$$1(Solr$1.Paging, Pager),
         Logger: Logger,
         AmbitModeller: a$$1(AmbitModelViewer, Ambit.Modelling, Ambit.Tasking),
         AmbitAlgorithmer: a$$1(AmbitModelViewer, Ambit.Algorithming)
