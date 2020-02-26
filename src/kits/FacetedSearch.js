@@ -2,7 +2,7 @@
  * The combined, begamoth kit providing full faceted search capabilites.
  *
  * Author: Ivan (Jonan) Georgiev
- * Copyright © 2017-2019, IDEAConsult Ltd. All rights reserved.
+ * Copyright © 2017-2020, IDEAConsult Ltd. All rights reserved.
  */
 
 (function (Solr, a$, $, jT) {

@@ -57,11 +57,12 @@ SolrQueryReporter.prototype.afterResponse = function () {
 	// now scan all the filter parameters for set values
 	for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
 		var f = fq[i],
-			vals = null;
+			vals = null,
+			w;
 
 		for (var wid in self.facetWidgets) {
-			var w = self.manager.getListener(wid),
-				vals = w.fqParse(f);
+			w = self.manager.getListener(wid);
+			vals = w.fqParse(f);
 			if (!!vals)
 				break;
 		}
