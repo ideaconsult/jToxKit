@@ -44,14 +44,14 @@
   "dependencies": {
     "as-sys": "file:../as-sys",
     "solr-jsx": "file:../solr-jsx",
-    "xlsx-datafill": "^0.9.3",
-    "xlsx-populate": "^1.20.1"
+    "xlsx-datafill": "^0.9.5",
+    "xlsx-populate": "^1.21.0"
   },
   "devDependencies": {
-    "uglify-js": "latest",
-    "jasmine-node": "latest",
     "jasmine-core": "latest",
-    "smash": "latest"
+    "jasmine-node": "latest",
+    "smash": "latest",
+    "uglify-js": "^3.8.0"
   },
   "scripts": {
     "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js && rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/as-sys/*.js libs && rsync node_modules/solr-jsx/*.js libs",
