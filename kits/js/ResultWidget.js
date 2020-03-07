@@ -58,9 +58,7 @@ jT.ItemListWidget.prototype = {
     // Check if external references are provided and prepare and show them.
     if (doc.content == null) {
       item.link = baseUrl + doc.s_uuid;
-      item.href = item.link + "/study";
-      item.href_title = "Study";
-      item.href_target = doc.s_uuid;
+      item.link_target = doc.s_uuid;
       item.footer = 
         '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
         '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
@@ -69,9 +67,9 @@ jT.ItemListWidget.prototype = {
         '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>').join("<br/>");
         ;
     } else {
-      item.href_title = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "External database";
-      item.href_target = "external";
+      item.link_target = "external";
       item.composition = this.renderComposition(doc);
+      item.footer = "";
       
       for (var i = 0; i < doc.content.length; ++i) {
         if (!doc.content[i].match(/^https?:\/\//))
@@ -79,7 +77,7 @@ jT.ItemListWidget.prototype = {
         if (!item.link)
           item.link = doc.content[i];
 
-        item.footer += '<a href="' + doc.content[i] + '" target="external">External database</a> ';
+        item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + 'External database</a>&nbsp;';
       }
     }
 
@@ -132,8 +130,9 @@ jT.ItemListWidget.prototype = {
         },
         item = { 
           logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || (this.imagesRoot + "external.png"),
+          link_title: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "Substance",
+          link_target: "_blank",
           link: "#",
-          href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
                 + (doc.substanceType == null ? "" : (" " 
                   + (this.lookupMap[doc.substanceType] || doc.substanceType)
