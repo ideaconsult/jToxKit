@@ -4,6 +4,7 @@ var	Settings = {
       multipleSelection: true,
       keepAllFacets: true,
       aggregateFacets: true,
+      imagesRoot: "../images",
 
     	listingFields: [ 
         "name:name_hs", 

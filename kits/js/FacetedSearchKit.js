@@ -260,7 +260,6 @@
             });
 
             var resDiv = $("#result-tabs"),
-                resSize,
                 self = this;
 
             resDiv.tabs({});
@@ -469,11 +468,9 @@
             var butts = $("button", form);
 
             if ($("#export_dataset").buttonset("option", "disabled")) {
-                butts.button("option", "label", "No target dataset selected...");
-            } else if (!this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered") {
-                butts.button("disable").button("option", "label", "No filters selected...");
-            } else if (!this.manager.response.response.numFound && form.export_dataset.value == "filtered") {
-                butts.button("disable").button("option", "label", "No entries match the filters...");
+                butts
+                    .button("option", "label", "No target dataset selected...")
+                    .button("disable");
             } else if ($(form).find('input[name=export_dataset]').val()) {
                 var sourceText = $("#export_dataset :radio:checked + label").text().toLowerCase(),
                     formatText = $(form.export_format).data('name').toUpperCase();
@@ -482,8 +479,6 @@
                     var me$ = $(this);
                     me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
                 });
-
-                // $("button#export_go", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
             }
         },
 
@@ -611,7 +606,8 @@
                     if (ui.newPanel[0].id == 'export_tab') {
                         var qPar = self.manager.getParameter("q").value,
                             hasFilter = (qPar && qPar.length) > 0 || self.manager.getParameter("json.filter").length > 0,
-                            hasDataset = hasFilter || !!self.basket.length;
+                            hasBasket = !!self.basket.length,
+                            hasDataset = hasFilter || hasBasket;
 
                         $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
                         $("#export_type").buttonset(hasDataset ? "enable" : "disable");
@@ -619,18 +615,20 @@
                         $('.data_formats').toggleClass('disabled', !hasDataset);
 
                         $("input#selected_data")
-                            .prop("checked", !!self.basket.length)
-                            .prop("disabled", !self.basket.length)
-                            .toggleClass("disabled", !self.basket.length);
+                            .prop("checked", hasBasket)
+                            .prop("disabled", !hasBasket)
+                            .toggleClass("disabled", !hasBasket);
                             
                         $("input#filtered_data")
+                            .prop("checked", hasFilter && !hasBasket)
                             .prop("disabled", !hasFilter)
                             .toggleClass("disabled", !hasFilter);
 
-                            $('.data_formats .jtox-ds-download a').first().trigger("click");
-                            $('.data_formats .jtox-ds-download a').first().trigger("click");
+                        $('.data_formats .jtox-ds-download a').first().trigger("click");
+                        $('.data_formats .jtox-ds-download a').first().trigger("click");
 
                         $("#export_dataset").buttonset("refresh");
+                        self.updateButtons(self.form);
                     }
                 }
             });

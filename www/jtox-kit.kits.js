@@ -357,7 +357,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
 
             var resDiv = $("#result-tabs"),
-                resSize,
                 self = this;
 
             resDiv.tabs({});
@@ -566,11 +565,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             var butts = $("button", form);
 
             if ($("#export_dataset").buttonset("option", "disabled")) {
-                butts.button("option", "label", "No target dataset selected...");
-            } else if (!this.manager.getParameter("json.filter").length && form.export_dataset.value == "filtered") {
-                butts.button("disable").button("option", "label", "No filters selected...");
-            } else if (!this.manager.response.response.numFound && form.export_dataset.value == "filtered") {
-                butts.button("disable").button("option", "label", "No entries match the filters...");
+                butts
+                    .button("option", "label", "No target dataset selected...")
+                    .button("disable");
             } else if ($(form).find('input[name=export_dataset]').val()) {
                 var sourceText = $("#export_dataset :radio:checked + label").text().toLowerCase(),
                     formatText = $(form.export_format).data('name').toUpperCase();
@@ -579,8 +576,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     var me$ = $(this);
                     me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
                 });
-
-                // $("button#export_go", ui.newPanel[0]).button("disable").button("option", "label", "No output format selected...");
             }
         },
 
@@ -708,7 +703,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     if (ui.newPanel[0].id == 'export_tab') {
                         var qPar = self.manager.getParameter("q").value,
                             hasFilter = (qPar && qPar.length) > 0 || self.manager.getParameter("json.filter").length > 0,
-                            hasDataset = hasFilter || !!self.basket.length;
+                            hasBasket = !!self.basket.length,
+                            hasDataset = hasFilter || hasBasket;
 
                         $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
                         $("#export_type").buttonset(hasDataset ? "enable" : "disable");
@@ -716,18 +712,20 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         $('.data_formats').toggleClass('disabled', !hasDataset);
 
                         $("input#selected_data")
-                            .prop("checked", !!self.basket.length)
-                            .prop("disabled", !self.basket.length)
-                            .toggleClass("disabled", !self.basket.length);
+                            .prop("checked", hasBasket)
+                            .prop("disabled", !hasBasket)
+                            .toggleClass("disabled", !hasBasket);
                             
                         $("input#filtered_data")
+                            .prop("checked", hasFilter && !hasBasket)
                             .prop("disabled", !hasFilter)
                             .toggleClass("disabled", !hasFilter);
 
-                            $('.data_formats .jtox-ds-download a').first().trigger("click");
-                            $('.data_formats .jtox-ds-download a').first().trigger("click");
+                        $('.data_formats .jtox-ds-download a').first().trigger("click");
+                        $('.data_formats .jtox-ds-download a').first().trigger("click");
 
                         $("#export_dataset").buttonset("refresh");
+                        self.updateButtons(self.form);
                     }
                 }
             });
@@ -922,18 +920,22 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     
     // line formatting function - function (params, jhr) -> { header: "", details: "" }
     formatEvent: function (params, jhr) {
+      var info = {};
+
+      if (params != null) {
+        info.header = params.method.toUpperCase() + ": " + params.service;
+        info.details = "...";
+      }
+
       if (jhr != null)
         // by returning only the details part, we leave the header as it is.
-        return {
-          details: jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders()
-        };
-      else if (params != null)
-        return {
-          header: params.method.toUpperCase() + ": " + params.service,
-          details: "..."
-        };
-      else
-        return null;
+        info.details = jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders();
+
+      return info;
+    },
+
+    formatUrl: function (url) {
+      return url.protocol + "://" + url.host + url.path;
     },
     
     setIcon: function (line$, status) {
@@ -1006,9 +1008,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     },
     
     beforeRequest: function (params) {
-      var url = jT.ui.parseURL(params.url),
-          service = params.service = url.protocol + "://" + url.host + url.path,
-          info = this.formatEvent(params),
+      params.service = this.formatUrl(jT.ui.parseURL(params.url));
+      
+      var info = this.formatEvent(params),
           line$ = this.addLine(info);
           
       this.setStatus("connecting");
@@ -1016,34 +1018,31 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
       this.setIcon(line$, 'connecting');
       line$.data('status', "connecting");
     },
+
+    afterResponse: function (status, params, jhr) {
+      var line$ = this.events[params.logId];
+      
+      this.setStatus(status);
+
+      if (!line$) {
+        if (!params.service)
+          params.service = this.formatUrl(jT.ui.parseURL(params.url));
+
+        line$ = this.addLine(this.formatEvent(params, jhr));
+      } else {
+        delete this.events[params.logId];
+        jT.ui.fillTree(line$[0], this.formatEvent(null, jhr));
+      }
+      
+      this.setIcon(line$, status);
+    },
     
     afterRequest: function (response, params, jhr) {
-      var info = this.formatEvent(params, jhr),
-          line$ = this.events[params.logId];
-
-      this.setStatus("success");
-      if (!line$) {
-        console.log("jToxLog: missing line for:" + params.service);
-        return;
-      }
-      delete this.events[params.logId];
-      this.setIcon(line$, 'success');
-      jT.ui.fillTree(line$[0], info);
+      this.afterResponse('success', params, jhr);
     },
     
     afterFailure: function (jhr, params) {
-      var info = this.formatEvent(params, jhr),
-          line$ = this.events[params.logId];
-
-      this.setStatus("error");
-      if (!line$) {
-        console.log("jToxLog: missing line for:" + params.service + "(" + jhr.statusText + ")");
-        return;
-      }
-      delete this.events[params.logId];
-      this.setIcon(line$, 'error');
-      jT.ui.fillTree(line$[0], info);
-
+      this.afterResponse('error', params, jhr);
       console && console.log("Error [" + params.service + "]: " + jhr.statusText);
     }
   };
@@ -1504,12 +1503,15 @@ jT.ItemListWidget = function (settings) {
 
   this.lookupMap = settings.lookupMap || {};
 	this.target = settings.target;
-	this.id = settings.id;
+  this.id = settings.id;
+  if (!this.imagesRoot.match(/(\/|\\)$/))
+    this.imagesRoot += '/'
 };
 
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
+  imagesRoot: "images/",
   tagDbs: {},
   onCreated: null,
   onClick: null,
@@ -1542,6 +1544,39 @@ jT.ItemListWidget.prototype = {
         })
       }
     }
+  },
+  renderLinks: function (doc) {
+    var baseUrl = this.getBaseUrl(doc),
+        item = {};
+
+    // Check if external references are provided and prepare and show them.
+    if (doc.content == null) {
+      item.link = baseUrl + doc.s_uuid;
+      item.link_target = doc.s_uuid;
+      item.footer = 
+        '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
+        '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
+        '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>';
+      item.composition = this.renderComposition(doc, 
+        '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>').join("<br/>");
+        ;
+    } else {
+      item.link_target = "external";
+      item.composition = this.renderComposition(doc);
+      item.link_title = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "External database";
+      item.footer = "";
+      
+      for (var i = 0; i < doc.content.length; ++i) {
+        if (!doc.content[i].match(/^https?:\/\//))
+          continue;
+        if (!item.link)
+          item.link = doc.content[i];
+
+        item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + '</a>&nbsp;';
+      }
+    }
+
+    return item;
   },
 	
   renderItem: function (doc) {
@@ -1585,27 +1620,20 @@ jT.ItemListWidget.prototype = {
   renderSubstance: function(doc) {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
-        baseUrl = this.getBaseUrl(doc),
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
-        }
-       var item = { 
-          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || "images/logo.png",
+        },
+        item = { 
+          logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || (this.imagesRoot + "external.png"),
+          link_title: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "Substance",
+          link_target: "_blank",
           link: "#",
-          href: "#",
           title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") 
                 + (doc.substanceType == null ? "" : (" " 
                   + (this.lookupMap[doc.substanceType] || doc.substanceType)
                 )),
-          composition: this.renderComposition(doc, 
-              '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>'
-            ).join("<br/>"),
           summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
-          item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
-          footer: 
-            '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' +
-            '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' +
-            '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
+          item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid          
         };
 
     // Build the outlook of the summary item
@@ -1613,38 +1641,8 @@ jT.ItemListWidget.prototype = {
       item.summary += 
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
-    
-    // Check if external references are provided and prepare and show them.
-    if (doc.content == null) {
-      item.link = baseUrl + doc.s_uuid;
-      item.href = item.link + "/study";
-      item.href_title = "Study";
-      item.href_target = doc.s_uuid;
-    } 
-    else {
-      var external = "External database";
-      
-      if (doc.owner_name && doc.owner_name.lastIndexOf("caNano", 0) === 0) {
-        item.logo = "images/canano.jpg";
-        item.href_title = "caNanoLab: " + item.link;
-        item.href_target = external = "caNanoLab";
-        item.footer = '';
-      }
-      else {
-        item.logo = "images/external.png";
-        item.href_title = "External: " + item.link;
-        item.href_target = "external";
-      }
-      
-      if (doc.content.length > 0) {
-        item.link = doc.content[0]; 
 
-        for (var i = 0, l = doc.content.length; i < l; i++)
-          item.footer += '<a href="' + doc.content[i] + '" target="external">' + external + '</a>';
-      }
-    } 
-    
-    return jT.ui.fillTemplate("#result-item", item);
+    return jT.ui.fillTemplate("#result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc){
@@ -1697,12 +1695,10 @@ jT.ItemListWidget.prototype = {
           entry += map[i];
       	}
       	
-      	if (entry === "")
-      	  entry = ":&nbsp;" + defValue;
-      	  
-        entry = type + " (" + map.length + ")" + entry;
-      	  
-      	summary.push(entry);
+        if (entry === "" && !!defValue)
+          entry = ":&nbsp;" + defValue;
+        
+        summary.push(type + " (" + map.length + ")" + entry);
     	});
     }
   	
@@ -1760,7 +1756,7 @@ jT.ResultWidgeting.prototype = {
   
 	beforeRequest : function() {
 		$(this.target).html(
-				$('<img>').attr('src', 'images/ajax-loader.gif'));
+				$('<img>').attr('src', this.imagesRoot + 'ajax-loader.gif'));
 	},
 	
 	afterFailure: function(jhr, params) {
@@ -1864,11 +1860,8 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "" +
 "<section id=\"result-item\">" +
 "<article id=\"{{item_id}}\" class=\"item\">" +
-"<header>{{title}}" +
-"<a href=\"{{href}}\" title=\"{{href_title}}\" target=\"{{href_target}}\"><span" +
-"class=\"ui-icon ui-icon-extlink\" style=\"float:right;margin:0;\"></span></a>" +
-"</header>" +
-"<a href=\"{{link}}\" title=\"{{link}}\" class=\"avatar\" target=\"_blank\"><img jt-src=\"{{logo}}\" /></a>" +
+"<header>{{title}}</header>" +
+"<a href=\"{{link}}\" title=\"{{link_title}}\" class=\"avatar\" target=\"{{link_target}}\"><img jt-src=\"{{logo}}\" /></a>" +
 "<div class=\"composition\">{{composition}}</div>" +
 "{{summary}}" +
 "<footer class=\"links\">" +
@@ -1896,7 +1889,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<header>{{title}}</header>" +
 "<div class=\"composition\">" +
 "{{description}}" +
-"<a href=\"#\" title=\"Apply the query\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
+"<a href=\"#\" title=\"Apply the query\" style=\"width: 100%;\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
 "</div>" +
 "</article>" +
 "</section>" +

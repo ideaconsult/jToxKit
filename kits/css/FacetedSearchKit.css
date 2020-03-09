@@ -26,6 +26,41 @@ section.item-list article.item .avatar img {
   border: none;
 }
 
+article a.more {
+  font-style: italic;
+}
+
+article.item header {
+  background-color: inherit;
+}
+
+article.item footer {
+	margin-top: 10px;
+  min-height: 10px;
+  background-color: inherit;
+}
+
+article.item footer a {
+	margin-right: 10px;
+}
+
+article.item footer a.command {
+	float: right;	
+	opacity: 0.5;
+	display: none;
+}
+
+article.item footer a.command:hover {
+	opacity: 1.0;
+}
+
+article.item footer.add .command.add,
+article.item footer.remove .command.remove,
+article.item footer.none .command.none {
+	display: inline-block;
+}
+
+
 #wrap {
   width: 1000px;
   margin: 0px auto;
@@ -122,47 +157,10 @@ div.query-container>div.query-left, .sticky-wrapper {
   display: inline;
 }
 
-div.item-list {
-  padding-top: 1px;
-}
-
 div.ui-tabs-panel.ui-widget-content {
   font-size: 0.9rem;
   padding-left: 0.7em;
   padding-right: 0.7em;
-}
-
-div.item-list header {
-	margin-bottom: 10px;	
-}
-
-article a.more {
-  font-style: italic;
-}
-
-article.item footer {
-	margin-top: 10px;
-	min-height: 10px;
-}
-
-article.item footer a {
-	margin-right: 10px;
-}
-
-footer a.command {
-	float: right;	
-	opacity: 0.5;
-	display: none;
-}
-
-footer a.command:hover {
-	opacity: 1.0;
-}
-
-footer.add .command.add,
-footer.remove .command.remove,
-footer.none .command.none {
-	display: inline-block;
 }
 
 article div.one-summary {
@@ -175,6 +173,13 @@ article div.one-summary .topic {
 }
 
 /* tagcloud */
+#hits_tab>div.row {
+  margin: 0;
+}
+
+#hits_tab ul {
+  width: 100%;
+}
 
 #hits_tab .tags li,
 #hits_tab .tags li.tag_combined.tag_last {
@@ -206,6 +211,7 @@ article div.one-summary .topic {
   position: relative;
   font-weight: normal;
   font-size: 80%;
+  background-color: inherit;
 }
 
 #sliders {
