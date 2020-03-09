@@ -12,7 +12,7 @@ import $ from 'jquery';
 import jT from '../Core';
 
 function buildServiceId(params) {
-	var url = jT.parseURL(params.url);
+	var url = jT.parseURL(params.url || params);
 
 	return url.protocol + "://" + url.host + url.path;
 };
@@ -68,18 +68,18 @@ function Logger(settings) {
 
 // line formatting function - function (params, jhr) -> { header: "", details: "" }
 Logger.prototype.formatEvent = function (params, jhr) {
+	var info = {};
+	
+	if (params != null) {
+		info.header = params.method.toUpperCase() + ": " + buildServiceId(params);
+		info.details = "...";
+	}
+	
+	// by returning only the details part, we leave the header as it is.	
 	if (jhr != null)
-		// by returning only the details part, we leave the header as it is.
-		return {
-			details: jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders()
-		};
-	else if (params != null)
-		return {
-			header: params.method.toUpperCase() + ": " + buildServiceId(params),
-			details: "..."
-		};
-	else
-		return null;
+		info.details = jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders();
+	
+	return info;
 };
 
 Logger.prototype.setIcon = function (line$, status) {
@@ -163,18 +163,18 @@ Logger.prototype.beforeRequest = function (params) {
 };
 
 Logger.prototype.afterResponse = function (response, jhr, params) {
-	var info = this.formatEvent(params, jhr),
-		line$ = this.events[params.logId],
+	var line$ = this.events[params.logId],
 		status = !!response ? 'success' : 'error';
 
-	this.setStatus(status);
 	if (!line$) {
-		console && console.log("jToxLog: missing line for:" + buildServiceId(params) + "(" + jhr.statusText + ")");
-		return;
+		line$ = this.addLine(this.formatEvent(params, jhr));
+	} else {
+		delete this.events[params.logId];
+		jT.fillTree(line$[0], info);
 	}
-	delete this.events[params.logId];
+
+	this.setStatus(status);
 	this.setIcon(line$, status);
-	jT.fillTree(line$[0], info);
 
 	if (status == 'error')
 		console && console.log("Error [" + buildServiceId(params) + "]: " + jhr.statusText);

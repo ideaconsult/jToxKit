@@ -1150,7 +1150,7 @@
         this.requestSent = false;
     };
     function buildServiceId(params) {
-        var url = jT$1.parseURL(params.url);
+        var url = jT$1.parseURL(params.url || params);
         return url.protocol + "://" + url.host + url.path;
     }
     var defSettings$9 = {
@@ -1186,12 +1186,13 @@
         }
     }
     Logger.prototype.formatEvent = function(params, jhr) {
-        if (jhr != null) return {
-            details: jhr.status + " " + jhr.statusText + "<br/>" + jhr.getAllResponseHeaders()
-        }; else if (params != null) return {
-            header: params.method.toUpperCase() + ": " + buildServiceId(params),
-            details: "..."
-        }; else return null;
+        var info = {};
+        if (params != null) {
+            info.header = params.method.toUpperCase() + ": " + buildServiceId(params);
+            info.details = "...";
+        }
+        if (jhr != null) info.details = jhr.status + " " + jhr.statusText + "<br/>" + jhr.getAllResponseHeaders();
+        return info;
     };
     Logger.prototype.setIcon = function(line$, status) {
         if (status == "error") line$.addClass("ui-state-error"); else line$.removeClass("ui-state-error");
@@ -1247,15 +1248,15 @@
         line$.data("status", "connecting");
     };
     Logger.prototype.afterResponse = function(response, jhr, params) {
-        var info = this.formatEvent(params, jhr), line$ = this.events[params.logId], status = !!response ? "success" : "error";
-        this.setStatus(status);
+        var line$ = this.events[params.logId], status = !!response ? "success" : "error";
         if (!line$) {
-            console && console.log("jToxLog: missing line for:" + buildServiceId(params) + "(" + jhr.statusText + ")");
-            return;
+            line$ = this.addLine(this.formatEvent(params, jhr));
+        } else {
+            delete this.events[params.logId];
+            jT$1.fillTree(line$[0], info);
         }
-        delete this.events[params.logId];
+        this.setStatus(status);
         this.setIcon(line$, status);
-        jT$1.fillTree(line$[0], info);
         if (status == "error") console && console.log("Error [" + buildServiceId(params) + "]: " + jhr.statusText);
     };
     Logger.prototype.mountOnHandlers = function(dest) {
@@ -1947,37 +1948,42 @@
         }));
         return null;
     };
-    SolrItemLister.prototype.renderSubstance = function(doc) {
-        var summaryhtml = $$1("#summary-item").html(), summarylist = this.buildSummary(doc), baseUrl = this.getBaseUrl(doc), summaryRender = function(summarylist) {
-            return summarylist.map((function(s) {
-                return jT$1.formatString(summaryhtml, s);
-            })).join("");
-        };
-        var item = {
-            logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || this.imagesRoot + "logo.png",
-            link: "#",
-            href: "#",
-            title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") + (doc.substanceType == null ? "" : " " + (this.lookupMap[doc.substanceType] || doc.substanceType)),
-            composition: this.renderComposition(doc, '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>').join("<br/>"),
-            summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
-            item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid,
-            footer: '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' + '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' + '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>'
-        };
-        if (summarylist.length > 0) item.summary += '<a href="#" class="more">more</a>' + '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + "</div>";
+    SolrItemLister.prototype.renderLinks = function(doc) {
+        var baseUrl = this.getBaseUrl(doc), item = {};
         if (doc.content == null) {
             item.link = baseUrl + doc.s_uuid;
-            item.href = item.link + "/study";
-            item.href_title = "Study";
-            item.href_target = doc.s_uuid;
+            item.link_target = doc.s_uuid;
+            item.footer = '<a href="' + baseUrl + doc.s_uuid + '" title="Substance" target="' + doc.s_uuid + '">Material</a>' + '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">Composition</a>' + '<a href="' + baseUrl + doc.s_uuid + '/study" title="Study" target="' + doc.s_uuid + '">Studies</a>';
+            item.composition = this.renderComposition(doc, '<a href="' + baseUrl + doc.s_uuid + '/structure" title="Composition" target="' + doc.s_uuid + '">&hellip;</a>').join("<br/>");
         } else {
-            item.href_title = "External: " + item.link;
-            item.href_target = "external";
-            if (doc.content.length > 0) {
-                item.link = doc.content[0];
-                for (var i = 0, l = doc.content.length; i < l; i++) item.footer += '<a href="' + doc.content[i] + '" target="external">External database</a>';
+            item.link_target = "external";
+            item.composition = this.renderComposition(doc);
+            item.link_title = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "External database";
+            item.footer = "";
+            for (var i = 0; i < doc.content.length; ++i) {
+                if (!doc.content[i].match(/^https?:\/\//)) continue;
+                if (!item.link) item.link = doc.content[i];
+                item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + "</a>&nbsp;";
             }
         }
-        return jT$1.fillTemplate("#result-item", item);
+        return item;
+    };
+    SolrItemLister.prototype.renderSubstance = function(doc) {
+        var summaryhtml = $$1("#summary-item").html(), summarylist = this.buildSummary(doc), summaryRender = function(summarylist) {
+            return summarylist.map((function(s) {
+                return jT$1.ui.formatString(summaryhtml, s);
+            })).join("");
+        }, item = {
+            logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || this.imagesRoot + "external.png",
+            link_title: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "Substance",
+            link_target: "_blank",
+            link: "#",
+            title: (doc.publicname || doc.name) + (doc.pubname === doc.name ? "" : "  (" + doc.name + ")") + (doc.substanceType == null ? "" : " " + (this.lookupMap[doc.substanceType] || doc.substanceType)),
+            summary: summarylist.length > 0 ? summaryRender(summarylist.splice(0, this.summaryPrimes.length)) : "",
+            item_id: (this.prefix || this.id || "item") + "_" + doc.s_uuid
+        };
+        if (summarylist.length > 0) item.summary += '<a href="#" class="more">more</a>' + '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + "</div>";
+        return jT$1.fillTemplate("#result-item", $$1.extend(item, this.renderLinks(doc)));
     };
     SolrItemLister.prototype.getBaseUrl = function(doc) {
         if (this.tagDbs[doc.dbtag_hss] !== undefined) {
@@ -2015,9 +2021,8 @@
                     if (map.length > 1) entry += "<strong>[" + (i + 1) + "]</strong>&nbsp;";
                     entry += map[i];
                 }
-                if (entry === "") entry = ":&nbsp;" + defValue;
-                entry = type + " (" + map.length + ")" + entry;
-                summary.push(entry);
+                if (entry === "" && !!defValue) entry = ":&nbsp;" + defValue;
+                summary.push(type + " (" + map.length + ")" + entry);
             }));
         }
         return summary;
