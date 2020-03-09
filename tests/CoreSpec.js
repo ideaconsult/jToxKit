@@ -1,5 +1,5 @@
-asSys = require("as-sys");
-Solr = require("solr-jsx");
+asSys = require("@thejonan/as-sys");
+Solr = require("@ideaconsult/solr-jsx");
 jT = require("../");
 
 a$ = asSys;
