@@ -173,6 +173,13 @@ article div.one-summary .topic {
 }
 
 /* tagcloud */
+#hits_tab>div.row {
+  margin: 0;
+}
+
+#hits_tab ul {
+  width: 100%;
+}
 
 #hits_tab .tags li,
 #hits_tab .tags li.tag_combined.tag_last {

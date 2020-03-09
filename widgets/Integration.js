@@ -16,7 +16,7 @@ jT.ui = a$.extend(jT.ui, {
     var self = this,
         dataParams = element.data(),
         kit = dataParams.kit,
-        topSettings = $.extend(true, {}, self.rootSettings);
+        topSettings = $.extend(true, {}, self.rootSettings),
         parent = null;
 
   	// we need to traverse up, to collect some parent's settings...
@@ -86,7 +86,9 @@ jT.ui = a$.extend(jT.ui, {
 	      $.extend(true, dataParams, (typeof config === 'function' ? config.call(kit, dataParams, kit) : config));
       }
 
-      element.data('jtKit', realInit(dataParams, element));
+      var kitObj = realInit(dataParams, element);
+      element.data('jtKit', kitObj);
+      return kitObj;
 	  }
   },
 

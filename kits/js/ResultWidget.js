@@ -69,6 +69,7 @@ jT.ItemListWidget.prototype = {
     } else {
       item.link_target = "external";
       item.composition = this.renderComposition(doc);
+      item.link_title = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "External database";
       item.footer = "";
       
       for (var i = 0; i < doc.content.length; ++i) {
@@ -77,7 +78,7 @@ jT.ItemListWidget.prototype = {
         if (!item.link)
           item.link = doc.content[i];
 
-        item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + 'External database</a>&nbsp;';
+        item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + '</a>&nbsp;';
       }
     }
 
@@ -200,7 +201,7 @@ jT.ItemListWidget.prototype = {
           entry += map[i];
       	}
       	
-        if (entry === "")
+        if (entry === "" && !!defValue)
           entry = ":&nbsp;" + defValue;
         
         summary.push(type + " (" + map.length + ")" + entry);

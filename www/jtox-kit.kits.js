@@ -357,7 +357,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
 
             var resDiv = $("#result-tabs"),
-                resSize,
                 self = this;
 
             resDiv.tabs({});
@@ -921,18 +920,22 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     
     // line formatting function - function (params, jhr) -> { header: "", details: "" }
     formatEvent: function (params, jhr) {
+      var info = {};
+
+      if (params != null) {
+        info.header = params.method.toUpperCase() + ": " + params.service;
+        info.details = "...";
+      }
+
       if (jhr != null)
         // by returning only the details part, we leave the header as it is.
-        return {
-          details: jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders()
-        };
-      else if (params != null)
-        return {
-          header: params.method.toUpperCase() + ": " + params.service,
-          details: "..."
-        };
-      else
-        return null;
+        info.details = jhr.status + " " + jhr.statusText + '<br/>' + jhr.getAllResponseHeaders();
+
+      return info;
+    },
+
+    formatUrl: function (url) {
+      return url.protocol + "://" + url.host + url.path;
     },
     
     setIcon: function (line$, status) {
@@ -1005,9 +1008,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     },
     
     beforeRequest: function (params) {
-      var url = jT.ui.parseURL(params.url),
-          service = params.service = url.protocol + "://" + url.host + url.path,
-          info = this.formatEvent(params),
+      params.service = this.formatUrl(jT.ui.parseURL(params.url));
+      
+      var info = this.formatEvent(params),
           line$ = this.addLine(info);
           
       this.setStatus("connecting");
@@ -1015,34 +1018,31 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
       this.setIcon(line$, 'connecting');
       line$.data('status', "connecting");
     },
+
+    afterResponse: function (status, params, jhr) {
+      var line$ = this.events[params.logId];
+      
+      this.setStatus(status);
+
+      if (!line$) {
+        if (!params.service)
+          params.service = this.formatUrl(jT.ui.parseURL(params.url));
+
+        line$ = this.addLine(this.formatEvent(params, jhr));
+      } else {
+        delete this.events[params.logId];
+        jT.ui.fillTree(line$[0], this.formatEvent(null, jhr));
+      }
+      
+      this.setIcon(line$, status);
+    },
     
     afterRequest: function (response, params, jhr) {
-      var info = this.formatEvent(params, jhr),
-          line$ = this.events[params.logId];
-
-      this.setStatus("success");
-      if (!line$) {
-        console.log("jToxLog: missing line for:" + params.service);
-        return;
-      }
-      delete this.events[params.logId];
-      this.setIcon(line$, 'success');
-      jT.ui.fillTree(line$[0], info);
+      this.afterResponse('success', params, jhr);
     },
     
     afterFailure: function (jhr, params) {
-      var info = this.formatEvent(params, jhr),
-          line$ = this.events[params.logId];
-
-      this.setStatus("error");
-      if (!line$) {
-        console.log("jToxLog: missing line for:" + params.service + "(" + jhr.statusText + ")");
-        return;
-      }
-      delete this.events[params.logId];
-      this.setIcon(line$, 'error');
-      jT.ui.fillTree(line$[0], info);
-
+      this.afterResponse('error', params, jhr);
       console && console.log("Error [" + params.service + "]: " + jhr.statusText);
     }
   };
@@ -1563,6 +1563,7 @@ jT.ItemListWidget.prototype = {
     } else {
       item.link_target = "external";
       item.composition = this.renderComposition(doc);
+      item.link_title = this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].title || "External database";
       item.footer = "";
       
       for (var i = 0; i < doc.content.length; ++i) {
@@ -1571,7 +1572,7 @@ jT.ItemListWidget.prototype = {
         if (!item.link)
           item.link = doc.content[i];
 
-        item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + 'External database</a>&nbsp;';
+        item.footer += '<a href="' + doc.content[i] + '" target="external">' + item.link_title + '</a>&nbsp;';
       }
     }
 
@@ -1694,7 +1695,7 @@ jT.ItemListWidget.prototype = {
           entry += map[i];
       	}
       	
-        if (entry === "")
+        if (entry === "" && !!defValue)
           entry = ":&nbsp;" + defValue;
         
         summary.push(type + " (" + map.length + ")" + entry);
@@ -1888,7 +1889,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<header>{{title}}</header>" +
 "<div class=\"composition\">" +
 "{{description}}" +
-"<a href=\"#\" title=\"Apply the query\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
+"<a href=\"#\" title=\"Apply the query\" style=\"width: 100%;\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
 "</div>" +
 "</article>" +
 "</section>" +

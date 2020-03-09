@@ -260,7 +260,6 @@
             });
 
             var resDiv = $("#result-tabs"),
-                resSize,
                 self = this;
 
             resDiv.tabs({});
