@@ -171,7 +171,7 @@
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					}, { anno: 'effects ' + c});
+					}, { anno: 'conditions.' + c});
 				};
 				return col;
 			});
@@ -443,7 +443,7 @@
 				});
 
 				jT.fireCallback(self.settings.onLoaded, self, substance.substance);
-				
+
 				// query for the summary and the composition too.
 				self.querySummary(substance.URI + "/studysummary");
 				self.insertComposition(substance.URI + "/composition");
@@ -454,6 +454,15 @@
 
 	StudyKit.prototype.query = function (uri) {
 		this.querySubstance(uri);
+	};
+
+	StudyKit.prototype.getContext = function () {
+		return {
+			subject: 'study',
+			substanceUri: this.substance.URI,
+			substanceId: this.substance.i5uuid,
+			owner: this.substance.ownerName
+		}
 	};
 
 	StudyKit.getFormatted = function (data, type, format) {
@@ -535,9 +544,9 @@
 			return jT.tables.renderMulti(data, type, full, function (data, type) {
 				var resText = jT.ui.renderRange(data.result, null, type);
 				if (data.result.errorValue != null)
-					resText += " (" + (data.result.errQualifier || StudyKit.defaults.errorDefault) + " " + data.result.errorValue + ")";
-				return resText;
-			}, { anno: "result result.errQualifier result.errValue"});
+					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
+				return resText
+			}, { anno: "result result.unit result.errValue result.errQualifier"});
 		}
 	},
 	{

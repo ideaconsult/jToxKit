@@ -134,6 +134,13 @@
 		this.queryComposition(uri);
 	};
 
+	CompositionKit.prototype.getContext = function () {
+		return {
+			subject: 'composition',
+			compositionUri: this.compositionUri
+		}
+	};
+
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
 		showDiagrams: false, // whether to show diagram for each compound in the composition

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>[jTox] Annotation Kit development page</title>
+    <link rel="stylesheet" href="css/AnnotationKit.css">
+    <link rel="stylesheet" href="css/Base.css">
+
+    <link rel="stylesheet" href="../libs/jquery-ui.min.css">
+    <link rel="stylesheet" href="../libs/jquery.range.css" type="text/css">
+
+    <link rel="stylesheet" href="../www/jtox-kit.css" type="text/css">
+</head>
+
+<body>
+
+    <div id="annotation-ui" class="jtox-kit" data-kit="Annotation" data-configuration="AnnotationSettings"
+        data-base-url="http://localhost:8080/ambit2/" />
+
+    <div class="jtox-template">
+<!--[[ jT.ui.templates['anno-input'] -->
+        <input name="{{ name }}" placeholder="{{ value }} " class="ui-widget ui-corner-all padded-control" />
+<!--// end of anno-input ]]-->
+<!--[[ jT.ui.templates['anno-select-option'] -->
+        <option value="{{ value }}">{{ title }}</option>
+<!--// end of anno-select-option ]]-->
+<!--[[ jT.ui.templates['anno-form'] -->
+        <form>
+            <p>Scope:</p>
+            <div class="annotip-scope">
+                <select name="operation.scope" class="ui-widget ui-corner-all padded-control"></select>
+            </div>
+            <div class="annotip-suggestion"></div>
+            <div class="annotip-description">
+                <textarea name="description" rows="3" class="ui-widget ui-corner-all padded-control"></textarea>
+            </div>
+            <p class="go-right">Operation:</p>
+            <div class="annotip-buttonset annotip-action go-right">
+                <input type="radio" value="add" name="operation.action" id="annotip-action-add" />
+                <label for="annotip-action-add">Add</label>
+                <input type="radio" value="replace" name="operation.action" id="annotip-action-replace" />
+                <label for="annotip-action-replace">Replace</label>
+                <input type="radio" value="delete" name="operation.action" id="annotip-action-delete" />
+                <label for="annotip-action-delete">Delete</label>
+                <input type="radio" value="synonyms" name="operation.action" id="annotip-action-synonyms" />
+                <label for="annotip-action-synonyms">Synonyms</label>
+            </div>
+            <p class="go-right">Severity:</p>
+            <div class="annotip-buttonset annotip-severity go-right">
+                <input type="radio" value="low" name="operation.severity" id="annotip-severity-low"/>
+                <label for="annotip-severity-low">Low</label>
+                <input type="radio" value="medium" name="operation.severity" id="annotip-severity-medium" />
+                <label for="annotip-severity-medium">Medium</label>
+                <input type="radio" value="high" name="operation.severity" id="annotip-severity-high" />
+                <label for="annotip-severity-high">High</label>
+            </div>
+        </form>
+<!--// end of anno-form ]]-->
+    </div>
+    <script src="../libs/jquery.js"></script>
+    <script src="../libs/jquery-ui.min.js"></script>
+    <script src="../libs/purl.js"></script>
+    <script src="../libs/jquery.range-min.js"></script>
+
+    <script src="../libs/as-sys.min.js"></script>
+    <script src="../libs/solr-jsx.min.js"></script>
+    <script src="../libs/solr-jsx.widgets.min.js"></script>
+    <script src="../libs/jquery.sticky.js"></script>
+
+    <script src="../www/jtox-kit.js"></script>
+    <script src="../www/jtox-kit.widgets.js"></script>
+    <!-- <script src="../www/jtox-kit.kits.js"></script> -->
+
+    <script src="js/AnnotationKit.js"></script>
+
+    <script lang="JavaScript">
+        $(document).ready(function () {
+            jT.ui.initialize();
+        });
+    </script>
+</body>
+
+</html>
