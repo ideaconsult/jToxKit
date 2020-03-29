@@ -61,7 +61,17 @@
             savedQueries: [],
             listingFields: [],
             facets: [],
-            summaryRenderers: {}
+            summaryRenderers: {},
+            annotationSettings: {
+                matchers: [{
+                    selector: "article.item",
+                    extractor: "s_uuid"
+                }, {
+                    selector: 'div.one-summary>span.value',
+                    extractor: ['SUMMARY.RESULTS_hss', 0],
+                    presenter: '<input type="text"></input>'
+                }]
+            }
         },
 
         uiUpdateTimer = null,
@@ -298,13 +308,25 @@
         initComm: function () {
             var Manager, Basket,
                 PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-                TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
+                TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running),
+                resultTarget = $('#docs'), 
+                self = this;
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
+            this.annoWidget = new jT.AnnotationWidget($.extend(true, {
+                target: resultTarget,
+                subject: {
+                    url: document.location.href,
+                    kind: "substance"
+                }
+            }, this.annotationSettings));
+            
+            // TODO: This should most likely happen after some button click.
+            this.annoWidget.start();
 
             Manager.addListeners(new jT.ResultWidget($.extend(true, {
                 id: 'result',
-                target: $('#docs'),
+                target: resultTarget,
                 itemId: "s_uuid",
                 nestLevel: "composition",
                 onClick: function (e, doc) {
@@ -328,6 +350,7 @@
                 },
                 onCreated: function (doc) {
                     $("footer", this).addClass("add");
+                    self.annoWidget.dataInserter(this, doc);
                 }
             }, this)));
 

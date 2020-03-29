@@ -217,5 +217,6 @@ import "Switching";
 import "Running";
 import "TableTools";
 import "Ambit";
+import "AnnotationWidget";
 
 })(jToxKit, asSys, jQuery);
