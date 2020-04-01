@@ -535,16 +535,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             listingFields: [],
             facets: [],
             summaryRenderers: {},
-            annotationSettings: {
-                matchers: [{
-                    selector: "article.item",
-                    extractor: "s_uuid"
-                }, {
-                    selector: 'div.one-summary>span.value',
-                    extractor: ['SUMMARY.RESULTS_hss', 0],
-                    presenter: '<input type="text"></input>'
-                }]
-            }
+            annotationSettings: {}
         },
 
         uiUpdateTimer = null,
@@ -788,9 +779,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
             this.annoWidget = new jT.AnnotationWidget($.extend(true, {
                 target: resultTarget,
-                subject: {
+                context: {
                     url: document.location.href,
-                    kind: "substance"
+                    subject: "substance"
                 }
             }, this.annotationSettings));
             

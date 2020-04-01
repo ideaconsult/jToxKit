@@ -5,15 +5,15 @@
 * Copyright © 2017-2020, IDEAConsult Ltd. All rights reserved.
 */
 
-(function(a$, $, jT) {
+(function(a$, $, jT) {	
 	function AnnotationWidget(settings) {
-		a$.extend(true, this, AnnotationWidget.defaults, a$.common(settings, AnnotationWidget.defaults));
+		a$.extend(true, this, AnnotationWidget.defaults, settings);
 		var self = this;
 		
 		this.target = settings.target;
-
+		
 		this.annoTip = new AnnoTip({
-			subject: this.subject,
+			context: this.context,
 			// Handlers. All accept @see {Anno} as an argument.
 			onSelection: function (anno) { return self.analyzeAnno(anno); },
 			onAction: function (action, anno) { return self.onAction(action, anno); },
@@ -22,13 +22,15 @@
 	};
 
 	AnnotationWidget.defaults = {
-		subject: null,
+		context: null,
 		ajaxSettings: null,
 		connector: null,
+		inputSize: 30,
 		matchers: [{
-			selector: /.*/,		// RegEx
-			extractor: null,	// String
-			presenter: null
+			selector: "*",		// String - CSS selector
+			extractor: null,	// String | Function 
+			presenter: null,	// String - HTML | Function
+			exclusive: false	// Boolean - terminate matching
 		}]
 	};
 
@@ -37,14 +39,20 @@
 	};
 
 	AnnotationWidget.prototype.onAction = function (action, anno) {
-		if (action === 'edit') {
-			anno.content = anno.controls;
+		if (action === 'edit') {			
+			anno.content = this.controlsPacker(anno);
 			this.annoTip.update(anno);
+			this.beautify(anno.element);
 			return;
 		}
 		if (action === 'ok') {
-			this.dataVerifier(anno);
-			// TODO: Use this this.connector(this.ajaxSettings) to make a call.
+			var data = this.dataPacker(anno);
+
+			if (typeof this.dataPostprocess === 'function')
+				data = this.dataPostprocess(data, anno);
+
+			if (data)
+				$.ajax($.extend(true, this.ajaxSettings, { data:  data }));
 		}
 		this.annoTip.discard();
 	};
@@ -53,40 +61,81 @@
 		var dataInfo = this.dataExtractor(anno.element),
 			data = dataInfo.data,
 			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
-			matchers = this.matchers,
-			ui = $('div'),
-			info = {};
+			matchers = this.matchers;
+			
+		anno.reference = {};
+		anno.controls = [];
+		for (var i = 0;i < matchers.length; ++i) {
+			var m = matchers[i],
+				found = false;
 
-		elChain.each(function (idx, el) {
-			for (var i = 0;i < matchers.length; ++i) {
-				var m = matchers[i],
-					v = null;
+			elChain.filter(m.selector).each(function (idx, el) {
+				var v = null;
 
 				// First, deal with value extraction...
-				if (!$(el).is(m.selector) || m.extractor === false)
-					continue;
-				else if (typeof m.extractor === 'function')
-					v = m.extractor(data, el, anno.selection);
+				if (typeof m.extractor === 'function')
+					v = m.extractor(data, anno, el);
 				else if (typeof m.extractor === 'string' || Array.isArray(m.extractor))
 					v = _.set({}, m.extractor, _.get(data, m.extractor));
+				else if (m.extractor != null)
+					v = m.extractor;
 				
-				// ... and merge it to the main info object.
-				info = $.extend(true, info, v);
+				// ... and merge it to the main data inside the anno object.
+				if (v != null)
+					anno.reference = $.extend(true, anno.reference, v);
 
 				// The, proceed with ui building.
 				if (typeof m.presenter === 'string')
-					ui.append(jT.ui.fillTemplate(m.presenter, info));
+					anno.controls.push(jT.ui.formatString(m.presenter, anno));
 				else if (typeof m.presenter === 'function')
-					m.presenter(ui, info, data);
-			}
-		});
+					anno.controls.push(m.presenter(data, anno, el));
 
-		anno.data = info;
-		anno.controls = ui[0].innerHTML;
+				found = true;
+			});
+
+			if (found && m.exclusive) break;
+		}
+
+		return anno.controls.length > 0;
 	};
 
-	AnnotationWidget.prototype.dataVerifier = function (anno) {
-		anno.subject.url = document.location.href;
+	AnnotationWidget.prototype.controlsPacker = function (anno) {
+		anno.controls.push(
+			'<textarea name="description" rows="3" cols="' + this.inputSize + '"></textarea>',
+			'<div class="annotip-severity">' +
+			'<div>Severity:</div>' +
+			'<input type="radio" value="low" name="severity" id="annotip-severity-low" checked="checked"/>' +
+			'<label for="annotip-severity-low">Low</label>' +
+			'<input type="radio" value="medium" name="severity" id="annotip-severity-medium"/>' +
+			'<label for="annotip-severity-medium">Medium</label>' +
+			'<input type="radio" value="high" name="severity" id="annotip-severity-high"/>' +
+			'<label for="annotip-severity-high">High</label>' +
+			'</div>');
+
+			return '<form><div>' + anno.controls.join('</div>\n<div>') + '</div></form>';
+  	};
+
+	AnnotationWidget.prototype.beautify = function (element) {
+		$(".annotip-severity", element).buttonset();
+		$("input, textarea, select", element).addClass("ui-widget ui-corner-all padded-control");
+		$("input", element).attr('size', this.inputSize - 1);		
+	};
+
+	AnnotationWidget.prototype.dataPreprocess = function (data, anno) {
+		$('form', anno.element).serializeArray().forEach(function (el) {
+			_.set(data, el.name, el.value);
+		});
+		
+		return data;
+	};
+
+	AnnotationWidget.prototype.dataPacker = function (anno) {
+		return this.dataPreprocess({
+			context: anno.context,
+			reference: anno.reference,
+			operation: anno.operation,
+			suggestion: anno.suggestion
+		}, anno);
 	};
 
 	AnnotationWidget.prototype.dataExtractor = function (el) {
