@@ -9,7 +9,7 @@
     vals += "&#x2026;" + (stats.max == null ? "&#x221E;" : stats.max);
   						
     if (isUnits)
-      vals += " " + jT.ui.formatUnits(stats.val)
+      vals += " " + jT.formatUnits(stats.val)
         .replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;")
         .replace(/<sup>(\d)<\/sup>/g, "^$1");
         

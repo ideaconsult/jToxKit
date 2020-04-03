@@ -189,6 +189,7 @@
 .jtox-toolkit table.dataTable th {
   border:1px solid #ccc;
   overflow: hidden;
+  padding: 3px;
 }
 
 .jtox-toolkit .shortened {

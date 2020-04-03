@@ -134,7 +134,7 @@ jT.ModelRunning.prototype = {
     if (self.forceCreate)
       createIt();
     else
-      obtainResults(jT.ui.addParameter(datasetUri, 'feature_uris[]=' + encodeURIComponent(modelUri + '/predicted')));
+      obtainResults(jT.addParameter(datasetUri, 'feature_uris[]=' + encodeURIComponent(modelUri + '/predicted')));
   },
 
   /**

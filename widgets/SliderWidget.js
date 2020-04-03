@@ -59,9 +59,9 @@ jT.SliderWidget.prototype = {
     var self = this,
         enabled = this.limits[1] > this.limits[0],
         scale = [
-          jT.ui.formatNumber(this.limits[0], this.precision), 
+          jT.nicifyNumber(this.limits[0], this.precision), 
           this.title + (enabled || !this.units ? "" : " (" + this.units + ")"), 
-          jT.ui.formatNumber(this.limits[1], this.precision)
+          jT.nicifyNumber(this.limits[1], this.precision)
         ],
         updateHandler = self.updateHandler(),
         settings = {
@@ -74,7 +74,7 @@ jT.SliderWidget.prototype = {
         	disable: !enabled,
         	isRange: this.isRange,
         	width: this.width,
-        	format: jT.ui.formatString(this.format, this) || ""
+        	format: jT.formatString(this.format, this) || ""
       	};
     
     if (this.color != null)

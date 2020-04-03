@@ -189,6 +189,7 @@
 .jtox-toolkit table.dataTable th {
   border:1px solid #ccc;
   overflow: hidden;
+  padding: 3px;
 }
 
 .jtox-toolkit .shortened {
@@ -747,6 +748,21 @@ div.jtox-study-tab .dataTables_wrapper {
 
 .jtox-toolkit .jtox-study table td {
   word-wrap: break-word;
+}
+.jtox-toolkit table.composition-info.dataTable td,
+.jtox-toolkit table.composition-info.dataTable th {
+  border: 0px;
+  padding-bottom: 0px;
+  padding-top: 0px;
+}
+
+.jtox-toolkit table.composition-info.dataTable th {
+  width: 20%;
+  text-align: right;
+}
+
+.jtox-toolkit table.composition-table td {
+  vertical-align: top;
 }
 a,
 section.item-list article.item a,
@@ -1325,4 +1341,72 @@ input.widget-filter {
 .jtox-log .logline .details {
   margin-left: 18px;
   vertical-align: top;
+}
+/* toxtstudy.css - Styling for toxstudy engine
+*/
+
+div.jtox-study,
+div.jtox-compo-tab,
+div.jtox-substance {
+  display: block;
+  font-size: small;
+  border-radius: 5px;
+  padding: 5px 5px 35px 5px;
+}
+
+.jtox-compo-tab {
+  margin-top: 25px;
+  margin-bottom: 45px;  
+}
+
+div.jtox-study-tab.unloaded  {
+  background: url(../images/waiting_big.gif) center center no-repeat;
+  background-size: 30px 30px;
+}
+
+div.jtox-study-tab.unloaded div.jtox-study {
+  display: none;
+}
+
+div.jtox-study.folded {
+  padding-bottom: 5px;
+}
+
+div.jtox-study .title {
+  font-weight: bold;
+  clear: both;
+  padding: 0px;
+  margin: 0px;
+  border: 0px;
+  width: 100%;
+}
+
+div.jtox-foldable.jtox-study.unloaded>.title {
+  background: url(../images/waiting_small.png) right top no-repeat;
+  background-size: 16px 16px;
+}
+
+div.jtox-study-tab.ui-tabs-panel {
+  padding-left: 0px;
+  padding-bottom: 0px;
+  padding-right: 0px;
+  width: 100%;
+  height: 100%;
+}
+
+div.jtox-study-tab div button {
+	font-size: 80%;
+	padding:4px 8px 4px 8px;
+}
+
+div.jtox-study-tab .dataTables_wrapper {
+  overflow: hidden;  
+  width: 100%;
+}
+
+.jtox-toolkit .jtox-study table td {
+  word-wrap: break-word;
+}
+.jtox-substance table td div.shortened {
+  width: 120px;
 }

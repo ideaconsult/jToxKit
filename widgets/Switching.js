@@ -10,7 +10,7 @@ jT.Switching = function (settings) {
   a$.extend(true, this, a$.common(settings, jT.Switching.prototype));
   var self = this,
       target$ = $(self.switchSelector, $(settings.target)[0]),
-      initial = a$.path(self, self.switchField);
+      initial = _.get(self, self.switchField);
 
   // Initialize the switcher according to the field.
   if (typeof initial === 'boolean')

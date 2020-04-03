@@ -69,7 +69,7 @@
             if (uiUpdateTimer != null)
                 clearTimeout(uiUpdateTimer);
             uiUpdateTimer = setTimeout(function () {
-                var state = jT.ui.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
+                var state = jT.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
 
                 if (!!state)
                     window.history.pushState({
@@ -150,7 +150,7 @@
         $(settings.target).html(jT.ui.templates['faceted-search-kit']);
         delete this.target;
 
-        var uiConf = jT.ui.parseURL(window.location.href).params['ui'];
+        var uiConf = jT.parseURL(window.location.href).params['ui'];
         if (uiConf != null)
             uiConfiguration = JSON.parse(decodeURIComponent(uiConf));
 
@@ -318,7 +318,7 @@
                         Basket.enumerateItems(function (d) {
                             s += d.s_uuid + ";";
                         });
-                        if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
+                        if (!!(s = jT.modifyURL(window.location.href, "basket", s)))
                             window.history.pushState({
                                 query: window.location.search
                             }, document.title, s);
@@ -438,7 +438,7 @@
                     Basket.enumerateItems(function (d) {
                         s += d.s_uuid + ";";
                     });
-                    if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
+                    if (!!(s = jT.modifyURL(window.location.href, "basket", s)))
                         window.history.pushState({
                             query: window.location.search
                         }, document.title, s);
@@ -480,7 +480,7 @@
 
                 butts.button("enable").each(function () {
                     var me$ = $(this);
-                    me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
+                    me$.button("option", "label", jT.formatString(me$.data('format'), { source: sourceText, format: formatText }));
                 });
             }
         },
@@ -576,7 +576,7 @@
                             .prop("checked", hasBasket)
                             .prop("disabled", !hasBasket)
                             .toggleClass("disabled", !hasBasket);
-                            
+
                         $("input#filtered_data")
                             .prop("checked", hasFilter && !hasBasket)
                             .prop("disabled", !hasFilter)

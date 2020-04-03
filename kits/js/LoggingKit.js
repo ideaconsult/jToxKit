@@ -43,7 +43,7 @@
     }
 
     if (!!this.mountDestination) {
-      var dest = typeof this.mountDestination === 'object' ? this.mountDestination : a$.path(window, this.mountDestination),
+      var dest = typeof this.mountDestination === 'object' ? this.mountDestination : _.get(window, this.mountDestination),
           self = this;
       dest.onPrepare = function (params) { return self.beforeRequest(params); };
       dest.onSuccess = function (response, jqXHR, params) { return self.afterRequest(response, params, jqXHR); };
@@ -150,7 +150,7 @@
     },
     
     beforeRequest: function (params) {
-      params.service = this.formatUrl(jT.ui.parseURL(params.url));
+      params.service = this.formatUrl(jT.parseURL(params.url));
       
       var info = this.formatEvent(params),
           line$ = this.addLine(info);
@@ -168,7 +168,7 @@
 
       if (!line$) {
         if (!params.service)
-          params.service = this.formatUrl(jT.ui.parseURL(params.url));
+          params.service = this.formatUrl(jT.parseURL(params.url));
 
         line$ = this.addLine(this.formatEvent(params, jhr));
       } else {

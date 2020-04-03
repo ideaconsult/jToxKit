@@ -218,7 +218,7 @@
               valuePattern: ref.pattern + "{{v}}",
               automatic: true,
               title: this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/),
-              units: ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "",
+              units: ref.id == "unit" ? jT.formatUnits(ref.val) : "",
               useJson: this.useJson,
               domain: this.domain,
               sliderRoot: this

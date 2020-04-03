@@ -4,7 +4,7 @@ var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{
     plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
   
 jT.ItemListWidget = function (settings) {
-	settings.baseUrl = jT.ui.fixBaseUrl(settings.baseUrl) + "/";
+	settings.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
   a$.extend(true, this, a$.common(settings, this));
 
   this.lookupMap = settings.lookupMap || {};
@@ -29,7 +29,7 @@ jT.ItemListWidget.prototype = {
       });
     },
     "REFOWNERS": function (val, topic) {
-      return { 'topic': "Study Providers", 'content': val.map(function (ref) { return jT.ui.formatString(htmlLink, { 
+      return { 'topic': "Study Providers", 'content': val.map(function (ref) { return jT.formatString(htmlLink, { 
         href: "#", 
         hint: "Freetext search", 
         target: "_self", 
@@ -43,7 +43,7 @@ jT.ItemListWidget.prototype = {
         'content': val.map(function (ref) { 
           var link = ref.match(/^doi:(.+)$/);
           link = link != null ? "https://www.doi.org/" + link[1] : ref;
-          return jT.ui.formatString(
+          return jT.formatString(
             link.match(/^https?:\/\//) ? htmlLink : plainLink,
             { href: link, hint: "External reference", target: "ref", value: ref }
           );
@@ -127,7 +127,7 @@ jT.ItemListWidget.prototype = {
     var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
         summaryRender = function (summarylist) { 
-          return summarylist.map(function (s) { return jT.ui.formatString(summaryhtml, s)}).join("");
+          return summarylist.map(function (s) { return jT.formatString(summaryhtml, s)}).join("");
         },
         item = { 
           logo: this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].icon || (this.imagesRoot + "external.png"),
@@ -177,7 +177,7 @@ jT.ItemListWidget.prototype = {
           var m = k.match(/^(\w+)_[shd]+$/);
           k = m && m[1] || k;
           if (!k.match(/type|id|component/))
-            se.push(jT.ui.formatString(htmlLink, { 
+            se.push(jT.formatString(htmlLink, { 
               href: "#", 
               hint: "Freetext search on '" + k + "'", 
               target: "_self", 
