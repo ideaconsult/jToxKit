@@ -34,6 +34,16 @@
 			}
 		});
 
+		// Initialize some handling buttons.
+		tree$.on('click', 'div.jtox-study-tab div button', function (e) {
+			var par = $(this).parents('.jtox-study-tab')[0];
+			if ($(this).hasClass('expand-all')) {
+				$('.jtox-foldable', par).removeClass('folded');
+			} else if ($(this).hasClass('collapse-all')) {
+				$('.jtox-foldable', par).addClass('folded');
+			}
+		});
+
 		// when all handlers are setup - make a call, if needed.
 		if (this.settings['substanceUri'] != null) {
 			this.querySubstance(this.settings['substanceUri']);
@@ -247,9 +257,7 @@
 			return (valA < valB) ? -1 : 1;
 		});
 
-		var tabRoot = $('ul', self.rootElement).parent()[0],
-			added = 0,
-			lastAdded = null;
+		var added = 0, lastAdded = null;
 
 		function addStudyTab(top, sum) {
 			var tabInfo = jT.ui.addTab(self.tabs, 

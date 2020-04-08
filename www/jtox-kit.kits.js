@@ -1,166 +1,3 @@
-/** jToxKit - chem-informatics multi-tool-kit.
-* The universal annotation capabilities.
-*
-* Author: Ivan (Jonan) Georgiev
-* Copyright © 2020, IDEAConsult Ltd. All rights reserved.
-*/
-
-(function(a$, $, jT) {	
-	function AnnotationKit(settings) {
-		a$.extend(true, this, AnnotationKit.defaults, settings);
-		var self = this;
-		
-		this.selector = settings.selector;
-		
-		this.annoTip = new AnnoTip({
-			context: this.context,
-			// Handlers. All accept @see {Anno} as an argument.
-			onSelection: function (anno) { return self.analyzeAnno(anno); },
-			onAction: function (action, anno) { return self.onAction(action, anno); },
-			onClose: null
-		});
-
-		if (!!settings.autoStart)
-			this.start();
-	};
-
-	AnnotationKit.defaults = {
-		context: null,
-		ajaxSettings: null,
-		connector: null,
-		inputSize: 30,
-		matchers: [{
-			selector: "*",		// String - CSS selector
-			extractor: null,	// String | Function 
-			presenter: null,	// String - HTML | Function
-			exclusive: false	// Boolean - terminate matching
-		}]
-	};
-
-	AnnotationKit.prototype.start = function () {
-		this.annoTip.attach(this.selector);
-	};
-
-	AnnotationKit.prototype.onAction = function (action, anno) {
-		if (action === 'edit') {			
-			if (typeof this.controlsPrepack === 'function')
-				anno = this.controlsPrepack(data, anno);
-
-			anno.content = this.controlsPacker(anno);
-			this.annoTip.update(anno);
-			this.beautify(anno.element);
-			$(anno.element).addClass('openned');
-			return;
-		}
-		if (action === 'ok') {
-			var data = this.dataPacker(anno);
-
-			if (typeof this.dataPostprocess === 'function')
-				data = this.dataPostprocess(data, anno);
-
-			if (data)
-				$.ajax($.extend(true, this.ajaxSettings, { data:  data }));
-		}
-		
-		$(".annotip-severity", anno.element).buttonset('destroy');
-		this.annoTip.discard();
-	};
-
-	AnnotationKit.prototype.analyzeAnno = function (anno) {
-		var dataInfo = this.dataExtractor(anno.element),
-			data = dataInfo.data,
-			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
-			matchers = this.matchers;
-			
-		anno.reference = {};
-		anno.controls = [];
-		for (var i = 0;i < matchers.length; ++i) {
-			var m = matchers[i],
-				found = false;
-
-			elChain.filter(m.selector).each(function (idx, el) {
-				var v = null;
-
-				// First, deal with value extraction...
-				if (typeof m.extractor === 'function')
-					v = m.extractor(data, anno, el);
-				else if (typeof m.extractor === 'string' || Array.isArray(m.extractor))
-					v = _.set({}, m.extractor, _.get(data, m.extractor));
-				else if (m.extractor != null)
-					v = m.extractor;
-				
-				// ... and merge it to the main data inside the anno object.
-				if (v != null)
-					anno.reference = $.extend(true, anno.reference, v);
-
-				// The, proceed with ui building.
-				if (typeof m.presenter === 'string')
-					anno.controls.push(jT.ui.formatString(m.presenter, anno));
-				else if (typeof m.presenter === 'function')
-					anno.controls.push(m.presenter(data, anno, el));
-
-				found = true;
-			});
-
-			if (found && m.exclusive) break;
-		}
-
-		return anno.controls.length > 0;
-	};
-
-	AnnotationKit.prototype.controlsPacker = function (anno) {
-		anno.controls.push(
-			'<textarea name="description" rows="3" cols="' + this.inputSize + '"></textarea>',
-			'<div class="annotip-severity">' +
-			'<div>Severity:</div>' +
-			'<input type="radio" value="low" name="severity" id="annotip-severity-low" checked="checked"/>' +
-			'<label for="annotip-severity-low">Low</label>' +
-			'<input type="radio" value="medium" name="severity" id="annotip-severity-medium"/>' +
-			'<label for="annotip-severity-medium">Medium</label>' +
-			'<input type="radio" value="high" name="severity" id="annotip-severity-high"/>' +
-			'<label for="annotip-severity-high">High</label>' +
-			'</div>');
-
-			return '<form><div>' + anno.controls.join('</div>\n<div>') + '</div></form>';
-  	};
-
-	AnnotationKit.prototype.beautify = function (element) {
-		$(".annotip-severity", element).buttonset();
-		$("input, textarea, select", element).addClass("ui-widget ui-corner-all padded-control");
-		$("input", element).attr('size', this.inputSize - 1);		
-	};
-
-	AnnotationKit.prototype.dataPreprocess = function (data, anno) {
-		$('form', anno.element).serializeArray().forEach(function (el) {
-			_.set(data, el.name, el.value);
-		});
-		
-		return data;
-	};
-
-	AnnotationKit.prototype.dataPacker = function (anno) {
-		return this.dataPreprocess({
-			context: anno.context,
-			reference: anno.reference,
-			operation: anno.operation,
-			suggestion: anno.suggestion
-		}, anno);
-	};
-
-	AnnotationKit.prototype.dataExtractor = function (el) {
-		var target = $(el).closest('table.dataTable>tbody>tr')[0],
-			table = jT.tables.getTable(target);
-		
-		return {
-			target: target,
-			data: table.row(target).data()		
-		};
-	};
-
-	AnnotationKit.prototype.dataInserter = function (el, data) { };
-
-	jT.ui.Annotation = AnnotationKit;
-})(asSys, jQuery, jToxKit);
 /* CompositionKit.js - A kit for visualizing substance composition(s). Migrated.
  *
  * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
@@ -274,13 +111,15 @@
 				// now make the actual filling
 				if (!self.settings.noInterface) {
 					for (var i in substances) {
-						var panel = jT.ui.bakeTemplate(jT.ui.templates['all-composition'], substances[i])[0];
+						var panel = $(jT.ui.templates['all-composition'])[0];
 						$(self.rootElement).append(panel);
 
-						if (!self.settings.showBanner) // we need to remove it
+						if (self.settings.showBanner)
+							jT.ui.fillTree($('.composition-info', panel)[0], substances[i]);
+						else // we need to remove it
 							$('.composition-info', panel).remove();
 						// we need to prepare tables, abyways.
-						self.prepareTable(substances[i].composition, panel[0]);
+						self.prepareTable(substances[i].composition, panel);
 					}
 				}
 			} else
@@ -776,15 +615,13 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         initComm: function () {
             var Manager, Basket,
                 PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-                TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running),
-                resultTarget = $('#docs'), 
-                self = this;
+                TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
-            
+
             Manager.addListeners(new jT.ResultWidget($.extend(true, {
                 id: 'result',
-                target: resultTarget,
+                target: $('#docs'),
                 itemId: "s_uuid",
                 nestLevel: "composition",
                 onClick: function (e, doc) {
@@ -833,7 +670,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     ui = uiConfiguration[f.id],
                     w = new TagWidget($.extend({
                         target: this.accordion,
-                        expansionTemplate: "tab-topcategory",
+                        expansionTemplate: "#tab-topcategory",
                         subtarget: "ul",
                         runMethod: toggleAggregate,
                         multivalue: this.multipleSelection,
@@ -865,7 +702,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 id: "studies",
                 target: this.accordion,
                 subtarget: "ul",
-                expansionTemplate: "tab-topcategory",
+                expansionTemplate: "#tab-topcategory",
                 before: "#cell_header",
                 field: "loValue_d",
                 lookupMap: this.lookupMap,
@@ -974,7 +811,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
             
             this.queries.renderItem = function (query) {
-                el$ = jT.ui.fillTemplate("query-item", query);
+                el$ = jT.ui.fillTemplate("#query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     var queryDef = $(this).data('query');
@@ -1138,7 +975,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.fillTemplate("export-format", this.exportFormats[i]);
+                var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
                 el.data("index", i);
                 exportEl.append(el);
 
@@ -1180,7 +1017,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
             for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
                 this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
-                var el = jT.ui.fillTemplate("export-type", this.exportTypes[i]);
+                var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
                 el.data("index", i);
                 exportEl.append(el);
             }
@@ -1363,7 +1200,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     
     addLine: function (data) {
       var self = this,
-          el$ = jT.ui.fillTemplate('logger-line', data);
+          el$ = jT.ui.fillTemplate("#jtox-logline", data);
 
       el$.height('0px');
       this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
@@ -1374,7 +1211,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
           el$.toggleClass('openned');
           if (el$.hasClass("openned")) {
             var height = 0;
-            $('.info-field', el$[0]).each(function () {
+            $('.data-field', el$[0]).each(function () {
               height += this.offsetHeight;
             });
             el$.height(height + 6);
@@ -1417,7 +1254,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         line$ = this.addLine(this.formatEvent(params, jhr));
       } else {
         delete this.events[params.logId];
-        line$.html(jT.formatString(jT.ui.templates['logger-line'], this.formatEvent(null, jhr)));
+        jT.ui.fillTree(line$[0], this.formatEvent(null, jhr));
       }
       
       this.setIcon(line$, status);
@@ -1598,7 +1435,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
           if (target.children().length > 1) // the input field.
             cont$ = $("#" + fid, target[0]).show();
           else {
-				    cont$ = jT.ui.fillTemplate("tag-facet", faceter).attr("id", fid);
+				    cont$ = jT.ui.fillTemplate($("#tag-facet"), faceter).attr("id", fid);
             
     				f.title = f.val;
     				f.onMain = this.clickHandler(faceter.id + ":" + f.val);
@@ -1824,7 +1661,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
       for (var i = 0, rangeCnt = current.length; i < rangeCnt; ++i) {
         var ref = current[i],
             full = allVals.find(function (e) { return e.pattern === ref.pattern }) || ref,
-            el$ = jT.ui.fillTemplate("slider-one"),
+            el$ = jT.ui.fillTemplate("#slider-one"),
             setup = {
               id: ref.id,
               targetValue: value,
@@ -2004,7 +1841,7 @@ jT.ItemListWidget.prototype = {
 	 * substance
 	 */
   renderSubstance: function(doc) {
-    var summaryhtml = jT.ui.templates["summary-item"],
+    var summaryhtml = $("#summary-item").html(),
         summarylist = this.buildSummary(doc),
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.formatString(summaryhtml, s)}).join("");
@@ -2028,7 +1865,7 @@ jT.ItemListWidget.prototype = {
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
 
-    return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
+    return jT.ui.fillTemplate("#result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc){
@@ -2178,7 +2015,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
+		var tree$ = $(this.rootElement).append(jT.ui.templates['all-studies']),
 			self = this;
 
 		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
@@ -2229,11 +2066,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	StudyKit.prototype.createCategory = function (tab, category) {
 		var theCat$ = $('.' + category + '.jtox-study', tab);
-		if (!theCat$.length) {
-			var aStudy = jT.ui.bakeTemplate(jT.ui.templates['one-study'], {})
-				.addClass(category);
-			theCat$ = $(tab).append(aStudy);
-		}
+		if (!theCat$.length)
+			theCat$ = $(tab).append($(jT.ui.templates['one-study']).addClass(category));
 
 		return theCat$[0];
 	};
@@ -2326,7 +2160,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					}, { anno: 'effects ' + c});
+					});
 				};
 				return col;
 			});
@@ -2360,7 +2194,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				"dom": self.settings.dom,
 				"columns": colDefs,
 				"infoCallback": function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
-					var el = $('.title .counter', $(this).parents('.jtox-study'))[0];
+					var el = $('.title .data-field', $(this).parents('.jtox-study'))[0];
 					el.innerHTML = jT.ui.updateCounter(el.innerHTML, iTotal);
 					return sPre;
 				},
@@ -2420,18 +2254,19 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		var added = 0, lastAdded = null;
 
 		function addStudyTab(top, sum) {
-			var tabInfo = jT.ui.addTab(self.tabs, 
-				(knownNames[top] || sum.topcategory.title), 
-				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
-				jT.ui.fillTemplate('one-category', self.substance));
+			var tab$ = $(jT.ui.templates['one-category']),
+				link = jT.ui.addTab(
+					self.tabs, 
+					(knownNames[top] || sum.topcategory.title) + " (0)", "jtox-" + top.toLowerCase() + '_' + self.instanceNo, tab$[0]).tab;
 
-			tabInfo.tab.data('type', top);
-			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);
+			$(link).data('type', top);
+			tab$.addClass(top).data('jtox-uri', sum.topcategory.uri);
+			jT.ui.fillTree(tab$[0], self.substance);
 
 			added++;
 			lastAdded = top;
 
-			return tabInfo.content[0];
+			return tab$[0];
 		};
 
 		for (var si = 0, sl = summary.length; si < sl; ++si) {
@@ -2514,12 +2349,13 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		// now iterate within all categories (if many) and initialize the tables
 		for (var c in cats) {
 			var onec = cats[c],
-				aStudy = $('.' + c + '.jtox-study', tab);
-
-			if (aStudy.length < 1)
+				aStudy = $('.' + c + '.jtox-study', tab)[0];
+			if (aStudy === undefined)
 				continue;
 
-			jT.ui.updateTree(aStudy, { title: onec[0].protocol.category.title + " (0)" });
+			jT.ui.fillTree(aStudy, {
+				title: onec[0].protocol.category.title + " (0)"
+			});
 
 			// now swipe through all studyies to build a "representative" one with all fields.
 			var study = {};
@@ -2597,13 +2433,12 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				substance["IUCFlags"] = jT.ambit.formatExtIdentifiers(substance.externalIdentifiers, 'display', substance);
 				self.substance = substance;
 
-				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
-
+				jT.ui.fillTree(self.rootElement, substance);
 				// go and query for the reference query
 				jT.ambit.call(self, substance.referenceSubstance.uri, function (dataset) {
 					if (!!dataset && dataset.dataEntry.length > 0) {
 						jT.ambit.processDataset(dataset, null, jT.ambit.getDatasetValue);
-						jT.ui.updateTree($('.jtox-substance', self.rootElement), dataset.dataEntry[0]);
+						jT.ui.fillTree($('.jtox-substance', self.rootElement)[0], dataset.dataEntry[0]);
 					}
 				});
 
@@ -2674,7 +2509,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				if (data.endpointtype != null)
 					endpointText += " (" + data.endpointtype + ")";
 				return endpointText
-			}, { anno: "endpoint endpointtype"});
+			});
 		}
 	}, // Effects columns
 	{
@@ -2688,7 +2523,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				if (data.result.errorValue != null)
 					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
 				return resText
-			}, { anno: "result result.errQualifier result.errValue"});
+			});
 		}
 	},
 	{
@@ -2699,7 +2534,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		"render": function (data, type, full) {
 			return jT.tables.renderMulti(data, type, full, function (data) {
 				return data.result.textValue || '-';
-			}, { anno: "result result.textValue"});
+			});
 		}
 	},
 	{
@@ -2771,7 +2606,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			var self = this;
 
 			if (this.settings.embedComposition && this.settings.onDetails == null) {
-				this.settings.onDetails = function (root, data) {
+				this.settings.onDetails = function (root, data, element) {
 					new jT.ui.Composition(root, $.extend({},
 						self.settings,
 						(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
@@ -2781,7 +2616,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				};
 			}
 
-			$(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-substance'], ' ? '));
+			$(this.rootElement).append(jT.ui.templates['all-substance']);
 			this.init(settings);
 		}
 
@@ -2966,18 +2801,18 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 })(asSys, jQuery, jToxKit);
 jT.ui.templates['all-composition']  = 
 "<div class=\"jtox-composition unloaded\">" +
-"<table class=\"dataTable composition-info font-small display jtox-annotatable\">" +
+"<table class=\"dataTable composition-info font-small display\">" +
 "<thead>" +
-"<tr><th>Composition name:</th><td class=\"camelCase\">{{ name }}</td></tr>" +
-"<tr><th>Composition UUID:</th><td>{{ uuid }}</td></tr>" +
-"<tr><th>Purity of IUC Substance:</th><td>{{ purity }}</td></tr>" +
+"<tr><th>Composition name:</th><td class=\"data-field camelCase\" data-field=\"name\"> ? </td></tr>" +
+"<tr><th>Composition UUID:</th><td class=\"data-field\" data-field=\"uuid\"> ? </td></tr>" +
+"<tr><th>Purity of IUC Substance:</th><td class=\"data-field\" data-field=\"purity\"> ? </td></tr>" +
 "</thead>" +
 "</table>" +
 "<table class=\"composition-table display\"></table>" +
 "</div>" +
 ""; // end of #jtox-composition 
 
-jT.ui.templates['faceted-search-kit']  = 
+jToxKit.ui.templates['faceted-search-kit']  = 
 "<div class=\"query-container\">" +
 "<!-- left -->" +
 "<div id=\"query\" class=\"query-left\">" +
@@ -3061,10 +2896,12 @@ jT.ui.templates['faceted-search-kit']  =
 "</div>" +
 ""; // end of #faceted-search-kit 
 
-jT.ui.templates['result-item']  = 
+jToxKit.ui.templates['faceted-search-templates']  = 
+"" +
+"<section id=\"result-item\">" +
 "<article id=\"{{item_id}}\" class=\"item\">" +
 "<header>{{title}}</header>" +
-"<a href=\"{{link}}\" title=\"{{link_title}}\" class=\"avatar\" target=\"{{link_target}}\"><img src=\"{{logo}}\" /></a>" +
+"<a href=\"{{link}}\" title=\"{{link_title}}\" class=\"avatar\" target=\"{{link_target}}\"><img jt-src=\"{{logo}}\" /></a>" +
 "<div class=\"composition\">{{composition}}</div>" +
 "{{summary}}" +
 "<footer class=\"links\">" +
@@ -3074,20 +2911,20 @@ jT.ui.templates['result-item']  =
 "<a href=\"#\" class=\"none jtox-fadable command\">Already added</a>" +
 "</footer>" +
 "</article>" +
-""; // end of #result-item 
-
-jT.ui.templates['summary-item']  = 
+"</section>" +
+"" +
+"<div id=\"summary-item\">" +
 "<div class=\"one-summary\">" +
 "<span class=\"topic\">{{topic}}:</span>" +
 "<span class=\"value\">{{content}}</span>" +
 "</div>" +
-""; // end of #summary-item 
-
-jT.ui.templates['tag-facet']  = 
+"</div>" +
+"" +
+"<div id=\"tag-facet\">" +
 "<ul class=\"tags tag-group folded\"></ul>" +
-""; // end of #tag-facet 
-
-jT.ui.templates['query-item']  = 
+"</div>" +
+"" +
+"<section id=\"query-item\">" +
 "<article id=\"{{id}}\" class=\"item\">" +
 "<header>{{title}}</header>" +
 "<div class=\"composition\">" +
@@ -3095,9 +2932,9 @@ jT.ui.templates['query-item']  =
 "<a href=\"#\" title=\"Apply the query\" style=\"width: 100%;\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
 "</div>" +
 "</article>" +
-""; // end of #query-item 
-
-jT.ui.templates['tab-topcategory']  = 
+"</section>" +
+"" +
+"<div id=\"tab-topcategory\">" +
 "<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}</h3>" +
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
 "<div>" +
@@ -3106,37 +2943,39 @@ jT.ui.templates['tab-topcategory']  =
 "</div>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
 "</div>" +
-""; // end of #tab-top-category 
-
-jT.ui.templates['slider-one']  = 
+"</div>" +
+"" +
+"<div id=\"slider-one\">" +
 "<input type=\"hidden\" />" +
-""; // end of #slider-one 
-
-jT.ui.templates['export-type']  = 
+"</div>" +
+"" +
+"<div id=\"export-type\">" +
 "<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" id=\"{{name}}\" />" +
 "<label for=\"{{name}}\">{{name}}</label>" +
-""; // end of #export-type 
-
-jT.ui.templates['export-format']  = 
-"<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
-"<a target=\"_blank\" data-name=\"{{name}}\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\" src=\"{{icon}}\" /></a>" +
 "</div>" +
-""; // end of #export-format 
+"" +
+"<div id=\"export-format\">" +
+"<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
+"<a target=\"_blank\" data-name=\"{{name}}\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\"" +
+"jt-src=\"{{icon}}\" /></a>" +
+"</div>" +
+"</div>" +
+""; // end of #faceted-search-templates 
 
 jT.ui.templates['logger-main']  = 
 "<div class=\"list-wrap\">" +
 "<div class=\"list-root\"></div>" +
 "</div>" +
-"<div class=\"status\">" +
-"<div class=\"icon jtox-fadable\"></div>" +
-"</div>" +
+"<div class=\"status\"><div class=\"icon jtox-fadable\"></div></div>" +
 ""; // end of #jtox-logger 
 
 jT.ui.templates['logger-line']  = 
+"<div id=\"jtox-logline\">" +
 "<div class=\"logline\">" +
 "<div class=\"icon\"></div>" +
-"<span class=\"content info-field\">{{header}}</span>" +
-"<div class=\"details info-field\">{{details}}</div>" +
+"<span class=\"content data-field\" data-field=\"header\">{{header}}</span>" +
+"<div class=\"details data-field\" data-field=\"details\">{{details}}</div>" +
+"</div>" +
 "</div>" +
 ""; // end of #jtox-logline 
 
@@ -3147,31 +2986,31 @@ jT.ui.templates['all-studies']  =
 "<li><a href=\"#jtox-compo-tab\">Composition</a></li>" +
 "</ul>" +
 "<div id=\"jtox-substance\" class=\"jtox-substance\">" +
-"<table class=\"dataTable display jtox-annotatable\">" +
+"<table class=\"dataTable display\">" +
 "<thead>" +
 "<tr>" +
 "<th class=\"right size-third\">IUC Substance name:</th>" +
-"<td class=\"camelCase\">{{ name }}</td>" +
+"<td class=\"data-field camelCase\" data-field=\"name\"> ? </td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">IUC Substance UUID:</th>" +
-"<td>{{ i5uuid }}</td>" +
+"<td class=\"data-field\" data-field=\"i5uuid\"> ? </td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">IUC Public name:</th>" +
-"<td class=\"camelCase\">{{ publicname }}</td>" +
+"<td class=\"data-field camelCase\" data-field=\"publicname\"> ? </td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">Legal entity:</th>" +
-"<td>{{ ownerName }}</td>" +
+"<td class=\"data-field\" data-field=\"ownerName\"> ? </td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">Legal entity UUID:</th>" +
-"<td>{{ ownerUUID }}</td>" +
+"<td class=\"data-field\" data-field=\"ownerUUID\"> ? </td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">Type substance composition:</th>" +
-"<td>{{ substanceType }}</td>" +
+"<td class=\"data-field\" data-field=\"substanceType\"> ? </td>" +
 "</tr>" +
 "<tr class=\"borderless-bottom\">" +
 "<th class=\"right\">IUC Substance Reference Identifier</th>" +
@@ -3179,27 +3018,27 @@ jT.ui.templates['all-studies']  =
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">CAS:</td>" +
-"<td>{{ compound.cas }}</td>" +
+"<td class=\"data-field\" data-field=\"compound.cas\"> ? </td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">EC:</td>" +
-"<td>{{ compound.einecs }}</td>" +
+"<td class=\"data-field\" data-field=\"compound.einecs\"> ? </td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">Chemical name:</td>" +
-"<td>{{ compound.name }}</td>" +
+"<td class=\"data-field\" data-field=\"compound.name\"> ? </td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">IUPAC name:</td>" +
-"<td>{{ compound.iupac }}</td>" +
+"<td class=\"data-field\" data-field=\"compound.iupac\"> ? </td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">UUID:</td>" +
-"<td>{{ referenceSubstance.i5uuid }}</td>" +
+"<td class=\"data-field\" data-field=\"referenceSubstance.i5uuid\"> ? </td>" +
 "</tr>" +
 "<tr class=\"borderless-top\">" +
 "<td class=\"right\">IUC Flags:</td>" +
-"<td>{{ IUCFlags }}</td>" +
+"<td class=\"data-field\" data-field=\"IUCFlags\"> ? </td>" +
 "</tr>" +
 "</thead>" +
 "</table>" +
@@ -3214,17 +3053,17 @@ jT.ui.templates['one-category']  =
 "<button class=\"expand-all\">Expand all</button><button class=\"collapse-all\">Collapse all</button>" +
 "</div>" +
 "<p><input type=\"text\" class=\"jtox-study-filter ui-input\" placeholder=\"Filter...\" /></p>" +
-"<h4 class=\"camelCase\">{{ showname }}</h4>" +
+"<h4 class=\"data-field camelCase\" data-field=\"showname\"> ? </h4>" +
 "</div>" +
 ""; // end of #jtox-category 
 
 jT.ui.templates['one-study']  = 
 "<div class=\"jtox-study jtox-foldable folded\">" +
 "<div class=\"title\">" +
-"<p class=\"counter\">{{ title }}</p>" +
+"<p class=\"data-field\" data-field=\"title\">? (0)</p>" +
 "</div>" +
 "<div class=\"content\">" +
-"<table class=\"jtox-study-table content display jtox-annotatable\"></table>" +
+"<table class=\"jtox-study-table content display\"></table>" +
 "</div>" +
 "</div>" +
 ""; // end of #jtox-study 
@@ -3232,7 +3071,7 @@ jT.ui.templates['one-study']  =
 jT.ui.templates['all-substance']  = 
 "<div class=\"jtox-substance\">" +
 "<div class=\"jtox-controls\">" +
-"Showing from <span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
+"Showing from <span class=\"data-field high\" data-field=\"pagestart\"> ? </span> to <span class=\"data-field high\" data-field=\"pageend\"> ? </span><span class=\"filtered-text\"> </span>in pages of <select class=\"data-field\" data-field=\"pagesize\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"50\">50</option>" +
@@ -3244,7 +3083,7 @@ jT.ui.templates['all-substance']  =
 "<input type=\"text\" class=\"filterbox\" placeholder=\"Filter...\" />" +
 "</div>" +
 "<div>" +
-"<table class=\"display jtox-annotatable\"></table>" +
+"<table class=\"display\"></table>" +
 "</div>" +
 "</div>" +
 ""; // end of #jtox-substance 
