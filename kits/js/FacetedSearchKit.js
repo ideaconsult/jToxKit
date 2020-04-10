@@ -61,8 +61,7 @@
             savedQueries: [],
             listingFields: [],
             facets: [],
-            summaryRenderers: {},
-            annotationSettings: {}
+            summaryRenderers: {}
         },
 
         uiUpdateTimer = null,
@@ -304,17 +303,7 @@
                 self = this;
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
-            this.annoWidget = new jT.AnnotationWidget($.extend(true, {
-                target: resultTarget,
-                context: {
-                    url: document.location.href,
-                    subject: "substance"
-                }
-            }, this.annotationSettings));
             
-            // TODO: This should most likely happen after some button click.
-            this.annoWidget.start();
-
             Manager.addListeners(new jT.ResultWidget($.extend(true, {
                 id: 'result',
                 target: resultTarget,
@@ -341,7 +330,6 @@
                 },
                 onCreated: function (doc) {
                     $("footer", this).addClass("add");
-                    self.annoWidget.dataInserter(this, doc);
                 }
             }, this)));
 

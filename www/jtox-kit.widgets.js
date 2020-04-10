@@ -1247,6 +1247,10 @@ jT.tables = {
 				}
 			}
 		}
+	},
+
+	getTable: function(el) {
+		return $(el).parents('table.dataTable').DataTable()
 	}
 };
 /** jToxKit - chem-informatics multi-tool-kit.
