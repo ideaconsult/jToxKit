@@ -2977,6 +2977,34 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	jT.ui.Substance = SubstanceKit;
 
 })(asSys, jQuery, jToxKit);
+jT.ui.templates['anno-input']  = 
+"<input name=\"{{ name }}\" placeholder=\"{{ value }} \" class=\"ui-widget ui-corner-all padded-control\"/>" +
+"";// end of anno-input 
+
+jT.ui.templates['anno-description']  = 
+"<textarea name=\"description\" rows=\"3\" class=\"ui-widget ui-corner-all padded-control\"></textarea>" +
+"";// end of anno-description 
+
+jT.ui.templates['anno-severity']  = 
+"<div class=\"annotip-severity\">" +
+"<div>Severity:</div>" +
+"<input type=\"radio\" value=\"low\" name=\"severity\" id=\"annotip-severity-low\" checked=\"checked\"/>" +
+"<label for=\"annotip-severity-low\">Low</label>" +
+"<input type=\"radio\" value=\"medium\" name=\"severity\" id=\"annotip-severity-medium\"/>" +
+"<label for=\"annotip-severity-medium\">Medium</label>" +
+"<input type=\"radio\" value=\"high\" name=\"severity\" id=\"annotip-severity-high\"/>" +
+"<label for=\"annotip-severity-high\">High</label>" +
+"</div>" +
+"";// end of anno-severity 
+
+jT.ui.templates['anno-select']  = 
+"<select name=\"{{ name }}\" value=\"{{ value }}\" class=\"ui-widget ui-corner-all padded-control\">{{ options }}</select>" +
+"";// end of anno-select 
+
+jT.ui.templates['anno-select-option']  = 
+"<option value=\"{{ value }}\">{{ title }}</option>" +
+"";// end of anno-select-option 
+
 jT.ui.templates['all-composition']  = 
 "<div class=\"jtox-composition unloaded\">" +
 "<table class=\"dataTable composition-info font-small display\">" +
