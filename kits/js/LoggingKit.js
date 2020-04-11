@@ -119,7 +119,7 @@
     
     addLine: function (data) {
       var self = this,
-          el$ = jT.ui.fillTemplate("#jtox-logline", data);
+          el$ = jT.ui.fillHtml(jT.ui.templates['jtox-logline'], data);
 
       el$.height('0px');
       this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
@@ -130,7 +130,7 @@
           el$.toggleClass('openned');
           if (el$.hasClass("openned")) {
             var height = 0;
-            $('.data-field', el$[0]).each(function () {
+            $('.info-field', el$[0]).each(function () {
               height += this.offsetHeight;
             });
             el$.height(height + 6);
@@ -173,7 +173,7 @@
         line$ = this.addLine(this.formatEvent(params, jhr));
       } else {
         delete this.events[params.logId];
-        jT.ui.fillTree(line$[0], this.formatEvent(null, jhr));
+        line$.html(jT.formatString(jT.ui.templates['logger-line'], this.formatEvent(null, jhr)));
       }
       
       this.setIcon(line$, status);

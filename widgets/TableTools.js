@@ -17,11 +17,12 @@ jT.tables = {
 	},
 
 	updateControls: function (qStart, qSize) {
-		var pane = $('.jtox-controls', this.rootElement)[0];
-		jT.ui.fillTree(pane, {
+		var pane = $('.jtox-controls', this.rootElement);
+		jT.ui.updateTree(pane, {
 			"pagestart": qSize > 0 ? qStart + 1 : 0,
 			"pageend": qStart + qSize
 		});
+		pane = pane[0];
 
 		var nextBut = $('.next-field', pane);
 		if (this.entriesCount == null || qStart + qSize < this.entriesCount)
@@ -257,9 +258,11 @@ jT.tables = {
 	},
 
 	bindControls: function (kit, handlers) {
-		var pane = $('.jtox-controls', kit.rootElement)[0];
+		var pane = $('.jtox-controls', kit.rootElement);
 		if (kit.settings.showControls) {
-			jT.ui.fillTree(pane, { "pagesize": kit.settings.pageSize });
+			jT.ui.updateTree(pane, { "pagesize": kit.settings.pageSize });
+			pane = pane[0];
+
 			$('.next-field', pane).on('click', handlers.nextPage);
 			$('.prev-field', pane).on('click', handlers.prevPage);
 			$('select', pane).on('change', handlers.sizeChange)

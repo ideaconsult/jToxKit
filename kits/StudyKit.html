@@ -68,27 +68,27 @@
 					<thead>
 						<tr>
 							<th class="right size-third">IUC Substance name:</th>
-							<td class="data-field camelCase" data-field="name"> ? </td>
+							<td class="camelCase">{{ name }}</td>
 						</tr>
 						<tr>
 							<th class="right">IUC Substance UUID:</th>
-							<td class="data-field" data-field="i5uuid"> ? </td>
+							<td>{{ i5uuid }}</td>
 						</tr>
 						<tr>
 							<th class="right">IUC Public name:</th>
-							<td class="data-field camelCase" data-field="publicname"> ? </td>
+							<td class="camelCase">{{ publicname }}</td>
 						</tr>
 						<tr>
 							<th class="right">Legal entity:</th>
-							<td class="data-field" data-field="ownerName"> ? </td>
+							<td>{{ ownerName }}</td>
 						</tr>
 						<tr>
 							<th class="right">Legal entity UUID:</th>
-							<td class="data-field" data-field="ownerUUID"> ? </td>
+							<td>{{ ownerUUID }}</td>
 						</tr>
 						<tr>
 							<th class="right">Type substance composition:</th>
-							<td class="data-field" data-field="substanceType"> ? </td>
+							<td>{{ substanceType }}</td>
 						</tr>
 						<tr class="borderless-bottom">
 							<th class="right">IUC Substance Reference Identifier</th>
@@ -96,27 +96,27 @@
 						</tr>
 						<tr class="borderless-top borderless-bottom">
 							<td class="right">CAS:</td>
-							<td class="data-field" data-field="compound.cas"> ? </td>
+							<td>{{ compound.cas }}</td>
 						</tr>
 						<tr class="borderless-top borderless-bottom">
 							<td class="right">EC:</td>
-							<td class="data-field" data-field="compound.einecs"> ? </td>
+							<td>{{ compound.einecs }}</td>
 						</tr>
 						<tr class="borderless-top borderless-bottom">
 							<td class="right">Chemical name:</td>
-							<td class="data-field" data-field="compound.name"> ? </td>
+							<td>{{ compound.name }}</td>
 						</tr>
 						<tr class="borderless-top borderless-bottom">
 							<td class="right">IUPAC name:</td>
-							<td class="data-field" data-field="compound.iupac"> ? </td>
+							<td>{{ compound.iupac }}</td>
 						</tr>
 						<tr class="borderless-top borderless-bottom">
 							<td class="right">UUID:</td>
-							<td class="data-field" data-field="referenceSubstance.i5uuid"> ? </td>
+							<td>{{ referenceSubstance.i5uuid }}</td>
 						</tr>
 						<tr class="borderless-top">
 							<td class="right">IUC Flags:</td>
-							<td class="data-field" data-field="IUCFlags"> ? </td>
+							<td>{{ IUCFlags }}</td>
 						</tr>
 					</thead>
 				</table>
@@ -130,13 +130,13 @@
 				<button class="expand-all">Expand all</button><button class="collapse-all">Collapse all</button>
 			</div>
 			<p><input type="text" class="jtox-study-filter ui-input" placeholder="Filter..." /></p>
-			<h4 class="data-field camelCase" data-field="showname"> ? </h4>
+			<h4 class="camelCase">{{ showname }}</h4>
 		</div>
 <!-- // end of #jtox-category ]]-->
 <!--[[ jT.ui.templates['one-study'] -->
 		<div class="jtox-study jtox-foldable folded">
 			<div class="title">
-				<p class="data-field" data-field="title">? (0)</p>
+				<p class="counter">{{ title }}</p>
 			</div>
 			<div class="content">
 				<table class="jtox-study-table content"></table>

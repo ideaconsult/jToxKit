@@ -19,7 +19,7 @@
 			var self = this;
 
 			if (this.settings.embedComposition && this.settings.onDetails == null) {
-				this.settings.onDetails = function (root, data, element) {
+				this.settings.onDetails = function (root, data) {
 					new jT.ui.Composition(root, $.extend({},
 						self.settings,
 						(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
@@ -29,7 +29,7 @@
 				};
 			}
 
-			$(this.rootElement).append(jT.ui.templates['all-substance']);
+			$(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-substance'], ' ? '));
 			this.init(settings);
 		}
 

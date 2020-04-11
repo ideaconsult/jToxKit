@@ -111,15 +111,13 @@
 				// now make the actual filling
 				if (!self.settings.noInterface) {
 					for (var i in substances) {
-						var panel = $(jT.ui.templates['all-composition'])[0];
+						var panel = jT.ui.bakeTemplate(jT.ui.templates['all-composition'], substances[i])[0];
 						$(self.rootElement).append(panel);
 
-						if (self.settings.showBanner)
-							jT.ui.fillTree($('.composition-info', panel)[0], substances[i]);
-						else // we need to remove it
+						if (!self.settings.showBanner) // we need to remove it
 							$('.composition-info', panel).remove();
 						// we need to prepare tables, abyways.
-						self.prepareTable(substances[i].composition, panel);
+						self.prepareTable(substances[i].composition, panel[0]);
 					}
 				}
 			} else

@@ -18,7 +18,7 @@
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = $(this.rootElement).append(jT.ui.templates['all-studies']),
+		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
 			self = this;
 
 		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
@@ -59,8 +59,11 @@
 
 	StudyKit.prototype.createCategory = function (tab, category) {
 		var theCat$ = $('.' + category + '.jtox-study', tab);
-		if (!theCat$.length)
-			theCat$ = $(tab).append($(jT.ui.templates['one-study']).addClass(category));
+		if (!theCat$.length) {
+			var aStudy = jT.ui.bakeTemplate(jT.ui.templates['one-study'], {})
+				.addClass(category);
+			theCat$ = $(tab).append(aStudy);
+		}
 
 		return theCat$[0];
 	};
@@ -187,7 +190,7 @@
 				"dom": self.settings.dom,
 				"columns": colDefs,
 				"infoCallback": function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
-					var el = $('.title .data-field', $(this).parents('.jtox-study'))[0];
+					var el = $('.title .counter', $(this).parents('.jtox-study'))[0];
 					el.innerHTML = jT.ui.updateCounter(el.innerHTML, iTotal);
 					return sPre;
 				},
@@ -249,28 +252,18 @@
 			lastAdded = null;
 
 		function addStudyTab(top, sum) {
-			var tab$ = $(jT.ui.templates['one-category']),
-				link = jT.ui.addTab(
-					self.tabs, 
-					(knownNames[top] || sum.topcategory.title) + " (0)", "jtox-" + top.toLowerCase() + '_' + self.instanceNo, tab$[0]).tab;
+			var tabInfo = jT.ui.addTab(self.tabs, 
+				(knownNames[top] || sum.topcategory.title), 
+				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
+				jT.ui.fillHtml(jT.ui.templates['one-category'], self.substance));
 
-			$(link).data('type', top);
-			tab$.addClass(top).data('jtox-uri', sum.topcategory.uri);
-			jT.ui.fillTree(tab$[0], self.substance);
+			tabInfo.tab.data('type', top);
+			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);
 
 			added++;
 			lastAdded = top;
 
-			$('div.jtox-study-tab div button', tabRoot).on('click', function (e) {
-				var par = $(this).parents('.jtox-study-tab')[0];
-				if ($(this).hasClass('expand-all')) {
-					$('.jtox-foldable', par).removeClass('folded');
-				} else if ($(this).hasClass('collapse-all')) {
-					$('.jtox-foldable', par).addClass('folded');
-				}
-			});
-
-			return tab$[0];
+			return tabInfo.content[0];
 		};
 
 		for (var si = 0, sl = summary.length; si < sl; ++si) {
@@ -353,13 +346,12 @@
 		// now iterate within all categories (if many) and initialize the tables
 		for (var c in cats) {
 			var onec = cats[c],
-				aStudy = $('.' + c + '.jtox-study', tab)[0];
-			if (aStudy === undefined)
+				aStudy = $('.' + c + '.jtox-study', tab);
+
+			if (aStudy.length < 1)
 				continue;
 
-			jT.ui.fillTree(aStudy, {
-				title: onec[0].protocol.category.title + " (0)"
-			});
+			jT.ui.updateTree(aStudy, { title: onec[0].protocol.category.title + " (0)" });
 
 			// now swipe through all studyies to build a "representative" one with all fields.
 			var study = {};
@@ -437,12 +429,13 @@
 				substance["IUCFlags"] = jT.ambit.formatExtIdentifiers(substance.externalIdentifiers, 'display', substance);
 				self.substance = substance;
 
-				jT.ui.fillTree(self.rootElement, substance);
+				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
+
 				// go and query for the reference query
 				jT.ambit.call(self, substance.referenceSubstance.uri, function (dataset) {
 					if (!!dataset && dataset.dataEntry.length > 0) {
 						jT.ambit.processDataset(dataset, null, jT.ambit.getDatasetValue);
-						jT.ui.fillTree($('.jtox-substance', self.rootElement)[0], dataset.dataEntry[0]);
+						jT.ui.updateTree($('.jtox-substance', self.rootElement), dataset.dataEntry[0]);
 					}
 				});
 
