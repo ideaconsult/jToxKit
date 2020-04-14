@@ -1,6 +1,6 @@
 {
   "name": "@ideaconsult/jtox-kit",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
   "keywords": [
     "chem-informatics",
@@ -44,7 +44,7 @@
   "dependencies": {
     "@thejonan/as-sys": "0.13.3",
     "@ideaconsult/solr-jsx": "^0.15.10",
-    "xlsx-datafill": "^0.9.5",
+    "xlsx-datafill": "^1.0.0",
     "xlsx-populate": "^1.21.0"
   },
   "devDependencies": {
