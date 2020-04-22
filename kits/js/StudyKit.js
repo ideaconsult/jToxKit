@@ -168,7 +168,7 @@
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					}, { anno: 'effects ' + c});
+					}, { anno: 'conditions.' + c});
 				};
 				return col;
 			});
@@ -532,7 +532,7 @@
 				if (data.result.errorValue != null)
 					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
 				return resText
-			}, { anno: "result result.errQualifier result.errValue"});
+			}, { anno: "result result.unit result.errValue result.errQualifier"});
 		}
 	},
 	{

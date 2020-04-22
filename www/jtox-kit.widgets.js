@@ -986,7 +986,7 @@ jT.tables = {
 			return render(data[0], type, full);
 
 		var df = '<table' + (!tabInfo ? '' : ' ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' ')) + '>';
-		for (var i = 0, dlen = data.length; i < dlen; ++i) {
+		for (var i = 0; i < dlen; ++i) {
 			df += '<tr class="' + (i % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(data[i], type, full, i) + '</td></tr>';
 		}
 

@@ -18,7 +18,7 @@ div.tippy-box div.annotip-dlg form>div {
 	margin: 10px 5px;
 }
 
-div.tippy-box div.annotip-severity {
+div.tippy-box .go-right {
 	text-align: right;
 }
 
