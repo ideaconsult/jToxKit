@@ -1,0 +1,24 @@
+div.tippy-box * {
+	font-size: .8rem;
+}
+
+div.tippy-box.openned .annotip-actions {
+	padding: 5px;
+}
+
+div.tippy-box div.annotip-dlg form {
+	border-bottom: #fff 1px solid;
+}
+
+div.tippy-box div.annotip-dlg form .padded-control {
+	padding: 2px
+}
+
+div.tippy-box div.annotip-dlg form>div {
+	margin: 10px 5px;
+}
+
+div.tippy-box div.annotip-severity {
+	text-align: right;
+}
+

@@ -156,7 +156,7 @@
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					});
+					}, { anno: 'effects ' + c});
 				};
 				return col;
 			});
@@ -506,7 +506,7 @@
 				if (data.endpointtype != null)
 					endpointText += " (" + data.endpointtype + ")";
 				return endpointText
-			});
+			}, { anno: "endpoint endpointtype"});
 		}
 	}, // Effects columns
 	{
@@ -520,7 +520,7 @@
 				if (data.result.errorValue != null)
 					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
 				return resText
-			});
+			}, { anno: "result result.errQualifier result.errValue"});
 		}
 	},
 	{
@@ -531,7 +531,7 @@
 		"render": function (data, type, full) {
 			return jT.tables.renderMulti(data, type, full, function (data) {
 				return data.result.textValue || '-';
-			});
+			}, { anno: "result result.textValue"});
 		}
 	},
 	{
