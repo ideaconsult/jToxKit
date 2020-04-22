@@ -59,7 +59,7 @@
         },
 
         fillTemplate: function (selector, info, def) {
-            return jT.ui.fillHtml($(selector).html(), info, def);
+            return jT.ui.fillHtml(jT.ui.templates[selector], info, def);
         },
 
         updateCounter: function (str, count, total) {
@@ -306,8 +306,6 @@ jT.ui = a$.extend(jT.ui, {
   	var self = this;
 
   	if (!root) {
-    	self.initTemplates();
-
       // make this handler for UUID copying. Once here - it's live, so it works for all tables in the future
       $(document).on('click', '.jtox-kit span.ui-icon-copy', function () { jT.copyToClipboard($(this).data('uuid')); return false;});
       // install the click handler for fold / unfold
@@ -366,25 +364,6 @@ jT.ui = a$.extend(jT.ui, {
 
     return query;
   },
-
-	initTemplates: function() {
-	  var self = this;
-
-    var root = $('.jtox-template')[0];
-    if (!root) {
-    	root = document.createElement('div');
-    	root.className = 'jtox-template';
-    	document.body.appendChild(root);
-    }
-
-	  var html = root.innerHTML;
-  	for (var t in self.templates) {
-    	html += self.templates[t];
-  	}
-
-  	root.innerHTML = html;
-  	self.templateRoot = root;
-	},
 
 	insertTool: function (name, root) {
 	  var html = this.tools[name];

@@ -205,7 +205,7 @@
       for (var i = 0, rangeCnt = current.length; i < rangeCnt; ++i) {
         var ref = current[i],
             full = allVals.find(function (e) { return e.pattern === ref.pattern }) || ref,
-            el$ = jT.ui.fillTemplate("#slider-one"),
+            el$ = jT.ui.fillTemplate("slider-one"),
             setup = {
               id: ref.id,
               targetValue: value,

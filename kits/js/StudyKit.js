@@ -255,7 +255,7 @@
 			var tabInfo = jT.ui.addTab(self.tabs, 
 				(knownNames[top] || sum.topcategory.title), 
 				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
-				jT.ui.fillHtml(jT.ui.templates['one-category'], self.substance));
+				jT.ui.fillTemplate('one-category', self.substance));
 
 			tabInfo.tab.data('type', top);
 			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);

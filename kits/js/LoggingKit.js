@@ -119,7 +119,7 @@
     
     addLine: function (data) {
       var self = this,
-          el$ = jT.ui.fillHtml(jT.ui.templates['jtox-logline'], data);
+          el$ = jT.ui.fillTemplate('logger-line', data);
 
       el$.height('0px');
       this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);

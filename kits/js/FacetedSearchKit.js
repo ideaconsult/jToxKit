@@ -353,7 +353,7 @@
                     ui = uiConfiguration[f.id],
                     w = new TagWidget($.extend({
                         target: this.accordion,
-                        expansionTemplate: "#tab-topcategory",
+                        expansionTemplate: "tab-topcategory",
                         subtarget: "ul",
                         runMethod: toggleAggregate,
                         multivalue: this.multipleSelection,
@@ -385,7 +385,7 @@
                 id: "studies",
                 target: this.accordion,
                 subtarget: "ul",
-                expansionTemplate: "#tab-topcategory",
+                expansionTemplate: "tab-topcategory",
                 before: "#cell_header",
                 field: "loValue_d",
                 lookupMap: this.lookupMap,
@@ -494,7 +494,7 @@
             });
             
             this.queries.renderItem = function (query) {
-                el$ = jT.ui.fillTemplate("#query-item", query);
+                el$ = jT.ui.fillTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     var queryDef = $(this).data('query');
@@ -711,7 +711,7 @@
                 self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
+                var el = jT.ui.fillTemplate("export-format", this.exportFormats[i]);
                 el.data("index", i);
                 exportEl.append(el);
 
@@ -751,8 +751,12 @@
                     $('.data_formats a:visible').not('.disabled').first().trigger('click');
                 };
 
-            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
-                exportEl.append(jT.ui.fillTemplate("#export-type", $.extend({ index: i }, this.exportTypes[i])));
+            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
+                this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
+                var el = jT.ui.fillTemplate("export-type", this.exportTypes[i]);
+                el.data("index", i);
+                exportEl.append(el);
+            }
             
             exportEl.on("change", function (e) { 
                 updateFormats(self.exportTypes[parseInt(this.value)].formats); 

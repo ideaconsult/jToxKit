@@ -124,7 +124,7 @@ jT.ItemListWidget.prototype = {
 	 * substance
 	 */
   renderSubstance: function(doc) {
-    var summaryhtml = $("#summary-item").html(),
+    var summaryhtml = jT.ui.templates["summary-item"],
         summarylist = this.buildSummary(doc),
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.formatString(summaryhtml, s)}).join("");
@@ -148,7 +148,7 @@ jT.ItemListWidget.prototype = {
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
 
-    return jT.ui.fillTemplate("#result-item", $.extend(item, this.renderLinks(doc)));
+    return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc){
