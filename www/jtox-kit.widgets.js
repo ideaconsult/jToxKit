@@ -981,11 +981,13 @@ jT.tables = {
 	},
 
 	renderMulti: function (data, type, full, render, tabInfo) {
-		var dlen = data.length;
-		if (dlen < 2)
-			return render(data[0], type, full);
+		var dlen = data.length,
+			tabInfo = (!tabInfo ? '' : ' class="tab-info-node" ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' '));
 
-		var df = '<table' + (!tabInfo ? '' : ' ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' ')) + '>';
+		if (dlen < 2)
+			return '<div' + tabInfo + '>' + render(data[0], type, full) + '</div>';
+
+		var df = '<table' + tabInfo + '>';
 		for (var i = 0; i < dlen; ++i) {
 			df += '<tr class="' + (i % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(data[i], type, full, i) + '</td></tr>';
 		}

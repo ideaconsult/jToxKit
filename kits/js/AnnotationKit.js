@@ -13,8 +13,6 @@
 		this.selector = settings.selector;
 		
 		this.annoTip = new AnnoTip({
-			context: this.context,
-			// Handlers. All accept {@link Anno} as an argument.
 			onSelection: function (anno) { return self.analyzeAnno(anno); },
 			onAction: function (action, anno) { return self.onAction(action, anno); },
 			onClose: null
@@ -54,6 +52,8 @@
 		}
 		if (action === 'ok') {
 			var data = this.dataPacker(anno);
+			
+			data.suggestion = _.set({}, data.scope, data.suggestion);
 
 			if (typeof this.dataPostprocess === 'function')
 				data = this.dataPostprocess(data, anno);
@@ -67,12 +67,13 @@
 	};
 
 	AnnotationKit.prototype.analyzeAnno = function (anno) {
-		var dataInfo = this.dataExtractor(anno.element),
+		var dataInfo = this.dataExtractor(anno),
 			data = dataInfo.data,
 			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
 			matchers = this.matchers,
 			self = this;
-			
+
+		anno.context = this.contextExtractor(anno);
 		anno.reference = null;
 		for (var i = 0;i < matchers.length; ++i) {
 			var m = matchers[i],
@@ -121,100 +122,63 @@
 			context: anno.context,
 			reference: anno.reference,
 			operation: anno.operation,
-			suggestion: anno.suggestion
+			suggestion: anno.suggestion,
+			selected: anno.selection,
+			reverseSelector: anno.reverseSelector
 		}, anno);
 	};
 
-	/**
-	 * Some predefined setups for data extraction and reference building.
-	 */
-	AnnotationKit.dataTableConfig = {
-		pathHandlers: {},
-		dataExtractor: function (el) {
-			var target = $(el).closest('table.dataTable>tbody>tr')[0],
-				table = jT.tables.getTable(target);
-			
-			return {
-				target: target,
-				data: table.row(target).data()		
-			};
-		},		
-		controlsSetup: function (data, anno) {
-			var self = this,
-				scopes = _.map(_.reverse(anno.scopes), function (s) { 
-					var title = (self.pathHandlers[s] && self.pathHandlers[s].title) || lookup[s] || s;
-					return { value: s, title: title };
-				});
-			
-			scopes.push({ title: 'Service', value: 'service' });
-			$(".annotip-scope select", anno.element).html(_.map(scopes, function (s) { return jT.formatString(jT.ui.templates['anno-select-option'], s); }));
-			return anno;
-		},
-		dataPostprocess: function (data) {
-			data.suggestion = _.set({}, data.scope, data.suggestion);
-			alert(JSON.stringify(data, null, 2));
-			return null;
-		},
-		matchers: [{ // General info - uuid
-			selector: "tr[role=row]",
-			processor: function (data, anno) {
-				(anno.scopes = (anno.scopes || [])).push('substance');
-				return { uuid: data.uuid };
-			}
-		}, { // General info - assay_uuid
-			selector: "tr[role=row]",
-			processor: "assay_uuid"
-		}, { // Major column info - it can be any of the
-			selector: 'tr[role=row]>td',
-			processor: function (data, anno, el) {
-				var table = jT.tables.getTable(el),
-					col = table.column(el).dataSrc(),
-					obj = {};
-	
-				if (!Array.isArray(data[col])) {
-					obj[col] = data[col];
-					(anno.scopes = (anno.scopes || [])).push(col);
-				} else // We'll fill that down there
-					obj = null;
-	
-				return obj;
-			}
-		}, { // Minor column info - it can be any of the
-			selector: 'td.jtox-multi table td',
-			processor: function (data, anno, el) {
-				var table = jT.tables.getTable(el),
-					colIdx = $(el).parents('td').index(),
-					col = table.settings()[0].aoColumns[colIdx],
-					minorRow$ = idx = $(el).parent('tr'),
-					idx = minorRow$.index(),
-					tabInfo = minorRow$.closest('table').data('anno'),
-					data = data[col.data][idx],
-					idFields = this.pathHandlers[col.data] && this.pathHandlers[col.data].idFields,
-					obj = {}, res = {};
-	
-				if (!tabInfo)
-					tabInfo = [''];
+	AnnotationKit.prototype.controlsSetup = function (data, anno) {
+		var self = this,
+			scopes = _.map(anno.scopes, function (s) { 
+				var title = (self.pathHandlers[s] && self.pathHandlers[s].title) || lookup[s] || s;
+				return { value: s, title: title };
+			});
+		
+		$(".annotip-scope select", anno.element)
+			.html(_.map(scopes, function (s) { return jT.formatString(jT.ui.templates['anno-select-option'], s); }))
+			.on('change', function (e) {
+				var newScope = $(this).val(),
+					pathHnd = self.pathHandlers[newScope],
+					newControl = pathHnd && pathHnd.control,
+					target$ = $('.annotip-suggestion', anno.element).empty();
+
+				if (typeof newControl === 'string')
+					target$.append(jT.formatString(newControl, { name: newScope, value: pathHnd.title}));
+				else if (typeof newControl === 'function')
+					newControl.call(self, target$, data, anno);
 				else
-					tabInfo = tabInfo.split(/\s+/);
-				if (!!idFields)
-					idFields = _.difference(idFields, tabInfo); // We leave only pure id fields.
+					return;
+
+				// nicify what was just added!
+				target$.children('input, select, textarea').addClass('ui-widget ui-corner-all padded-control');
+			});
+		return anno;
+	};
+
 	
-				anno.scopes.push(col.data);
-				_.each(tabInfo.concat(idFields), function (path) {
-					if (path != '') {
-						// We only add to scope non-pure id fields.
-						if (_.indexOf(idFields, path) == -1)
-							anno.scopes.push(col.data + '.' + path);
-						path = path.split('.');
-						_.set(obj, path, _.get(data, path, null));
-					} else
-						obj = $.extend(obj, data);
-				});
-				
-				res[col.data] = [obj];
-				return res;
-			}
-		}]		
+	AnnotationKit.prototype.buildScopes = function (rootPath, pathList, data, anno) {
+		var idFields = this.pathHandlers[rootPath] && this.pathHandlers[rootPath].idFields,
+			obj = {};
+
+		pathList = !pathList ? [''] : pathList.split(/\s+/);
+		if (!!idFields)
+			idFields = _.difference(idFields, pathList); // We leave only pure id fields.
+
+		anno.scopes.push(rootPath);
+		_.each(pathList.concat(idFields), function (path) {
+			if (path != '') {
+				// We only add to scope non-pure id fields.
+				if (_.indexOf(idFields, path) == -1)
+					anno.scopes.push(rootPath + '.' + path);
+
+				path = path.split('.');
+				_.set(obj, path, _.get(data, path, null));
+			} else
+				obj = $.extend(obj, data);
+		});
+
+		return obj;
 	};
 
 	jT.ui.Annotation = AnnotationKit;
