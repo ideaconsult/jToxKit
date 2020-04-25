@@ -36,6 +36,9 @@
 
 	AnnotationKit.prototype.start = function () {
 		this.annoTip.attach(this.selector);
+
+		// TODO: Load annos from the server and call this:
+		// this.annoTip.applyAnnos(rootElement, annoList, function (anno) { self.applyAnno(anno); });
 	};
 
 	AnnotationKit.prototype.onAction = function (action, anno) {
@@ -45,10 +48,9 @@
 			
 			if (typeof this.controlsSetup === 'function')
 				anno = this.controlsSetup(data, anno);
-				
-			this.beautify(anno.element);
-			$(anno.element).addClass('openned');
-			return;
+
+			// Nothing meaningful, but it's nicer this way...
+			return this.beautify();
 		}
 		if (action === 'ok') {
 			var data = this.dataPacker(anno);
@@ -60,9 +62,12 @@
 
 			if (data)
 				$.ajax($.extend(true, this.ajaxSettings, { data:  data }));
+
+			// TODO: Potentially make this to be the success handler of the above!
+			this.applyAnno(anno);
 		}
 		
-		$(".annotip-severity", anno.element).buttonset('destroy');
+		$(".annotip-severity", this.annoTip.getFrame()).buttonset('destroy');
 		this.annoTip.discard();
 	};
 
@@ -73,7 +78,6 @@
 			matchers = this.matchers,
 			self = this;
 
-		anno.context = this.contextExtractor(anno);
 		anno.reference = null;
 		for (var i = 0;i < matchers.length; ++i) {
 			var m = matchers[i],
@@ -103,14 +107,23 @@
 		return anno.reference !== null;
 	};
 
-	AnnotationKit.prototype.beautify = function (element) {
-		$(".annotip-severity", element).buttonset();
-		$("input", element).attr('size', this.inputSize - 1);
-		$("textarea", element).attr('cols', this.inputSize);
+	AnnotationKit.prototype.applyAnno = function (anno) {
+		// TODO: Make this real!
+		$(anno.element).css({ "background-color": "yellow" });
+	};
+
+	AnnotationKit.prototype.beautify = function () {
+		var annoFrame = this.annoTip.getFrame();
+
+		$(".annotip-severity", annoFrame).buttonset();
+		$("input", annoFrame).attr('size', this.inputSize - 1);
+		$("textarea", annoFrame).attr('cols', this.inputSize);
+
+		$(annoFrame).addClass('openned');
 	};
 
 	AnnotationKit.prototype.dataPreprocess = function (data, anno) {
-		$('form', anno.element).serializeArray().forEach(function (el) {
+		$('form', this.annoTip.getFrame()).serializeArray().forEach(function (el) {
 			_.set(data, el.name, el.value);
 		});
 		
@@ -130,18 +143,19 @@
 
 	AnnotationKit.prototype.controlsSetup = function (data, anno) {
 		var self = this,
+			annoFrame = this.annoTip.getFrame(),
 			scopes = _.map(anno.scopes, function (s) { 
 				var title = (self.pathHandlers[s] && self.pathHandlers[s].title) || lookup[s] || s;
 				return { value: s, title: title };
 			});
 		
-		$(".annotip-scope select", anno.element)
+		$(".annotip-scope select", annoFrame)
 			.html(_.map(scopes, function (s) { return jT.formatString(jT.ui.templates['anno-select-option'], s); }))
 			.on('change', function (e) {
 				var newScope = $(this).val(),
 					pathHnd = self.pathHandlers[newScope],
 					newControl = pathHnd && pathHnd.control,
-					target$ = $('.annotip-suggestion', anno.element).empty();
+					target$ = $('.annotip-suggestion', annoFrame).empty();
 
 				if (typeof newControl === 'string')
 					target$.append(jT.formatString(newControl, { name: newScope, value: pathHnd.title}));
