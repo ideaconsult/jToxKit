@@ -267,7 +267,6 @@ jT.ui = a$.extend(jT.ui, {
         if (fn.prototype.__kits === undefined)
           fn.prototype.__kits = [];
         fn.prototype.__kits.push(obj);
-        obj.parentKit = parent;
         
         if (dataParams.id !== null)
           self.kitsMap[dataParams.id] = obj;
@@ -342,7 +341,7 @@ jT.ui = a$.extend(jT.ui, {
 
 	kit: function (element) {
   	if (typeof element !== "string")
-  	  return $(element).data('jtKit');
+  	  return $(element).closest('.jtox-kit').data('jtKit');
     else if (this.kitsMap[element] !== undefined)
       return this.kitsMap[element];
     else
@@ -352,22 +351,6 @@ jT.ui = a$.extend(jT.ui, {
 	attachKit: function (element, kit) {
   	return $(element).data('jtKit', kit);
 	},
-
-	parentKit: function(name, element) {
-	  var self = this;
-    var query = null;
-    if (typeof name == 'string')
-      name = window[name];
-    $(element).parents('.jtox-kit').each(function() {
-      var kit = self.kit(this);
-      if (!kit || !!query)
-        return;
-      if (!name || kit instanceof name)
-        query = kit;
-    });
-
-    return query;
-  },
 
 	insertTool: function (name, root) {
 	  var html = this.tools[name];

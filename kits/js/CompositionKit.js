@@ -131,6 +131,12 @@
 		this.queryComposition(uri);
 	};
 
+	CompositionKit.prototype.getContext = function () {
+		return {
+			subject: 'composition',
+			compositionUri: this.compositionUri
+		}
+	};
 
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		selectionHandler: null, // selection handler, if needed for selection checkbox, which will be inserted if this is non-null

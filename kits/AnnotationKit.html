@@ -35,21 +35,32 @@
 <!--// end of anno-select-option ]]-->
 <!--[[ jT.ui.templates['anno-form'] -->
         <form>
+            <p>Scope:</p>
             <div class="annotip-scope">
-                <div>Scope:</div>
-                <select name="scope" class="ui-widget ui-corner-all padded-control"></select>
+                <select name="operation.scope" class="ui-widget ui-corner-all padded-control"></select>
             </div>
             <div class="annotip-suggestion"></div>
             <div class="annotip-description">
                 <textarea name="description" rows="3" class="ui-widget ui-corner-all padded-control"></textarea>
             </div>
-            <div class="go-right">Severity:</div>
-            <div class="annotip-severity go-right">
-                <input type="radio" value="low" name="severity" id="annotip-severity-low"/>
+            <p class="go-right">Operation:</p>
+            <div class="annotip-buttonset annotip-action go-right">
+                <input type="radio" value="add" name="operation.action" id="annotip-action-add" />
+                <label for="annotip-action-add">Add</label>
+                <input type="radio" value="replace" name="operation.action" id="annotip-action-replace" />
+                <label for="annotip-action-replace">Replace</label>
+                <input type="radio" value="delete" name="operation.action" id="annotip-action-delete" />
+                <label for="annotip-action-delete">Delete</label>
+                <input type="radio" value="synonyms" name="operation.action" id="annotip-action-synonyms" />
+                <label for="annotip-action-synonyms">Synonyms</label>
+            </div>
+            <p class="go-right">Severity:</p>
+            <div class="annotip-buttonset annotip-severity go-right">
+                <input type="radio" value="low" name="operation.severity" id="annotip-severity-low"/>
                 <label for="annotip-severity-low">Low</label>
-                <input type="radio" value="medium" name="severity" id="annotip-severity-medium" />
+                <input type="radio" value="medium" name="operation.severity" id="annotip-severity-medium" />
                 <label for="annotip-severity-medium">Medium</label>
-                <input type="radio" value="high" name="severity" id="annotip-severity-high" />
+                <input type="radio" value="high" name="operation.severity" id="annotip-severity-high" />
                 <label for="annotip-severity-high">High</label>
             </div>
         </form>

@@ -451,6 +451,15 @@
 		this.querySubstance(uri);
 	};
 
+	StudyKit.prototype.getContext = function () {
+		return {
+			subject: 'study',
+			substanceUri: this.substance.URI,
+			substanceId: this.substance.i5uuid,
+			owner: this.substance.ownerName
+		}
+	};
+
 	StudyKit.getFormatted = function (data, type, format) {
 		var value = null;
 		if (typeof format === 'function')

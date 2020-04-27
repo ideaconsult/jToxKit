@@ -55,7 +55,8 @@
 		if (action === 'ok') {
 			var data = this.dataPacker(anno);
 			
-			data.suggestion = _.set({}, data.scope, data.suggestion);
+			data.suggestion = _.set({}, data.operation.scope, data.suggestion);
+			data.timestamp = new Date().toUTCString();
 
 			if (typeof this.dataPostprocess === 'function')
 				data = this.dataPostprocess(data, anno);
@@ -67,7 +68,7 @@
 			this.applyAnno(anno);
 		}
 		
-		$(".annotip-severity", this.annoTip.getFrame()).buttonset('destroy');
+		$(".annotip-buttonset", this.annoTip.getFrame()).buttonset('destroy');
 		this.annoTip.discard();
 	};
 
@@ -76,8 +77,10 @@
 			data = dataInfo.data,
 			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
 			matchers = this.matchers,
+			kit = jT.ui.kit(anno.root),
 			self = this;
 
+		anno.context = kit && typeof kit.getContext === 'function' && kit.getContext();
 		anno.reference = null;
 		for (var i = 0;i < matchers.length; ++i) {
 			var m = matchers[i],
@@ -115,7 +118,7 @@
 	AnnotationKit.prototype.beautify = function () {
 		var annoFrame = this.annoTip.getFrame();
 
-		$(".annotip-severity", annoFrame).buttonset();
+		$(".annotip-buttonset", annoFrame).buttonset();
 		$("input", annoFrame).attr('size', this.inputSize - 1);
 		$("textarea", annoFrame).attr('cols', this.inputSize);
 
@@ -134,10 +137,11 @@
 		return this.dataPreprocess({
 			context: anno.context,
 			reference: anno.reference,
-			operation: anno.operation,
 			suggestion: anno.suggestion,
-			selected: anno.selection,
-			reverseSelector: anno.reverseSelector
+			operation: {
+				selected: anno.selection,
+				reverseSelector: anno.reverseSelector
+			}
 		}, anno);
 	};
 
