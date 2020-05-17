@@ -50,13 +50,11 @@
             },
             exportTypes: [],
             exportSolrDefaults: [
-                { name: "facet", value: "false" },
                 { name: "echoParams", value: "none" },
-                { name: 'rows', value: 999999 } //2147483647
+                { name: 'rows', value: 999998 } //2147483647
             ],
             savedQueries: [],
             listingFields: [],
-            summaryReports: [],
             facets: [],
             summaryRenderers: {}
         },
@@ -534,71 +532,15 @@
             $("#export_tab button").button({
                 disabled: true
             });
-            $("#report_go").on("click", function (e) {
-                var butEl = $(this),
-                    oldText = butEl.button("option", "label");
 
-                butEl.button("option", "label", "Generating the report...");
+            var goButt$ = $("#export_go");
+            goButt$.on('click', function (e) { 
+                var oldText = goButt$.button("option", "label");
 
-                self.buildSummaryReport(function (blob, error) {
-                    butEl.button("option", "label", blob ? oldText : error || oldText);
-                    if (blob)
-                        jT.ui.activateDownload(null, blob, "Report-" + (new Date().toISOString().replace(":", "_"))+ ".xlsx", true);
-                });
-            });
-
-            var reportSelection = $("#report_select");
-            $.each(self.summaryReports, function (idx, def) {
-                reportSelection.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
-            });
-
-            $("#export_tab form").on("submit", function (e) {
-                var form = this,
-                    mime = form.export_format.value,
-                    mime = mime.substr(mime.indexOf("/") + 1),
-                    exFormat = self.exportFormats[$('.data_formats .selected').data('index')],
-                    exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
-                    server = exType.server || exFormat.server,
-                    selectedIds = self.getSelectedIds(form),
-                    formAmbitUrl = function () { 
-                        form.search.value = selectedIds.join(" ");
-                        form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
-                    },
-                    Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
-                        exportDefinition: exType,
-                        useJson: false,
-                        expectJson: true
-                    });
-
-                Exporter.init(self.manager);
-
-                // Now we have all the filtering parameters in the `params`.
-                if (server == 'ambitUrl') {
-                    // If we already have the selected Ids - we don't even need to bother calling Solr.
-                    if (!!selectedIds)
-                        formAmbitUrl();
-                    else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
-                        async: false,
-                        dataType: "json",
-                        success: function (data) {
-                            var ids = [];
-                            $.each(data.response.docs, function (index, value) {
-                                ids.push(value.s_uuid_hs);
-                            });
-
-                            formAmbitUrl();
-                        }
-                    }));
-                } else {
-                    // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
-                    form.action = Exporter.prepareExport(self.exportSolrDefaults.concat(
-                        mime == "tsv"
-                            ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true } ]
-                            : [ { name: 'wt', value: mime } ]
-                    ), selectedIds).getAjax(self[server]).url;
-                }
-
-                return true;
+                self.makeExport($("#export_tab form")[0], function (error) {
+                    console.error(error);
+                    goButt$.button("option", "label", JSON.stringify(error && error.message || error || oldText).substr(0, 32));
+                }); 
             });
 
             $("#result-tabs").tabs({
@@ -634,11 +576,116 @@
             });
         },
 
+        makeExport: function (form, errFn) {
+            var self = this,
+                mime = form.export_format.value,
+                exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
+                exType = this.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
+                exDef = $.extend(true, {}, exType.definition),
+                server = exType.server || exFormat.server,
+                selectedIds = this.getSelectedIds(form),
+                formAmbitUrl = function () { 
+                    form.search.value = selectedIds.join(" ");
+                    form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
+                };
+
+            Array.prototype.unshift.apply(exDef.extraParams, this.exportSolrDefaults);
+            mime = mime.substr(mime.indexOf("/") + 1);
+            var Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
+                    exportDefinition: exDef,
+                    useJson: false,
+                    expectJson: true
+                });
+
+            Exporter.init(this.manager);
+
+            // Now we have all the filtering parameters in the `params`.
+            if (server == 'ambitUrl') {
+                // If we already have the selected Ids - we don't even need to bother calling Solr.
+                if (!!selectedIds)
+                    formAmbitUrl();
+                else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
+                    async: false,
+                    dataType: "json",
+                    success: function (data) {
+                        var ids = [];
+                        $.each(data.response.docs, function (index, value) {
+                            ids.push(value.s_uuid_hs);
+                        });
+
+                        formAmbitUrl();
+                    },
+                    error: function (jhr, status, errText) { errFn(errText); }
+                }));
+            } else {
+                // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
+                var loadActions = [], // Here' we'll put the promises we need to obtain the required data.
+                    extraParams = [];
+
+                if (mime == "tsv")
+                    extraParams.push({ name: "wt", value: "json" }, { name: "json2tsv", value: true });
+                else
+                    extraParams.push({ name: 'wt', value: exFormat.name === 'xlsx' ? 'json' : mime });
+                
+                // This is guaranteed to be here.
+                loadActions.push($.ajax(Exporter.prepareExport(extraParams, selectedIds).getAjax(this.solrUrl)));
+
+                if (exDef.template && exFormat.name === 'xlsx') {
+                    $.extend(true, exDef, { 
+                        callbacksMap: {
+                            lookup: function (val) { return mainLookupMap[val] || val; } 
+                        }
+                    });
+    
+                    loadActions.push(jT.ui.promiseXHR({
+                        url: exDef.template,
+                        settings: { 
+                            responseType: "arraybuffer" 
+                        }
+                    }));
+                }
+    
+                Promise.all(loadActions).then(function (results) {
+                    var queryData = results[0],
+                        wbData = results[1];                        
+    
+                    if (typeof exDef.onData === 'function')
+                        exDef.onData(queryData);
+
+                    if (!wbData) {
+                        jT.ui.activateDownload(null, 
+                            new Blob([JSON.stringify(queryData)]), 
+                            "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name,
+                            true);
+                    } else {
+                        XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
+                            try {
+                                new XlsxDataFill(
+                                    new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
+                                    exDef
+                                ).fillData(queryData);
+        
+                                workbook.outputAsync().then(function (blob) {
+                                    blob && jT.ui.activateDownload(
+                                        null, 
+                                        blob, 
+                                        "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name, 
+                                        true);
+                                });
+                            } catch (e) {
+                                errFn(e.message);
+                            };
+
+                        }).catch(errFn);
+                    }
+                }).catch(errFn);
+            }
+
+            return true;
+        },
+
         getSelectedIds: function (form) {
             var selectedIds = null;
-
-            if (!form)
-                form = $("#export_tab form")[0];
 
             if (form.export_dataset.value != "filtered") {
                 selectedIds = [];
@@ -708,53 +755,6 @@
             });
 
             updateTypes(0);
-        },
-
-        buildSummaryReport: function(callback) {
-            var reportDefinition = $.extend(true, {
-                    callbacksMap: { 
-                        lookup: function (val) { return mainLookupMap[val] || val; }
-                    }
-                }, this.summaryReports[$("#report_select")[0].selectedIndex].definition)
-                Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
-                    exportDefinition: reportDefinition,
-                    useJson: true,
-                    expectJson: true
-                }), 
-                selectedIds = this.getSelectedIds(),
-                errFn = function (err) {
-                    console.log(JSON.stringify(err).substr(0, 256));
-                    callback(null, typeof err === "string" ? "Err: " + err : "Error occurred!"); 
-                };
-
-            Exporter.init(this.manager);
-
-            Promise.all([
-                jT.ui.promiseXHR({
-                    url: reportDefinition.template,
-                    settings: { responseType: "arraybuffer" }
-                }),
-                $.ajax(Exporter.prepareExport(null, selectedIds).getAjax(this.solrUrl))
-            ]).then(function (results) {
-                var wbData = results[0],
-                    queryData = results[1];
-
-                if (typeof reportDefinition.onData === 'function')
-                    reportDefinition.onData(queryData);
-
-                XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
-                    try {
-                        new XlsxDataFill(
-                            new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
-                            reportDefinition
-                        ).fillData(queryData);
-
-                        workbook.outputAsync().then(callback, errFn)
-                    } catch (e) {
-                        errFn(e.message);
-                    }
-                }, errFn);
-            }, errFn);
         }
     };
 
