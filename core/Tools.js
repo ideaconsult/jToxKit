@@ -178,6 +178,9 @@ jT.ui = {
         });
       }
 
+      if (typeof ajax.dataType === 'string')
+        xhr.setRequestHeader('Content-Type', ajax.dataType);
+
       Object.keys(ajax.settings).forEach(function (key) {
         xhr[key] = ajax.settings[key];
       });

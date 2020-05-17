@@ -622,7 +622,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             this.prepareTypes();
 
             $("#export_dataset").buttonset();
-            $("#export_type").buttonset();
             $("#export_dataset input").on("change", function (e) {
                 self.updateButtons(this.form);
             });
@@ -649,7 +648,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             hasDataset = hasFilter || hasBasket;
 
                         $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
-                        $("#export_type").buttonset(hasDataset ? "enable" : "disable");
+                        $("#export_select").toggleClass('disabled', !hasDataset);
                         $('div.warning-message')[hasDataset ? "hide" : "show"]();
                         $('.data_formats').toggleClass('disabled', !hasDataset);
 
@@ -677,7 +676,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             var self = this,
                 mime = form.export_format.value,
                 exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
-                exType = this.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
+                exType = this.exportTypes[parseInt(form.export_select.value)],
                 exDef = $.extend(true, {}, exType.definition),
                 server = exType.server || exFormat.server,
                 selectedIds = this.getSelectedIds(form),
@@ -687,7 +686,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 };
 
             Array.prototype.unshift.apply(exDef.extraParams, this.exportSolrDefaults);
-            mime = mime.substr(mime.indexOf("/") + 1);
             var Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
                     exportDefinition: exDef,
                     useJson: false,
@@ -714,68 +712,62 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     },
                     error: function (jhr, status, errText) { errFn(errText); }
                 }));
-            } else {
-                // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
-                var loadActions = [], // Here' we'll put the promises we need to obtain the required data.
-                    extraParams = [];
+            } else { // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
+                var ajaxOpts = Exporter.prepareExport(
+                        exFormat.name == "tsv"
+                            ? [{ name: "wt", value: "json" }, { name: "json2tsv", value: true }]
+                            : [{ name: 'wt', value: exFormat.name === 'xlsx' ? 'json' : exFormat.name }],
+                        selectedIds
+                        ).getAjax(this.solrUrl),
+                    downloadFn = function (blob) {
+                        if (!(blob instanceof Blob))
+                            blob = new Blob([blob]);
 
-                if (mime == "tsv")
-                    extraParams.push({ name: "wt", value: "json" }, { name: "json2tsv", value: true });
-                else
-                    extraParams.push({ name: 'wt', value: exFormat.name === 'xlsx' ? 'json' : mime });
-                
-                // This is guaranteed to be here.
-                loadActions.push($.ajax(Exporter.prepareExport(extraParams, selectedIds).getAjax(this.solrUrl)));
-
-                if (exDef.template && exFormat.name === 'xlsx') {
-                    $.extend(true, exDef, { 
-                        callbacksMap: {
-                            lookup: function (val) { return mainLookupMap[val] || val; } 
-                        }
-                    });
-    
-                    loadActions.push(jT.ui.promiseXHR({
-                        url: exDef.template,
-                        settings: { 
-                            responseType: "arraybuffer" 
-                        }
-                    }));
-                }
-    
-                Promise.all(loadActions).then(function (results) {
-                    var queryData = results[0],
-                        wbData = results[1];                        
-    
-                    if (typeof exDef.onData === 'function')
-                        exDef.onData(queryData);
-
-                    if (!wbData) {
-                        jT.ui.activateDownload(null, 
-                            new Blob([JSON.stringify(queryData)]), 
-                            "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name,
+                        jT.ui.activateDownload(
+                            null, 
+                            blob, 
+                            "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name, 
                             true);
-                    } else {
+                    };
+
+                // Not a template thing.
+                if (!exDef.template || exFormat.name !== 'xlsx') {
+                    ajaxOpts.dataType = 'application/json';
+                    ajaxOpts.settings = { responseType: "arraybuffer" }
+                    jT.ui.promiseXHR(ajaxOpts).then(downloadFn).catch(errFn);
+                }
+                else { // We're in templating mode!
+                    Promise.all([
+                        $.ajax(ajaxOpts),
+                        jT.ui.promiseXHR({
+                            url: exDef.template,
+                            settings: { responseType: "arraybuffer" }
+                        })
+                    ]).then(function (results) {
+                        var queryData = results[0],
+                            wbData = results[1];                        
+
+                        if (typeof exDef.onData === 'function')
+                            exDef.onData(queryData);
+
                         XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
+                            if (!exDef.callbacksMap.lookup)
+                                exDef.callbacksMap.lookup = function (val) { return mainLookupMap[val] || val; } 
+                            
                             try {
                                 new XlsxDataFill(
                                     new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
                                     exDef
                                 ).fillData(queryData);
-        
-                                workbook.outputAsync().then(function (blob) {
-                                    blob && jT.ui.activateDownload(
-                                        null, 
-                                        blob, 
-                                        "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name, 
-                                        true);
-                                });
+
+                                workbook.outputAsync().then(downloadFn);
                             } catch (e) {
                                 errFn(e.message);
                             };
 
                         }).catch(errFn);
-                    }
-                }).catch(errFn);
+                    }).catch(errFn);
+                }
             }
 
             return true;
@@ -827,31 +819,27 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         },
 
         prepareTypes: function () {
-            var exportEl = $("#export_tab div#export_type"),
-                self = this,
-                updateTypes = function (idx) {
+            var self = this,
+                exportEl = $("#export_select"),
+                updateFormats = function (formats) {
                     $('.data_formats a').addClass('disabled');
 
-                    self.exportTypes[idx].formats.split(",").forEach(function (item) {
+                    formats.split(",").forEach(function (item) {
                         $('.data_formats a[data-name=' + item + ']').removeClass('disabled')
                     });
 
                     $('.data_formats a:visible').not('.disabled').first().trigger('click');
                 };
 
-            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
-                this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
-                var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
-                el.data("index", i);
-                exportEl.append(el);
-            }
+            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
+                exportEl.append(jT.ui.fillTemplate("#export-type", $.extend({ index: i }, this.exportTypes[i])));
             
-            $("input[name=export_type]").on("change", function (e) {  
-                updateTypes($(this).data("index")); 
+            exportEl.on("change", function (e) { 
+                updateFormats(self.exportTypes[parseInt(this.value)].formats); 
                 return false; 
             });
 
-            updateTypes(0);
+            updateFormats(this.exportTypes[0].formats);
         }
     };
 
@@ -1829,7 +1817,7 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "</div>" +
 "" +
 "<h6>Select export/report type</h6>" +
-"<div id=\"export_type\"></div>" +
+"<select id=\"export_select\" name=\"export_select\"></select>" +
 "" +
 "<h6>Select output format</h6>" +
 "<input type=\"hidden\" name=\"export_format\" id=\"export_format\" />" +
@@ -1906,8 +1894,7 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "</div>" +
 "" +
 "<div id=\"export-type\">" +
-"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" id=\"{{name}}\" />" +
-"<label for=\"{{name}}\">{{name}}</label>" +
+"<option value=\"{{index}}\">{{name}}</button>" +
 "</div>" +
 "" +
 "<div id=\"export-format\">" +

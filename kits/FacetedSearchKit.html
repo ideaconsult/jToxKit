@@ -86,7 +86,7 @@
                         </div>
 
                         <h6>Select export/report type</h6>
-                        <div id="export_type"></div>
+                        <select id="export_select" name="export_select"></select>
 
                         <h6>Select output format</h6>
                         <input type="hidden" name="export_format" id="export_format" />
@@ -162,8 +162,7 @@
         </div>
 
         <div id="export-type">
-            <input type="radio" value="{{fields}}" {{selected}} name="export_type" id="{{name}}" />
-            <label for="{{name}}">{{name}}</label>
+            <option value="{{index}}">{{name}}</button>
         </div>
 
         <div id="export-format">
