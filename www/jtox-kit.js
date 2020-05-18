@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.2.6" };
+var jToxKit = { version: "2.2.7" };
 
 (function (jT, a$, Solr) {
   // Now import all the actual skills ...
@@ -191,6 +191,9 @@ jT.ui = {
           xhr.setRequestHeader(key, ajax.headers[key]);
         });
       }
+
+      if (typeof ajax.dataType === 'string')
+        xhr.setRequestHeader('Content-Type', ajax.dataType);
 
       Object.keys(ajax.settings).forEach(function (key) {
         xhr[key] = ajax.settings[key];

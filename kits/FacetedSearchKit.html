@@ -85,19 +85,15 @@
                             <label for="selected_data">Selected entries</label>
                         </div>
 
-                        <h6>Select export type</h6>
-                        <div id="export_type"></div>
+                        <h6>Select export/report type</h6>
+                        <select id="export_select" name="export_select"></select>
 
                         <h6>Select output format</h6>
                         <input type="hidden" name="export_format" id="export_format" />
                         <div class="data_formats"></div>
 
                         <br />
-                        <button id="export_go" type="submit" name="export_go" data-format="Download {{source}} as {{format}}">?</button>
-
-                        <br />
-                        <select id="report_select" style="width: auto;"></select>
-                        <button id="report_go" type="button" name="report_go" data-format="Generate summary report for {{source}}">?</button>
+                        <button id="export_go" type="button" name="export_go" data-format="Download {{source}} as {{format}}">?</button>
 
                         <div class="ui-state-error ui-corner-all warning-message" style="padding: 0 .7em;">
                                 <p><span class="ui-icon ui-icon-alert"
@@ -166,8 +162,7 @@
         </div>
 
         <div id="export-type">
-            <input type="radio" value="{{fields}}" {{selected}} name="export_type" id="{{name}}" />
-            <label for="{{name}}">{{name}}</label>
+            <option value="{{index}}">{{name}}</button>
         </div>
 
         <div id="export-format">
