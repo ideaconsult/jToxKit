@@ -631,11 +631,23 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
             var goButt$ = $("#export_go");
             goButt$.on('click', function (e) { 
-                var oldText = goButt$.button("option", "label");
+                var oldText = goButt$.button("option", "label"),
+                    goTime = new Date().getTime();
+
+                goButt$.button("option", "label", "Downloading...");
 
                 self.makeExport($("#export_tab form")[0], function (error) {
-                    console.error(error);
-                    goButt$.button("option", "label", JSON.stringify(error && error.message || error || oldText).substr(0, 32));
+                    if (error != null) {
+                        console.error(error);
+
+                        if (typeof error === 'object')
+                            error = error.message || error.status || "Wrong request!";
+                    }
+
+                    // Ensure at least 900ms of showtime for the "Downloading..." label
+                    setTimeout(function () {
+                        goButt$.button("option", "label", (error || oldText).substr(0, 40));
+                    }, Math.max(0, goTime + 900 - new Date().getTime()));
                 }); 
             });
 
@@ -672,7 +684,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
         },
 
-        makeExport: function (form, errFn) {
+        makeExport: function (form, doneFn) {
             var self = this,
                 mime = form.export_format.value,
                 exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
@@ -709,8 +721,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         });
 
                         formAmbitUrl();
+                        doneFn();
                     },
-                    error: function (jhr, status, errText) { errFn(errText); }
+                    error: function (jhr, status, errText) { doneFn(errText); }
                 }));
             } else { // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
                 var ajaxOpts = Exporter.prepareExport(
@@ -728,13 +741,14 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             blob, 
                             "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name, 
                             true);
+                        doneFn();
                     };
 
                 // Not a template thing.
                 if (!exDef.template || exFormat.name !== 'xlsx') {
                     ajaxOpts.dataType = 'application/json';
                     ajaxOpts.settings = { responseType: "arraybuffer" }
-                    jT.ui.promiseXHR(ajaxOpts).then(downloadFn).catch(errFn);
+                    jT.ui.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);
                 }
                 else { // We're in templating mode!
                     Promise.all([
@@ -762,11 +776,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
                                 workbook.outputAsync().then(downloadFn);
                             } catch (e) {
-                                errFn(e.message);
+                                doneFn(e);
                             };
 
-                        }).catch(errFn);
-                    }).catch(errFn);
+                        }).catch(doneFn);
+                    }).catch(doneFn);
                 }
             }
 
