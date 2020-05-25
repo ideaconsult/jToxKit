@@ -150,6 +150,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 { name: "echoParams", value: "none" },
                 { name: 'rows', value: 999998 } //2147483647
             ],
+            exportDefaultDef: {
+                callbacksMap: {
+                    lookup: function (val) { return mainLookupMap[val] || val; }
+                }
+            },
             savedQueries: [],
             listingFields: [],
             facets: [],
@@ -688,7 +693,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             var self = this,
                 exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
                 exType = this.exportTypes[parseInt(form.export_select.value)],
-                exDef = $.extend(true, {}, exType.definition),
+                exDef = _.defaultsDeep($.extend(true, {}, exType.definition), this.exportDefaultDef),
                 server = exType.server || exFormat.server,
                 selectedIds = this.getSelectedIds(form),
                 formAmbitUrl = function () { 
@@ -766,9 +771,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             exDef.onData(queryData);
 
                         XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
-                            if (!exDef.callbacksMap.lookup)
-                                exDef.callbacksMap.lookup = function (val) { return mainLookupMap[val] || val; } 
-                            
                             try {
                                 new XlsxDataFill(
                                     new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
