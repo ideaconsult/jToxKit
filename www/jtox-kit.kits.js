@@ -686,7 +686,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
         makeExport: function (form, doneFn) {
             var self = this,
-                mime = form.export_format.value,
                 exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
                 exType = this.exportTypes[parseInt(form.export_select.value)],
                 exDef = $.extend(true, {}, exType.definition),
@@ -696,6 +695,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     form.search.value = selectedIds.join(" ");
                     form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                 };
+
+            exFormat = exFormat.name;
 
             Array.prototype.unshift.apply(exDef.extraParams, this.exportSolrDefaults);
             var Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
@@ -727,9 +728,9 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 }));
             } else { // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
                 var ajaxOpts = Exporter.prepareExport(
-                        exFormat.name == "tsv"
+                        exFormat == "tsv"
                             ? [{ name: "wt", value: "json" }, { name: "json2tsv", value: true }]
-                            : [{ name: 'wt', value: exFormat.name === 'xlsx' ? 'json' : exFormat.name }],
+                            : [{ name: 'wt', value: exFormat === 'xlsx' ? 'json' : exFormat }],
                         selectedIds
                         ).getAjax(this.solrUrl),
                     downloadFn = function (blob) {
@@ -739,13 +740,13 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         jT.ui.activateDownload(
                             null, 
                             blob, 
-                            "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat.name, 
+                            "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat, 
                             true);
                         doneFn();
                     };
 
                 // Not a template thing.
-                if (!exDef.template || exFormat.name !== 'xlsx') {
+                if (!exDef.template || exFormat !== 'xlsx') {
                     ajaxOpts.dataType = 'application/json';
                     ajaxOpts.settings = { responseType: "arraybuffer" }
                     jT.ui.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);

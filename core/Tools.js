@@ -170,6 +170,8 @@ jT.ui = {
   promiseXHR: function (ajax) {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
+
+      xhr.withCredentials = true;
       
       xhr.open(ajax.method || "GET", ajax.url, true);
       if (ajax.headers) {

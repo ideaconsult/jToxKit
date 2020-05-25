@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.2.7" };
+var jToxKit = { version: "2.2.8" };
 
 (function (jT, a$, Solr) {
   // Now import all the actual skills ...
@@ -184,6 +184,8 @@ jT.ui = {
   promiseXHR: function (ajax) {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
+
+      xhr.withCredentials = true;
       
       xhr.open(ajax.method || "GET", ajax.url, true);
       if (ajax.headers) {
