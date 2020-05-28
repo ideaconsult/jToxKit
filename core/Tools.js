@@ -168,25 +168,26 @@ jT.ui = {
 	},
   
   promiseXHR: function (ajax) {
+    var keySetter = function (xhr, aux) {
+      aux && Object.keys(aux).forEach(function (key) {
+        xhr[key] = aux[key];
+      });
+    };
+
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
 
-      xhr.withCredentials = true;
-      
       xhr.open(ajax.method || "GET", ajax.url, true);
-      if (ajax.headers) {
-        Object.keys(ajax.headers).forEach(function (key) {
-          xhr.setRequestHeader(key, ajax.headers[key]);
-        });
-      }
+      Object.keys(ajax.headers || {}).forEach(function (key) {
+        xhr.setRequestHeader(key, ajax.headers[key]);
+      });
 
       if (typeof ajax.dataType === 'string')
         xhr.setRequestHeader('Content-Type', ajax.dataType);
 
-      Object.keys(ajax.settings).forEach(function (key) {
-        xhr[key] = ajax.settings[key];
-      });
-      
+      keySetter(xhr, ajax.settings);
+      keySetter(xhr, ajax.xhrFields);
+
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4) 
           return;

@@ -608,10 +608,10 @@
 
             Array.prototype.unshift.apply(exDef.extraParams, this.exportSolrDefaults);
             var Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
-                    exportDefinition: exDef,
-                    useJson: false,
-                    expectJson: true
-                });
+                exportDefinition: exDef,
+                useJson: false,
+                expectJson: true
+            });
 
             Exporter.init(this.manager);
 
@@ -662,10 +662,10 @@
                 else { // We're in templating mode!
                     Promise.all([
                         $.ajax(ajaxOpts),
-                        jT.ui.promiseXHR({
+                        jT.ui.promiseXHR($.extend({
                             url: exDef.template,
                             settings: { responseType: "arraybuffer" }
-                        })
+                        }, this.ajaxSettings))
                     ]).then(function (results) {
                         var queryData = results[0],
                             wbData = results[1];                        
