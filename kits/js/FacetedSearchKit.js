@@ -645,7 +645,7 @@
                         if (!(blob instanceof Blob))
                             blob = new Blob([blob]);
 
-                        jT.ui.activateDownload(
+                        jT.activateDownload(
                             null, 
                             blob, 
                             "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat, 
@@ -657,12 +657,12 @@
                 if (!exDef.template || exFormat !== 'xlsx') {
                     ajaxOpts.dataType = 'application/json';
                     ajaxOpts.settings = { responseType: "arraybuffer" }
-                    jT.ui.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);
+                    jT.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);
                 }
                 else { // We're in templating mode!
                     Promise.all([
                         $.ajax(ajaxOpts),
-                        jT.ui.promiseXHR($.extend({
+                        jT.promiseXHR($.extend({
                             url: exDef.template,
                             settings: { responseType: "arraybuffer" }
                         }, this.ajaxSettings))
@@ -751,12 +751,11 @@
                     $('.data_formats a:visible').not('.disabled').first().trigger('click');
                 };
 
-            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
-                this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
-                var el = jT.ui.fillTemplate("export-type", this.exportTypes[i]);
-                el.data("index", i);
-                exportEl.append(el);
-            }
+            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
+                exportEl.append(jT.ui.fillTemplate("export-type", $.extend({ 
+                    index: i,
+                    selected: (i == 0) ? 'checked="checked"' : ''
+                }, this.exportTypes[i])));
             
             exportEl.on("change", function (e) { 
                 updateFormats(self.exportTypes[parseInt(this.value)].formats); 

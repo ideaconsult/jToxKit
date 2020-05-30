@@ -1,3 +1,159 @@
+/** jToxKit - chem-informatics multi-tool-kit.
+* The universal annotation capabilities.
+*
+* Author: Ivan (Jonan) Georgiev
+* Copyright © 2020, IDEAConsult Ltd. All rights reserved.
+*/
+
+(function(a$, $, jT) {	
+	function AnnotationKit(settings) {
+		a$.extend(true, this, AnnotationKit.defaults, settings);
+		var self = this;
+		
+		this.selector = settings.selector;
+		
+		this.annoTip = new AnnoTip({
+			context: this.context,
+			// Handlers. All accept @see {Anno} as an argument.
+			onSelection: function (anno) { return self.analyzeAnno(anno); },
+			onAction: function (action, anno) { return self.onAction(action, anno); },
+			onClose: null
+		});
+
+		if (!!settings.autoStart)
+			this.start();
+	};
+
+	AnnotationKit.defaults = {
+		context: null,
+		ajaxSettings: null,
+		connector: null,
+		inputSize: 30,
+		matchers: [{
+			selector: "*",		// String - CSS selector
+			extractor: null,	// String | Function 
+			presenter: null,	// String - HTML | Function
+			exclusive: false	// Boolean - terminate matching
+		}]
+	};
+
+	AnnotationKit.prototype.start = function () {
+		this.annoTip.attach(this.selector);
+	};
+
+	AnnotationKit.prototype.onAction = function (action, anno) {
+		if (action === 'edit') {			
+			if (typeof this.controlsPrepack === 'function')
+				anno = this.controlsPrepack(data, anno);
+
+			anno.content = this.controlsPacker(anno);
+			this.annoTip.update(anno);
+			this.beautify(anno.element);
+			$(anno.element).addClass('openned');
+			return;
+		}
+		if (action === 'ok') {
+			var data = this.dataPacker(anno);
+
+			if (typeof this.dataPostprocess === 'function')
+				data = this.dataPostprocess(data, anno);
+
+			if (data)
+				$.ajax($.extend(true, this.ajaxSettings, { data:  data }));
+		}
+		
+		$(".annotip-severity", anno.element).buttonset('destroy');
+		this.annoTip.discard();
+	};
+
+	AnnotationKit.prototype.analyzeAnno = function (anno) {
+		var dataInfo = this.dataExtractor(anno.element),
+			data = dataInfo.data,
+			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
+			matchers = this.matchers;
+			
+		anno.reference = {};
+		anno.controls = [];
+		for (var i = 0;i < matchers.length; ++i) {
+			var m = matchers[i],
+				found = false;
+
+			elChain.filter(m.selector).each(function (idx, el) {
+				var v = null;
+
+				// First, deal with value extraction...
+				if (typeof m.extractor === 'function')
+					v = m.extractor(data, anno, el);
+				else if (typeof m.extractor === 'string' || Array.isArray(m.extractor))
+					v = _.set({}, m.extractor, _.get(data, m.extractor));
+				else if (m.extractor != null)
+					v = m.extractor;
+				
+				// ... and merge it to the main data inside the anno object.
+				if (v != null)
+					anno.reference = $.extend(true, anno.reference, v);
+
+				// The, proceed with ui building.
+				if (typeof m.presenter === 'string')
+					anno.controls.push(jT.ui.formatString(m.presenter, anno));
+				else if (typeof m.presenter === 'function')
+					anno.controls.push(m.presenter(data, anno, el));
+
+				found = true;
+			});
+
+			if (found && m.exclusive) break;
+		}
+
+		return anno.controls.length > 0;
+	};
+
+	AnnotationKit.prototype.controlsPacker = function (anno) {
+		anno.controls.push(
+			jT.formatString(jT.ui.templates['anno-description'], this),
+			jT.formatString(jT.ui.templates['anno-severity'], this)
+		);
+
+		return '<form><div>' + anno.controls.join('</div>\n<div>') + '</div></form>';
+  	};
+
+	AnnotationKit.prototype.beautify = function (element) {
+		$(".annotip-severity", element).buttonset();
+		$("input", element).attr('size', this.inputSize - 1);
+		$("textarea", element).attr('cols', this.inputSize);
+	};
+
+	AnnotationKit.prototype.dataPreprocess = function (data, anno) {
+		$('form', anno.element).serializeArray().forEach(function (el) {
+			_.set(data, el.name, el.value);
+		});
+		
+		return data;
+	};
+
+	AnnotationKit.prototype.dataPacker = function (anno) {
+		return this.dataPreprocess({
+			context: anno.context,
+			reference: anno.reference,
+			operation: anno.operation,
+			suggestion: anno.suggestion
+		}, anno);
+	};
+
+	AnnotationKit.prototype.dataExtractor = function (el) {
+		var target = $(el).closest('table.dataTable>tbody>tr')[0],
+			table = jT.tables.getTable(target);
+		
+		return {
+			target: target,
+			data: table.row(target).data()		
+		};
+	};
+
+	AnnotationKit.prototype.dataInserter = function (el, data) { };
+
+	jT.ui.Annotation = AnnotationKit;
+})(asSys, jQuery, jToxKit);
 /* CompositionKit.js - A kit for visualizing substance composition(s). Migrated.
  *
  * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
@@ -111,15 +267,13 @@
 				// now make the actual filling
 				if (!self.settings.noInterface) {
 					for (var i in substances) {
-						var panel = $(jT.ui.templates['all-composition'])[0];
+						var panel = jT.ui.bakeTemplate(jT.ui.templates['all-composition'], substances[i])[0];
 						$(self.rootElement).append(panel);
 
-						if (self.settings.showBanner)
-							jT.ui.fillTree($('.composition-info', panel)[0], substances[i]);
-						else // we need to remove it
+						if (!self.settings.showBanner) // we need to remove it
 							$('.composition-info', panel).remove();
 						// we need to prepare tables, abyways.
-						self.prepareTable(substances[i].composition, panel);
+						self.prepareTable(substances[i].composition, panel[0]);
 					}
 				}
 			} else
@@ -370,13 +524,16 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             },
             exportTypes: [],
             exportSolrDefaults: [
-                { name: "facet", value: "false" },
                 { name: "echoParams", value: "none" },
-                { name: 'rows', value: 999999 } //2147483647
+                { name: 'rows', value: 999998 } //2147483647
             ],
+            exportDefaultDef: {
+                callbacksMap: {
+                    lookup: function (val) { return mainLookupMap[val] || val; }
+                }
+            },
             savedQueries: [],
             listingFields: [],
-            summaryReports: [],
             facets: [],
             summaryRenderers: {}
         },
@@ -670,7 +827,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                     ui = uiConfiguration[f.id],
                     w = new TagWidget($.extend({
                         target: this.accordion,
-                        expansionTemplate: "#tab-topcategory",
+                        expansionTemplate: "tab-topcategory",
                         subtarget: "ul",
                         runMethod: toggleAggregate,
                         multivalue: this.multipleSelection,
@@ -702,7 +859,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 id: "studies",
                 target: this.accordion,
                 subtarget: "ul",
-                expansionTemplate: "#tab-topcategory",
+                expansionTemplate: "tab-topcategory",
                 before: "#cell_header",
                 field: "loValue_d",
                 lookupMap: this.lookupMap,
@@ -811,7 +968,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
             
             this.queries.renderItem = function (query) {
-                el$ = jT.ui.fillTemplate("#query-item", query);
+                el$ = jT.ui.fillTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     var queryDef = $(this).data('query');
@@ -847,78 +1004,33 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             this.prepareTypes();
 
             $("#export_dataset").buttonset();
-            $("#export_type").buttonset();
             $("#export_dataset input").on("change", function (e) {
                 self.updateButtons(this.form);
             });
             $("#export_tab button").button({
                 disabled: true
             });
-            $("#report_go").on("click", function (e) {
-                var butEl = $(this),
-                    oldText = butEl.button("option", "label");
 
-                butEl.button("option", "label", "Generating the report...");
+            var goButt$ = $("#export_go");
+            goButt$.on('click', function (e) { 
+                var oldText = goButt$.button("option", "label"),
+                    goTime = new Date().getTime();
 
-                self.buildSummaryReport(function (blob, error) {
-                    butEl.button("option", "label", blob ? oldText : error || oldText);
-                    if (blob)
-                        jT.activateDownload(null, blob, "Report-" + (new Date().toISOString().replace(":", "_"))+ ".xlsx", true);
-                });
-            });
+                goButt$.button("option", "label", "Downloading...");
 
-            var reportSelection = $("#report_select");
-            $.each(self.summaryReports, function (idx, def) {
-                reportSelection.append('<option id="' + def.id + '"' + (idx == 0 ? ' selected="true"' : '') + '>' + def.name + '</option>');
-            });
+                self.makeExport($("#export_tab form")[0], function (error) {
+                    if (error != null) {
+                        console.error(error);
 
-            $("#export_tab form").on("submit", function (e) {
-                var form = this,
-                    mime = form.export_format.value,
-                    mime = mime.substr(mime.indexOf("/") + 1),
-                    exFormat = self.exportFormats[$('.data_formats .selected').data('index')],
-                    exType = self.exportTypes[$(form).find('input[name=export_type]:checked').data('index')],
-                    server = exType.server || exFormat.server,
-                    selectedIds = self.getSelectedIds(form),
-                    formAmbitUrl = function () { 
-                        form.search.value = selectedIds.join(" ");
-                        form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
-                    },
-                    Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingURL))({
-                        exportDefinition: exType,
-                        useJson: false,
-                        expectJson: true
-                    });
+                        if (typeof error === 'object')
+                            error = error.message || error.status || "Wrong request!";
+                    }
 
-                Exporter.init(self.manager);
-
-                // Now we have all the filtering parameters in the `params`.
-                if (server == 'ambitUrl') {
-                    // If we already have the selected Ids - we don't even need to bother calling Solr.
-                    if (!!selectedIds)
-                        formAmbitUrl();
-                    else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
-                        async: false,
-                        dataType: "json",
-                        success: function (data) {
-                            var ids = [];
-                            $.each(data.response.docs, function (index, value) {
-                                ids.push(value.s_uuid_hs);
-                            });
-
-                            formAmbitUrl();
-                        }
-                    }));
-                } else {
-                    // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
-                    form.action = Exporter.prepareExport(self.exportSolrDefaults.concat(
-                        mime == "tsv"
-                            ? [ { name: "wt", value: "json" }, { name: "json2tsv", value: true } ]
-                            : [ { name: 'wt', value: mime } ]
-                    ), selectedIds).getAjax(self[server]).url;
-                }
-
-                return true;
+                    // Ensure at least 900ms of showtime for the "Downloading..." label
+                    setTimeout(function () {
+                        goButt$.button("option", "label", (error || oldText).substr(0, 40));
+                    }, Math.max(0, goTime + 900 - new Date().getTime()));
+                }); 
             });
 
             $("#result-tabs").tabs({
@@ -930,7 +1042,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             hasDataset = hasFilter || hasBasket;
 
                         $("#export_dataset").buttonset(hasDataset ? "enable" : "disable");
-                        $("#export_type").buttonset(hasDataset ? "enable" : "disable");
+                        $("#export_select").toggleClass('disabled', !hasDataset);
                         $('div.warning-message')[hasDataset ? "hide" : "show"]();
                         $('.data_formats').toggleClass('disabled', !hasDataset);
 
@@ -938,7 +1050,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             .prop("checked", hasBasket)
                             .prop("disabled", !hasBasket)
                             .toggleClass("disabled", !hasBasket);
-                            
+
                         $("input#filtered_data")
                             .prop("checked", hasFilter && !hasBasket)
                             .prop("disabled", !hasFilter)
@@ -954,11 +1066,109 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
         },
 
+        makeExport: function (form, doneFn) {
+            var self = this,
+                exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
+                exType = this.exportTypes[parseInt(form.export_select.value)],
+                exDef = _.defaultsDeep($.extend(true, {}, exType.definition), this.exportDefaultDef),
+                server = exType.server || exFormat.server,
+                selectedIds = this.getSelectedIds(form),
+                formAmbitUrl = function () { 
+                    form.search.value = selectedIds.join(" ");
+                    form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
+                };
+
+            exFormat = exFormat.name;
+
+            Array.prototype.unshift.apply(exDef.extraParams, this.exportSolrDefaults);
+            var Exporter = new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
+                exportDefinition: exDef,
+                useJson: false,
+                expectJson: true
+            });
+
+            Exporter.init(this.manager);
+
+            // Now we have all the filtering parameters in the `params`.
+            if (server == 'ambitUrl') {
+                // If we already have the selected Ids - we don't even need to bother calling Solr.
+                if (!!selectedIds)
+                    formAmbitUrl();
+                else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
+                    async: false,
+                    dataType: "json",
+                    success: function (data) {
+                        var ids = [];
+                        $.each(data.response.docs, function (index, value) {
+                            ids.push(value.s_uuid_hs);
+                        });
+
+                        formAmbitUrl();
+                        doneFn();
+                    },
+                    error: function (jhr, status, errText) { doneFn(errText); }
+                }));
+            } else { // We're strictly in Solr mode - prepare the filters and add the selecteds (if they exists)
+                var ajaxOpts = Exporter.prepareExport(
+                        exFormat == "tsv"
+                            ? [{ name: "wt", value: "json" }, { name: "json2tsv", value: true }]
+                            : [{ name: 'wt', value: exFormat === 'xlsx' ? 'json' : exFormat }],
+                        selectedIds
+                        ).getAjax(this.solrUrl),
+                    downloadFn = function (blob) {
+                        if (!(blob instanceof Blob))
+                            blob = new Blob([blob]);
+
+                        jT.activateDownload(
+                            null, 
+                            blob, 
+                            "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat, 
+                            true);
+                        doneFn();
+                    };
+
+                // Not a template thing.
+                if (!exDef.template || exFormat !== 'xlsx') {
+                    ajaxOpts.dataType = 'application/json';
+                    ajaxOpts.settings = { responseType: "arraybuffer" }
+                    jT.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);
+                }
+                else { // We're in templating mode!
+                    Promise.all([
+                        $.ajax(ajaxOpts),
+                        jT.promiseXHR($.extend({
+                            url: exDef.template,
+                            settings: { responseType: "arraybuffer" }
+                        }, this.ajaxSettings))
+                    ]).then(function (results) {
+                        var queryData = results[0],
+                            wbData = results[1];                        
+
+                        if (typeof exDef.onData === 'function')
+                            exDef.onData(queryData);
+
+                        XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
+                            try {
+                                new XlsxDataFill(
+                                    new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
+                                    exDef
+                                ).fillData(queryData);
+
+                                workbook.outputAsync().then(downloadFn);
+                            } catch (e) {
+                                doneFn(e);
+                            };
+
+                        }).catch(doneFn);
+                    }).catch(doneFn);
+                }
+            }
+
+            return true;
+        },
+
         getSelectedIds: function (form) {
             var selectedIds = null;
-
-            if (!form)
-                form = $("#export_tab form")[0];
 
             if (form.export_dataset.value != "filtered") {
                 selectedIds = [];
@@ -975,7 +1185,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
+                var el = jT.ui.fillTemplate("export-format", this.exportFormats[i]);
                 el.data("index", i);
                 exportEl.append(el);
 
@@ -1003,78 +1213,30 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         },
 
         prepareTypes: function () {
-            var exportEl = $("#export_tab div#export_type"),
-                self = this,
-                updateTypes = function (idx) {
+            var self = this,
+                exportEl = $("#export_select"),
+                updateFormats = function (formats) {
                     $('.data_formats a').addClass('disabled');
 
-                    self.exportTypes[idx].formats.split(",").forEach(function (item) {
+                    formats.split(",").forEach(function (item) {
                         $('.data_formats a[data-name=' + item + ']').removeClass('disabled')
                     });
 
                     $('.data_formats a:visible').not('.disabled').first().trigger('click');
                 };
 
-            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i) {
-                this.exportTypes[i].selected = (i == 0) ? 'checked="checked"' : '';
-                var el = jT.ui.fillTemplate("#export-type", this.exportTypes[i]);
-                el.data("index", i);
-                exportEl.append(el);
-            }
+            for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
+                exportEl.append(jT.ui.fillTemplate("export-type", $.extend({ 
+                    index: i,
+                    selected: (i == 0) ? 'checked="checked"' : ''
+                }, this.exportTypes[i])));
             
-            $("input[name=export_type]").on("change", function (e) {  
-                updateTypes($(this).data("index")); 
+            exportEl.on("change", function (e) { 
+                updateFormats(self.exportTypes[parseInt(this.value)].formats); 
                 return false; 
             });
 
-            updateTypes(0);
-        },
-
-        buildSummaryReport: function(callback) {
-            var reportDefinition = $.extend(true, {
-                    callbacksMap: { 
-                        lookup: function (val) { return mainLookupMap[val] || val; }
-                    }
-                }, this.summaryReports[$("#report_select")[0].selectedIndex].definition)
-                Exporter =new (a$(jT.Exporting, Solr.Configuring, Solr.QueryingJson))({
-                    exportDefinition: reportDefinition,
-                    useJson: true,
-                    expectJson: true
-                }), 
-                selectedIds = this.getSelectedIds(),
-                errFn = function (err) {
-                    console.log(JSON.stringify(err).substr(0, 256));
-                    callback(null, typeof err === "string" ? "Err: " + err : "Error occurred!"); 
-                };
-
-            Exporter.init(this.manager);
-
-            Promise.all([
-                jT.promiseXHR({
-                    url: reportDefinition.template,
-                    settings: { responseType: "arraybuffer" }
-                }),
-                $.ajax(Exporter.prepareExport(null, selectedIds).getAjax(this.solrUrl))
-            ]).then(function (results) {
-                var wbData = results[0],
-                    queryData = results[1];
-
-                if (typeof reportDefinition.onData === 'function')
-                    reportDefinition.onData(queryData);
-
-                XlsxPopulate.fromDataAsync(wbData).then(function (workbook) {
-                    try {
-                        new XlsxDataFill(
-                            new XlsxDataFill.XlsxPopulateAccess(workbook, XlsxPopulate), 
-                            reportDefinition
-                        ).fillData(queryData);
-
-                        workbook.outputAsync().then(callback, errFn)
-                    } catch (e) {
-                        errFn(e.message);
-                    }
-                }, errFn);
-            }, errFn);
+            updateFormats(this.exportTypes[0].formats);
         }
     };
 
@@ -1200,7 +1362,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     
     addLine: function (data) {
       var self = this,
-          el$ = jT.ui.fillTemplate("#jtox-logline", data);
+          el$ = jT.ui.fillTemplate('logger-line', data);
 
       el$.height('0px');
       this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
@@ -1211,7 +1373,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
           el$.toggleClass('openned');
           if (el$.hasClass("openned")) {
             var height = 0;
-            $('.data-field', el$[0]).each(function () {
+            $('.info-field', el$[0]).each(function () {
               height += this.offsetHeight;
             });
             el$.height(height + 6);
@@ -1254,7 +1416,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         line$ = this.addLine(this.formatEvent(params, jhr));
       } else {
         delete this.events[params.logId];
-        jT.ui.fillTree(line$[0], this.formatEvent(null, jhr));
+        line$.html(jT.formatString(jT.ui.templates['logger-line'], this.formatEvent(null, jhr)));
       }
       
       this.setIcon(line$, status);
@@ -1435,7 +1597,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
           if (target.children().length > 1) // the input field.
             cont$ = $("#" + fid, target[0]).show();
           else {
-				    cont$ = jT.ui.fillTemplate($("#tag-facet"), faceter).attr("id", fid);
+				    cont$ = jT.ui.fillTemplate("tag-facet", faceter).attr("id", fid);
             
     				f.title = f.val;
     				f.onMain = this.clickHandler(faceter.id + ":" + f.val);
@@ -1661,7 +1823,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
       for (var i = 0, rangeCnt = current.length; i < rangeCnt; ++i) {
         var ref = current[i],
             full = allVals.find(function (e) { return e.pattern === ref.pattern }) || ref,
-            el$ = jT.ui.fillTemplate("#slider-one"),
+            el$ = jT.ui.fillTemplate("slider-one"),
             setup = {
               id: ref.id,
               targetValue: value,
@@ -1841,7 +2003,7 @@ jT.ItemListWidget.prototype = {
 	 * substance
 	 */
   renderSubstance: function(doc) {
-    var summaryhtml = $("#summary-item").html(),
+    var summaryhtml = jT.ui.templates["summary-item"],
         summarylist = this.buildSummary(doc),
         summaryRender = function (summarylist) { 
           return summarylist.map(function (s) { return jT.formatString(summaryhtml, s)}).join("");
@@ -1865,7 +2027,7 @@ jT.ItemListWidget.prototype = {
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
 
-    return jT.ui.fillTemplate("#result-item", $.extend(item, this.renderLinks(doc)));
+    return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc){
@@ -2015,7 +2177,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = $(this.rootElement).append(jT.ui.templates['all-studies']),
+		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
 			self = this;
 
 		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
@@ -2066,8 +2228,11 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	StudyKit.prototype.createCategory = function (tab, category) {
 		var theCat$ = $('.' + category + '.jtox-study', tab);
-		if (!theCat$.length)
-			theCat$ = $(tab).append($(jT.ui.templates['one-study']).addClass(category));
+		if (!theCat$.length) {
+			var aStudy = jT.ui.bakeTemplate(jT.ui.templates['one-study'], {})
+				.addClass(category);
+			theCat$ = $(tab).append(aStudy);
+		}
 
 		return theCat$[0];
 	};
@@ -2160,7 +2325,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					});
+					}, { anno: 'effects ' + c});
 				};
 				return col;
 			});
@@ -2194,7 +2359,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				"dom": self.settings.dom,
 				"columns": colDefs,
 				"infoCallback": function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
-					var el = $('.title .data-field', $(this).parents('.jtox-study'))[0];
+					var el = $('.title .counter', $(this).parents('.jtox-study'))[0];
 					el.innerHTML = jT.ui.updateCounter(el.innerHTML, iTotal);
 					return sPre;
 				},
@@ -2254,19 +2419,18 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		var added = 0, lastAdded = null;
 
 		function addStudyTab(top, sum) {
-			var tab$ = $(jT.ui.templates['one-category']),
-				link = jT.ui.addTab(
-					self.tabs, 
-					(knownNames[top] || sum.topcategory.title) + " (0)", "jtox-" + top.toLowerCase() + '_' + self.instanceNo, tab$[0]).tab;
+			var tabInfo = jT.ui.addTab(self.tabs, 
+				(knownNames[top] || sum.topcategory.title), 
+				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
+				jT.ui.fillTemplate('one-category', self.substance));
 
-			$(link).data('type', top);
-			tab$.addClass(top).data('jtox-uri', sum.topcategory.uri);
-			jT.ui.fillTree(tab$[0], self.substance);
+			tabInfo.tab.data('type', top);
+			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);
 
 			added++;
 			lastAdded = top;
 
-			return tab$[0];
+			return tabInfo.content[0];
 		};
 
 		for (var si = 0, sl = summary.length; si < sl; ++si) {
@@ -2349,13 +2513,12 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		// now iterate within all categories (if many) and initialize the tables
 		for (var c in cats) {
 			var onec = cats[c],
-				aStudy = $('.' + c + '.jtox-study', tab)[0];
-			if (aStudy === undefined)
+				aStudy = $('.' + c + '.jtox-study', tab);
+
+			if (aStudy.length < 1)
 				continue;
 
-			jT.ui.fillTree(aStudy, {
-				title: onec[0].protocol.category.title + " (0)"
-			});
+			jT.ui.updateTree(aStudy, { title: onec[0].protocol.category.title + " (0)" });
 
 			// now swipe through all studyies to build a "representative" one with all fields.
 			var study = {};
@@ -2433,12 +2596,13 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				substance["IUCFlags"] = jT.ambit.formatExtIdentifiers(substance.externalIdentifiers, 'display', substance);
 				self.substance = substance;
 
-				jT.ui.fillTree(self.rootElement, substance);
+				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
+
 				// go and query for the reference query
 				jT.ambit.call(self, substance.referenceSubstance.uri, function (dataset) {
 					if (!!dataset && dataset.dataEntry.length > 0) {
 						jT.ambit.processDataset(dataset, null, jT.ambit.getDatasetValue);
-						jT.ui.fillTree($('.jtox-substance', self.rootElement)[0], dataset.dataEntry[0]);
+						jT.ui.updateTree($('.jtox-substance', self.rootElement), dataset.dataEntry[0]);
 					}
 				});
 
@@ -2509,7 +2673,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				if (data.endpointtype != null)
 					endpointText += " (" + data.endpointtype + ")";
 				return endpointText
-			});
+			}, { anno: "endpoint endpointtype"});
 		}
 	}, // Effects columns
 	{
@@ -2523,7 +2687,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				if (data.result.errorValue != null)
 					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
 				return resText
-			});
+			}, { anno: "result result.errQualifier result.errValue"});
 		}
 	},
 	{
@@ -2534,7 +2698,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		"render": function (data, type, full) {
 			return jT.tables.renderMulti(data, type, full, function (data) {
 				return data.result.textValue || '-';
-			});
+			}, { anno: "result result.textValue"});
 		}
 	},
 	{
@@ -2606,7 +2770,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			var self = this;
 
 			if (this.settings.embedComposition && this.settings.onDetails == null) {
-				this.settings.onDetails = function (root, data, element) {
+				this.settings.onDetails = function (root, data) {
 					new jT.ui.Composition(root, $.extend({},
 						self.settings,
 						(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
@@ -2616,7 +2780,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				};
 			}
 
-			$(this.rootElement).append(jT.ui.templates['all-substance']);
+			$(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-substance'], ' ? '));
 			this.init(settings);
 		}
 
@@ -2803,16 +2967,16 @@ jT.ui.templates['all-composition']  =
 "<div class=\"jtox-composition unloaded\">" +
 "<table class=\"dataTable composition-info font-small display\">" +
 "<thead>" +
-"<tr><th>Composition name:</th><td class=\"data-field camelCase\" data-field=\"name\"> ? </td></tr>" +
-"<tr><th>Composition UUID:</th><td class=\"data-field\" data-field=\"uuid\"> ? </td></tr>" +
-"<tr><th>Purity of IUC Substance:</th><td class=\"data-field\" data-field=\"purity\"> ? </td></tr>" +
+"<tr><th>Composition name:</th><td class=\"camelCase\">{{ name }}</td></tr>" +
+"<tr><th>Composition UUID:</th><td>{{ uuid }}</td></tr>" +
+"<tr><th>Purity of IUC Substance:</th><td>{{ purity }}</td></tr>" +
 "</thead>" +
 "</table>" +
 "<table class=\"composition-table display\"></table>" +
 "</div>" +
 ""; // end of #jtox-composition 
 
-jToxKit.ui.templates['faceted-search-kit']  = 
+jT.ui.templates['faceted-search-kit']  = 
 "<div class=\"query-container\">" +
 "<!-- left -->" +
 "<div id=\"query\" class=\"query-left\">" +
@@ -2868,19 +3032,15 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "<label for=\"selected_data\">Selected entries</label>" +
 "</div>" +
 "" +
-"<h6>Select export type</h6>" +
-"<div id=\"export_type\"></div>" +
+"<h6>Select export/report type</h6>" +
+"<select id=\"export_select\" name=\"export_select\"></select>" +
 "" +
 "<h6>Select output format</h6>" +
 "<input type=\"hidden\" name=\"export_format\" id=\"export_format\" />" +
 "<div class=\"data_formats\"></div>" +
 "" +
 "<br />" +
-"<button id=\"export_go\" type=\"submit\" name=\"export_go\" data-format=\"Download {{source}} as {{format}}\">?</button>" +
-"" +
-"<br />" +
-"<select id=\"report_select\" style=\"width: auto;\"></select>" +
-"<button id=\"report_go\" type=\"button\" name=\"report_go\" data-format=\"Generate summary report for {{source}}\">?</button>" +
+"<button id=\"export_go\" type=\"button\" name=\"export_go\" data-format=\"Download {{source}} as {{format}}\">?</button>" +
 "" +
 "<div class=\"ui-state-error ui-corner-all warning-message\" style=\"padding: 0 .7em;\">" +
 "<p><span class=\"ui-icon ui-icon-alert\"" +
@@ -2896,12 +3056,10 @@ jToxKit.ui.templates['faceted-search-kit']  =
 "</div>" +
 ""; // end of #faceted-search-kit 
 
-jToxKit.ui.templates['faceted-search-templates']  = 
-"" +
-"<section id=\"result-item\">" +
+jT.ui.templates['result-item']  = 
 "<article id=\"{{item_id}}\" class=\"item\">" +
 "<header>{{title}}</header>" +
-"<a href=\"{{link}}\" title=\"{{link_title}}\" class=\"avatar\" target=\"{{link_target}}\"><img jt-src=\"{{logo}}\" /></a>" +
+"<a href=\"{{link}}\" title=\"{{link_title}}\" class=\"avatar\" target=\"{{link_target}}\"><img src=\"{{logo}}\" /></a>" +
 "<div class=\"composition\">{{composition}}</div>" +
 "{{summary}}" +
 "<footer class=\"links\">" +
@@ -2911,20 +3069,20 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<a href=\"#\" class=\"none jtox-fadable command\">Already added</a>" +
 "</footer>" +
 "</article>" +
-"</section>" +
-"" +
-"<div id=\"summary-item\">" +
+""; // end of #result-item 
+
+jT.ui.templates['summary-item']  = 
 "<div class=\"one-summary\">" +
 "<span class=\"topic\">{{topic}}:</span>" +
 "<span class=\"value\">{{content}}</span>" +
 "</div>" +
-"</div>" +
-"" +
-"<div id=\"tag-facet\">" +
+""; // end of #summary-item 
+
+jT.ui.templates['tag-facet']  = 
 "<ul class=\"tags tag-group folded\"></ul>" +
-"</div>" +
-"" +
-"<section id=\"query-item\">" +
+""; // end of #tag-facet 
+
+jT.ui.templates['query-item']  = 
 "<article id=\"{{id}}\" class=\"item\">" +
 "<header>{{title}}</header>" +
 "<div class=\"composition\">" +
@@ -2932,9 +3090,9 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "<a href=\"#\" title=\"Apply the query\" style=\"width: 100%;\"><span style=\"float:right;margin:0;\">Apply</span></a>" +
 "</div>" +
 "</article>" +
-"</section>" +
-"" +
-"<div id=\"tab-topcategory\">" +
+""; // end of #query-item 
+
+jT.ui.templates['tab-topcategory']  = 
 "<h3 id=\"{{id}}_header\" class=\"nested-tab\">{{title}}</h3>" +
 "<div id=\"{{id}}\" class=\"widget-content widget-root\">" +
 "<div>" +
@@ -2943,39 +3101,36 @@ jToxKit.ui.templates['faceted-search-templates']  =
 "</div>" +
 "<ul class=\"widget-content tags remove-bottom\" data-color=\"{{color}}\"></ul>" +
 "</div>" +
-"</div>" +
-"" +
-"<div id=\"slider-one\">" +
+""; // end of #tab-top-category 
+
+jT.ui.templates['slider-one']  = 
 "<input type=\"hidden\" />" +
-"</div>" +
-"" +
-"<div id=\"export-type\">" +
-"<input type=\"radio\" value=\"{{fields}}\" {{selected}} name=\"export_type\" id=\"{{name}}\" />" +
-"<label for=\"{{name}}\">{{name}}</label>" +
-"</div>" +
-"" +
-"<div id=\"export-format\">" +
+""; // end of #slider-one 
+
+jT.ui.templates['export-type']  = 
+"<option value=\"{{index}}\">{{name}}</button>" +
+""; // end of #export-type 
+
+jT.ui.templates['export-format']  = 
 "<div class=\"jtox-inline jtox-ds-download jtox-fadable\">" +
-"<a target=\"_blank\" data-name=\"{{name}}\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\"" +
-"jt-src=\"{{icon}}\" /></a>" +
+"<a target=\"_blank\" data-name=\"{{name}}\" data-mime=\"{{mime}}\" href=\"#\"><img class=\"borderless\" src=\"{{icon}}\" /></a>" +
 "</div>" +
-"</div>" +
-""; // end of #faceted-search-templates 
+""; // end of #export-format 
 
 jT.ui.templates['logger-main']  = 
 "<div class=\"list-wrap\">" +
 "<div class=\"list-root\"></div>" +
 "</div>" +
-"<div class=\"status\"><div class=\"icon jtox-fadable\"></div></div>" +
+"<div class=\"status\">" +
+"<div class=\"icon jtox-fadable\"></div>" +
+"</div>" +
 ""; // end of #jtox-logger 
 
 jT.ui.templates['logger-line']  = 
-"<div id=\"jtox-logline\">" +
 "<div class=\"logline\">" +
 "<div class=\"icon\"></div>" +
-"<span class=\"content data-field\" data-field=\"header\">{{header}}</span>" +
-"<div class=\"details data-field\" data-field=\"details\">{{details}}</div>" +
-"</div>" +
+"<span class=\"content info-field\">{{header}}</span>" +
+"<div class=\"details info-field\">{{details}}</div>" +
 "</div>" +
 ""; // end of #jtox-logline 
 
@@ -2990,27 +3145,27 @@ jT.ui.templates['all-studies']  =
 "<thead>" +
 "<tr>" +
 "<th class=\"right size-third\">IUC Substance name:</th>" +
-"<td class=\"data-field camelCase\" data-field=\"name\"> ? </td>" +
+"<td class=\"camelCase\">{{ name }}</td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">IUC Substance UUID:</th>" +
-"<td class=\"data-field\" data-field=\"i5uuid\"> ? </td>" +
+"<td>{{ i5uuid }}</td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">IUC Public name:</th>" +
-"<td class=\"data-field camelCase\" data-field=\"publicname\"> ? </td>" +
+"<td class=\"camelCase\">{{ publicname }}</td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">Legal entity:</th>" +
-"<td class=\"data-field\" data-field=\"ownerName\"> ? </td>" +
+"<td>{{ ownerName }}</td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">Legal entity UUID:</th>" +
-"<td class=\"data-field\" data-field=\"ownerUUID\"> ? </td>" +
+"<td>{{ ownerUUID }}</td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right\">Type substance composition:</th>" +
-"<td class=\"data-field\" data-field=\"substanceType\"> ? </td>" +
+"<td>{{ substanceType }}</td>" +
 "</tr>" +
 "<tr class=\"borderless-bottom\">" +
 "<th class=\"right\">IUC Substance Reference Identifier</th>" +
@@ -3018,27 +3173,27 @@ jT.ui.templates['all-studies']  =
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">CAS:</td>" +
-"<td class=\"data-field\" data-field=\"compound.cas\"> ? </td>" +
+"<td>{{ compound.cas }}</td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">EC:</td>" +
-"<td class=\"data-field\" data-field=\"compound.einecs\"> ? </td>" +
+"<td>{{ compound.einecs }}</td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">Chemical name:</td>" +
-"<td class=\"data-field\" data-field=\"compound.name\"> ? </td>" +
+"<td>{{ compound.name }}</td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">IUPAC name:</td>" +
-"<td class=\"data-field\" data-field=\"compound.iupac\"> ? </td>" +
+"<td>{{ compound.iupac }}</td>" +
 "</tr>" +
 "<tr class=\"borderless-top borderless-bottom\">" +
 "<td class=\"right\">UUID:</td>" +
-"<td class=\"data-field\" data-field=\"referenceSubstance.i5uuid\"> ? </td>" +
+"<td>{{ referenceSubstance.i5uuid }}</td>" +
 "</tr>" +
 "<tr class=\"borderless-top\">" +
 "<td class=\"right\">IUC Flags:</td>" +
-"<td class=\"data-field\" data-field=\"IUCFlags\"> ? </td>" +
+"<td>{{ IUCFlags }}</td>" +
 "</tr>" +
 "</thead>" +
 "</table>" +
@@ -3053,14 +3208,14 @@ jT.ui.templates['one-category']  =
 "<button class=\"expand-all\">Expand all</button><button class=\"collapse-all\">Collapse all</button>" +
 "</div>" +
 "<p><input type=\"text\" class=\"jtox-study-filter ui-input\" placeholder=\"Filter...\" /></p>" +
-"<h4 class=\"data-field camelCase\" data-field=\"showname\"> ? </h4>" +
+"<h4 class=\"camelCase\">{{ showname }}</h4>" +
 "</div>" +
 ""; // end of #jtox-category 
 
 jT.ui.templates['one-study']  = 
 "<div class=\"jtox-study jtox-foldable folded\">" +
 "<div class=\"title\">" +
-"<p class=\"data-field\" data-field=\"title\">? (0)</p>" +
+"<p class=\"counter\">{{ title }}</p>" +
 "</div>" +
 "<div class=\"content\">" +
 "<table class=\"jtox-study-table content display\"></table>" +
@@ -3071,7 +3226,7 @@ jT.ui.templates['one-study']  =
 jT.ui.templates['all-substance']  = 
 "<div class=\"jtox-substance\">" +
 "<div class=\"jtox-controls\">" +
-"Showing from <span class=\"data-field high\" data-field=\"pagestart\"> ? </span> to <span class=\"data-field high\" data-field=\"pageend\"> ? </span><span class=\"filtered-text\"> </span>in pages of <select class=\"data-field\" data-field=\"pagesize\">" +
+"Showing from <span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"50\">50</option>" +
