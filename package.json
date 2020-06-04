@@ -1,6 +1,6 @@
 {
   "name": "@ideaconsult/jtox-kit",
-  "version": "2.2.8",
+  "version": "2.3.0",
   "description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
   "keywords": [
     "chem-informatics",
