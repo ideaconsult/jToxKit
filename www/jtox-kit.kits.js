@@ -176,8 +176,8 @@
 		var self = this;
 
 		// deal if the selection is chosen
-		var colId = self.settings.configuration.columns.composition.Name;
-		if (!!self.settings.selectionHandler) {
+		var colId = self.settings.columns.composition && self.settings.columns.composition.Name;
+		if (colId && !!self.settings.selectionHandler) {
 			jT.tables.putActions(self, colId);
 			colId.sWidth = "60px";
 		}
@@ -296,77 +296,75 @@
 		onLoaded: null,
 
 		/* compositionUri */
-		configuration: {
-			columns: {
-				composition: {
-					'Type': {
-						"title": "Type",
-						"class": "left",
-						"width": "10%",
-						"data": "relation",
-						"render": function (val, type, full) {
-							if (type != 'display')
-								return '' + val;
-							var func = ("HAS_ADDITIVE" == val) ? full.proportion.function_as_additive : "";
-							return '<span class="camelCase">' + val.substr(4).toLowerCase() + '</span>' + ((func === undefined || func === null || func == '') ? "" : " (" + func + ")");
-						}
-					},
-					'Name': {
-						"title": "Name",
-						"class": "camelCase left",
-						"width": "15%",
-						"data": "component.compound.name",
-						"render": function (val, type, full) {
-							return (type != 'display') ? '' + val :
-								'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="ui-icon ui-icon-link" style="float: left; margin-right: .3em;"></span></a>' + val;
-						}
-					},
-					'EC No.': {
-						"title": "EC No.",
-						"class": "left",
-						"width": "10%",
-						"data": "component.compound.einecs"
-					},
-					'CAS No.': {
-						"title": "CAS No.",
-						"class": "left",
-						"width": "10%",
-						"data": "component.compound.cas"
-					},
-					'Typical concentration': {
-						"title": "Typical concentration",
-						"class": "center",
-						"width": "15%",
-						"data": "proportion.typical",
-						"render": function (val, type, full) {
-							return type != 'display' ? '' + val.value : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
-						}
-					},
-					'Concentration ranges': {
-						"title": "Concentration ranges",
-						"class": "center colspan-2",
-						"width": "20%",
-						"data": "proportion.real",
-						"render": function (val, type, full) {
-							return type != 'display' ? '' + val.lowerValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
-						}
-					},
-					'Upper range': {
-						"title": 'Upper range',
-						"class": "center",
-						"width": "20%",
-						"data": "proportion.real",
-						"render": function (val, type, full) {
-							return type != 'display' ? '' + val.upperValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
-						}
-					},
-					'Also': {
-						"title": "Also",
-						"class": "center",
-						"sortable": false,
-						"data": "component.compound.URI",
-						"defaultContent": "-"
+		columns: {
+			composition: {
+				'Type': {
+					"title": "Type",
+					"class": "left",
+					"width": "10%",
+					"data": "relation",
+					"render": function (val, type, full) {
+						if (type != 'display')
+							return '' + val;
+						var func = ("HAS_ADDITIVE" == val) ? full.proportion.function_as_additive : "";
+						return '<span class="camelCase">' + val.substr(4).toLowerCase() + '</span>' + ((func === undefined || func === null || func == '') ? "" : " (" + func + ")");
 					}
+				},
+				'Name': {
+					"title": "Name",
+					"class": "camelCase left",
+					"width": "15%",
+					"data": "component.compound.name",
+					"render": function (val, type, full) {
+						return (type != 'display') ? '' + val :
+							'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="ui-icon ui-icon-link" style="float: left; margin-right: .3em;"></span></a>' + val;
+					}
+				},
+				'EC No.': {
+					"title": "EC No.",
+					"class": "left",
+					"width": "10%",
+					"data": "component.compound.einecs"
+				},
+				'CAS No.': {
+					"title": "CAS No.",
+					"class": "left",
+					"width": "10%",
+					"data": "component.compound.cas"
+				},
+				'Typical concentration': {
+					"title": "Typical concentration",
+					"class": "center",
+					"width": "15%",
+					"data": "proportion.typical",
+					"render": function (val, type, full) {
+						return type != 'display' ? '' + val.value : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+					}
+				},
+				'Concentration ranges': {
+					"title": "Concentration ranges",
+					"class": "center colspan-2",
+					"width": "20%",
+					"data": "proportion.real",
+					"render": function (val, type, full) {
+						return type != 'display' ? '' + val.lowerValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+					}
+				},
+				'Upper range': {
+					"title": 'Upper range',
+					"class": "center",
+					"width": "20%",
+					"data": "proportion.real",
+					"render": function (val, type, full) {
+						return type != 'display' ? '' + val.upperValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+					}
+				},
+				'Also': {
+					"title": "Also",
+					"class": "center",
+					"sortable": false,
+					"data": "component.compound.URI",
+					"defaultContent": "-"
 				}
 			}
 		}
@@ -2793,11 +2791,13 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		var self = this;
 
 		// deal if the selection is chosen
-		var colId = self.settings.configuration.columns.substance['Id'];
-		jT.tables.putActions(self, colId);
-		colId.title = '';
+		var colId = self.settings.columns.substance['Id'];
+		if (colId) {
+			jT.tables.putActions(self, colId);
+			colId.title = '';
+		}
 
-		self.settings.configuration.columns.substance['Owner'].render = function (data, type, full) {
+		self.settings.columns.substance['Owner'].render = function (data, type, full) {
 			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + '/substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
 		};
 
@@ -2896,64 +2896,62 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		pageStart: 0,
 		pageSize: 10,
 		/* substanceUri */
-		configuration: {
-			columns: {
-				substance: {
-					'Id': {
-						title: 'Id',
-						data: 'URI',
-						defaultContent: "-",
-						width: "60px",
-						render: function (data, type, full) {
-							return (type != 'display') ? full.index : '&nbsp;-&nbsp;' + full.index + '&nbsp;-&nbsp;';
-						}
-					},
-					'Substance Name': {
-						title: "Substance Name",
-						data: "name",
-						render: function (data, type, full) {
-							if (data == null || data == 'null') data = '-';
-							return (type != 'display') ? data : jT.ui.linkedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Click to view study details", data)
-						}
-					},
-					'Substance UUID': {
-						title: "Substance UUID",
-						data: "i5uuid",
-						render: function (data, type, full) {
-							if (data == null || data == 'null') return '';
-							return (type != 'display') ? data : jT.ui.shortenedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Press to copy the UUID in the clipboard", data)
-						}
-					},
-					'Substance Type': {
-						title: "Substance Type",
-						data: "substanceType",
-						width: "15%",
-						defaultContent: '-'
-					},
-					'Public name': {
-						title: "Public name",
-						data: "publicname",
-						defaultContent: '-'
-					},
-					'Reference substance UUID': {
-						title: "Reference substance UUID",
-						data: "referenceSubstance",
-						render: function (data, type, full) {
-							if (data.i5uuid == null || data.i5uuid == 'null') return '';
-							return (type != 'display') ? data.i5uuid : jT.ui.shortenedData('<a target="_blank" href="' + data.uri + '">' + data.i5uuid + '</a>', "Press to copy the UUID in the clipboard", data.i5uuid);
-						}
-					},
-					'Owner': {
-						title: "Owner",
-						data: "ownerName",
-						defaultContent: '-'
-					},
-					'Info': {
-						title: "Info",
-						data: "externalIdentifiers",
-						render: function (data, type, full) {
-							return jT.ambit.formatExtIdentifiers(data, type, full);
-						}
+		columns: {
+			substance: {
+				'Id': {
+					title: 'Id',
+					data: 'URI',
+					defaultContent: "-",
+					width: "60px",
+					render: function (data, type, full) {
+						return (type != 'display') ? full.index : '&nbsp;-&nbsp;' + full.index + '&nbsp;-&nbsp;';
+					}
+				},
+				'Substance Name': {
+					title: "Substance Name",
+					data: "name",
+					render: function (data, type, full) {
+						if (data == null || data == 'null') data = '-';
+						return (type != 'display') ? data : jT.ui.linkedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Click to view study details", data)
+					}
+				},
+				'Substance UUID': {
+					title: "Substance UUID",
+					data: "i5uuid",
+					render: function (data, type, full) {
+						if (data == null || data == 'null') return '';
+						return (type != 'display') ? data : jT.ui.shortenedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Press to copy the UUID in the clipboard", data)
+					}
+				},
+				'Substance Type': {
+					title: "Substance Type",
+					data: "substanceType",
+					width: "15%",
+					defaultContent: '-'
+				},
+				'Public name': {
+					title: "Public name",
+					data: "publicname",
+					defaultContent: '-'
+				},
+				'Reference substance UUID': {
+					title: "Reference substance UUID",
+					data: "referenceSubstance",
+					render: function (data, type, full) {
+						if (data.i5uuid == null || data.i5uuid == 'null') return '';
+						return (type != 'display') ? data.i5uuid : jT.ui.shortenedData('<a target="_blank" href="' + data.uri + '">' + data.i5uuid + '</a>', "Press to copy the UUID in the clipboard", data.i5uuid);
+					}
+				},
+				'Owner': {
+					title: "Owner",
+					data: "ownerName",
+					defaultContent: '-'
+				},
+				'Info': {
+					title: "Info",
+					data: "externalIdentifiers",
+					render: function (data, type, full) {
+						return jT.ambit.formatExtIdentifiers(data, type, full);
 					}
 				}
 			}

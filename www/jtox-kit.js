@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.2.8" };
+var jToxKit = { version: "2.3.0" };
 
 (function (jT, a$, Solr) {
   // Now import all the actual skills ...

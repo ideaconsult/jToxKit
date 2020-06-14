@@ -81,11 +81,15 @@ jT.ui = a$.extend(jT.ui, {
   	  });
 	  }
 	  else {
-	    if (typeof dataParams.configuration == "string" && !!window[dataParams.configuration]) {
-	      var config = window[dataParams.configuration];
-        $.extend(true, dataParams, (typeof config === 'function' ? config.call(kit, dataParams, kit) : config));
-        delete dataParams.configuration;
-      }
+      var config = dataParams.configuration;
+      if (typeof config === 'string')
+        config = window[config];
+      if (typeof config === 'function')
+        config = config.call(kit, dataParams, kit);
+      if (typeof config === 'object')
+        $.extend(true, dataParams, config);
+
+      delete dataParams.configuration;
 
       var kitObj = realInit(dataParams, element);
       element.data('jtKit', kitObj);

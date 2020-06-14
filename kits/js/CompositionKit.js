@@ -20,8 +20,8 @@
 		var self = this;
 
 		// deal if the selection is chosen
-		var colId = self.settings.configuration.columns.composition.Name;
-		if (!!self.settings.selectionHandler) {
+		var colId = self.settings.columns.composition && self.settings.columns.composition.Name;
+		if (colId && !!self.settings.selectionHandler) {
 			jT.tables.putActions(self, colId);
 			colId.sWidth = "60px";
 		}
@@ -140,77 +140,75 @@
 		onLoaded: null,
 
 		/* compositionUri */
-		configuration: {
-			columns: {
-				composition: {
-					'Type': {
-						"title": "Type",
-						"class": "left",
-						"width": "10%",
-						"data": "relation",
-						"render": function (val, type, full) {
-							if (type != 'display')
-								return '' + val;
-							var func = ("HAS_ADDITIVE" == val) ? full.proportion.function_as_additive : "";
-							return '<span class="camelCase">' + val.substr(4).toLowerCase() + '</span>' + ((func === undefined || func === null || func == '') ? "" : " (" + func + ")");
-						}
-					},
-					'Name': {
-						"title": "Name",
-						"class": "camelCase left",
-						"width": "15%",
-						"data": "component.compound.name",
-						"render": function (val, type, full) {
-							return (type != 'display') ? '' + val :
-								'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="ui-icon ui-icon-link" style="float: left; margin-right: .3em;"></span></a>' + val;
-						}
-					},
-					'EC No.': {
-						"title": "EC No.",
-						"class": "left",
-						"width": "10%",
-						"data": "component.compound.einecs"
-					},
-					'CAS No.': {
-						"title": "CAS No.",
-						"class": "left",
-						"width": "10%",
-						"data": "component.compound.cas"
-					},
-					'Typical concentration': {
-						"title": "Typical concentration",
-						"class": "center",
-						"width": "15%",
-						"data": "proportion.typical",
-						"render": function (val, type, full) {
-							return type != 'display' ? '' + val.value : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
-						}
-					},
-					'Concentration ranges': {
-						"title": "Concentration ranges",
-						"class": "center colspan-2",
-						"width": "20%",
-						"data": "proportion.real",
-						"render": function (val, type, full) {
-							return type != 'display' ? '' + val.lowerValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
-						}
-					},
-					'Upper range': {
-						"title": 'Upper range',
-						"class": "center",
-						"width": "20%",
-						"data": "proportion.real",
-						"render": function (val, type, full) {
-							return type != 'display' ? '' + val.upperValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
-						}
-					},
-					'Also': {
-						"title": "Also",
-						"class": "center",
-						"sortable": false,
-						"data": "component.compound.URI",
-						"defaultContent": "-"
+		columns: {
+			composition: {
+				'Type': {
+					"title": "Type",
+					"class": "left",
+					"width": "10%",
+					"data": "relation",
+					"render": function (val, type, full) {
+						if (type != 'display')
+							return '' + val;
+						var func = ("HAS_ADDITIVE" == val) ? full.proportion.function_as_additive : "";
+						return '<span class="camelCase">' + val.substr(4).toLowerCase() + '</span>' + ((func === undefined || func === null || func == '') ? "" : " (" + func + ")");
 					}
+				},
+				'Name': {
+					"title": "Name",
+					"class": "camelCase left",
+					"width": "15%",
+					"data": "component.compound.name",
+					"render": function (val, type, full) {
+						return (type != 'display') ? '' + val :
+							'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="ui-icon ui-icon-link" style="float: left; margin-right: .3em;"></span></a>' + val;
+					}
+				},
+				'EC No.': {
+					"title": "EC No.",
+					"class": "left",
+					"width": "10%",
+					"data": "component.compound.einecs"
+				},
+				'CAS No.': {
+					"title": "CAS No.",
+					"class": "left",
+					"width": "10%",
+					"data": "component.compound.cas"
+				},
+				'Typical concentration': {
+					"title": "Typical concentration",
+					"class": "center",
+					"width": "15%",
+					"data": "proportion.typical",
+					"render": function (val, type, full) {
+						return type != 'display' ? '' + val.value : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+					}
+				},
+				'Concentration ranges': {
+					"title": "Concentration ranges",
+					"class": "center colspan-2",
+					"width": "20%",
+					"data": "proportion.real",
+					"render": function (val, type, full) {
+						return type != 'display' ? '' + val.lowerValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+					}
+				},
+				'Upper range': {
+					"title": 'Upper range',
+					"class": "center",
+					"width": "20%",
+					"data": "proportion.real",
+					"render": function (val, type, full) {
+						return type != 'display' ? '' + val.upperValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+					}
+				},
+				'Also': {
+					"title": "Also",
+					"class": "center",
+					"sortable": false,
+					"data": "component.compound.URI",
+					"defaultContent": "-"
 				}
 			}
 		}

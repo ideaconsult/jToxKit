@@ -42,11 +42,13 @@
 		var self = this;
 
 		// deal if the selection is chosen
-		var colId = self.settings.configuration.columns.substance['Id'];
-		jT.tables.putActions(self, colId);
-		colId.title = '';
+		var colId = self.settings.columns.substance['Id'];
+		if (colId) {
+			jT.tables.putActions(self, colId);
+			colId.title = '';
+		}
 
-		self.settings.configuration.columns.substance['Owner'].render = function (data, type, full) {
+		self.settings.columns.substance['Owner'].render = function (data, type, full) {
 			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + '/substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
 		};
 
@@ -145,64 +147,62 @@
 		pageStart: 0,
 		pageSize: 10,
 		/* substanceUri */
-		configuration: {
-			columns: {
-				substance: {
-					'Id': {
-						title: 'Id',
-						data: 'URI',
-						defaultContent: "-",
-						width: "60px",
-						render: function (data, type, full) {
-							return (type != 'display') ? full.index : '&nbsp;-&nbsp;' + full.index + '&nbsp;-&nbsp;';
-						}
-					},
-					'Substance Name': {
-						title: "Substance Name",
-						data: "name",
-						render: function (data, type, full) {
-							if (data == null || data == 'null') data = '-';
-							return (type != 'display') ? data : jT.ui.linkedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Click to view study details", data)
-						}
-					},
-					'Substance UUID': {
-						title: "Substance UUID",
-						data: "i5uuid",
-						render: function (data, type, full) {
-							if (data == null || data == 'null') return '';
-							return (type != 'display') ? data : jT.ui.shortenedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Press to copy the UUID in the clipboard", data)
-						}
-					},
-					'Substance Type': {
-						title: "Substance Type",
-						data: "substanceType",
-						width: "15%",
-						defaultContent: '-'
-					},
-					'Public name': {
-						title: "Public name",
-						data: "publicname",
-						defaultContent: '-'
-					},
-					'Reference substance UUID': {
-						title: "Reference substance UUID",
-						data: "referenceSubstance",
-						render: function (data, type, full) {
-							if (data.i5uuid == null || data.i5uuid == 'null') return '';
-							return (type != 'display') ? data.i5uuid : jT.ui.shortenedData('<a target="_blank" href="' + data.uri + '">' + data.i5uuid + '</a>', "Press to copy the UUID in the clipboard", data.i5uuid);
-						}
-					},
-					'Owner': {
-						title: "Owner",
-						data: "ownerName",
-						defaultContent: '-'
-					},
-					'Info': {
-						title: "Info",
-						data: "externalIdentifiers",
-						render: function (data, type, full) {
-							return jT.ambit.formatExtIdentifiers(data, type, full);
-						}
+		columns: {
+			substance: {
+				'Id': {
+					title: 'Id',
+					data: 'URI',
+					defaultContent: "-",
+					width: "60px",
+					render: function (data, type, full) {
+						return (type != 'display') ? full.index : '&nbsp;-&nbsp;' + full.index + '&nbsp;-&nbsp;';
+					}
+				},
+				'Substance Name': {
+					title: "Substance Name",
+					data: "name",
+					render: function (data, type, full) {
+						if (data == null || data == 'null') data = '-';
+						return (type != 'display') ? data : jT.ui.linkedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Click to view study details", data)
+					}
+				},
+				'Substance UUID': {
+					title: "Substance UUID",
+					data: "i5uuid",
+					render: function (data, type, full) {
+						if (data == null || data == 'null') return '';
+						return (type != 'display') ? data : jT.ui.shortenedData('<a target="_blank" href="' + full.URI + '/study">' + data + '</a>', "Press to copy the UUID in the clipboard", data)
+					}
+				},
+				'Substance Type': {
+					title: "Substance Type",
+					data: "substanceType",
+					width: "15%",
+					defaultContent: '-'
+				},
+				'Public name': {
+					title: "Public name",
+					data: "publicname",
+					defaultContent: '-'
+				},
+				'Reference substance UUID': {
+					title: "Reference substance UUID",
+					data: "referenceSubstance",
+					render: function (data, type, full) {
+						if (data.i5uuid == null || data.i5uuid == 'null') return '';
+						return (type != 'display') ? data.i5uuid : jT.ui.shortenedData('<a target="_blank" href="' + data.uri + '">' + data.i5uuid + '</a>', "Press to copy the UUID in the clipboard", data.i5uuid);
+					}
+				},
+				'Owner': {
+					title: "Owner",
+					data: "ownerName",
+					defaultContent: '-'
+				},
+				'Info': {
+					title: "Info",
+					data: "externalIdentifiers",
+					render: function (data, type, full) {
+						return jT.ambit.formatExtIdentifiers(data, type, full);
 					}
 				}
 			}

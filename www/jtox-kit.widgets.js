@@ -289,11 +289,15 @@ jT.ui = a$.extend(jT.ui, {
   	  });
 	  }
 	  else {
-	    if (typeof dataParams.configuration == "string" && !!window[dataParams.configuration]) {
-	      var config = window[dataParams.configuration];
-        $.extend(true, dataParams, (typeof config === 'function' ? config.call(kit, dataParams, kit) : config));
-        delete dataParams.configuration;
-      }
+      var config = dataParams.configuration;
+      if (typeof config === 'string')
+        config = window[config];
+      if (typeof config === 'function')
+        config = config.call(kit, dataParams, kit);
+      if (typeof config === 'object')
+        $.extend(true, dataParams, config);
+
+      delete dataParams.configuration;
 
       var kitObj = realInit(dataParams, element);
       element.data('jtKit', kitObj);
@@ -925,7 +929,7 @@ jT.tables = {
 
 		// helper function for retrieving col definition, if exists. Returns empty object, if no.
 		var getColDef = function (cat) {
-			var catCol = kit.settings.configuration.columns[cat];
+			var catCol = kit.settings.columns[cat];
 			if (catCol != null) {
 				if (!!group) {
 					catCol = catCol[group];
@@ -965,7 +969,7 @@ jT.tables = {
 
 	processColumns: function (kit, category) {
 		var colDefs = [];
-		var catList = kit.settings.configuration.columns[category];
+		var catList = kit.settings.columns[category];
 		for (var name in catList) {
 			var col = this.modifyColDef(kit, catList[name], category);
 			if (col != null)
@@ -1038,8 +1042,8 @@ jT.tables = {
 		$('.jtox-handler', root).each(function () {
 			var name = $(this).data('handler');
 			var handler = null;
-			if (kit.settings.configuration != null && kit.settings.configuration.handlers != null)
-				handler = kit.settings.configuration.handlers[name];
+			if (kit.settings.configuration != null && kit.settings.configuration != null)
+				handler = kit.settings.handlers[name];
 			handler = handler || window[name];
 
 			if (!handler)
