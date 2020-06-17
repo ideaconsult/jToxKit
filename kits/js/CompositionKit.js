@@ -33,7 +33,7 @@
 				cols[i].title = '';
 				// we need to do this here, because 'self' is not defined up there...
 				cols[i].render = function (val, type, full) {
-					return !val ? '' : '<a href="' + self.settings.baseUrl + '/substance?type=related&compound_uri=' + encodeURIComponent(val) + '" target="_blank">Also contained in...</a>';
+					return !val ? '' : '<a href="' + self.settings.baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(val) + '" target="_blank">Also contained in...</a>';
 				};
 				break;
 			}
@@ -65,7 +65,8 @@
 
 	CompositionKit.prototype.queryComposition = function (uri) {
 		var self = this;
-		self.compositionUri = uri;
+		
+		this.settings.baseUrl = jT.formBaseUrl(this.compositionUri = uri);
 
 		jT.ambit.call(self, uri, function (json) {
 			if (!!json && !!json.composition) {

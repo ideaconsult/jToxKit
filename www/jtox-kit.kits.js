@@ -189,7 +189,7 @@
 				cols[i].title = '';
 				// we need to do this here, because 'self' is not defined up there...
 				cols[i].render = function (val, type, full) {
-					return !val ? '' : '<a href="' + self.settings.baseUrl + '/substance?type=related&compound_uri=' + encodeURIComponent(val) + '" target="_blank">Also contained in...</a>';
+					return !val ? '' : '<a href="' + self.settings.baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(val) + '" target="_blank">Also contained in...</a>';
 				};
 				break;
 			}
@@ -221,7 +221,8 @@
 
 	CompositionKit.prototype.queryComposition = function (uri) {
 		var self = this;
-		self.compositionUri = uri;
+		
+		this.settings.baseUrl = jT.formBaseUrl(this.compositionUri = uri);
 
 		jT.ambit.call(self, uri, function (json) {
 			if (!!json && !!json.composition) {
@@ -1881,7 +1882,7 @@ var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{
     plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
   
 jT.ItemListWidget = function (settings) {
-	settings.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
+	settings.baseUrl = jT.fixBaseUrl(settings.baseUrl);
   a$.extend(true, this, a$.common(settings, this));
 
   this.lookupMap = settings.lookupMap || {};
@@ -1929,7 +1930,7 @@ jT.ItemListWidget.prototype = {
     }
   },
   renderLinks: function (doc) {
-    var baseUrl = this.getBaseUrl(doc),
+    var baseUrl = this.getBaseUrl(doc) + "substance/",
         item = {};
 
     // Check if external references are provided and prepare and show them.
@@ -2028,14 +2029,9 @@ jT.ItemListWidget.prototype = {
     return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
-  getBaseUrl: function(doc){
-    if(this.tagDbs[doc.dbtag_hss] !== undefined){
-      var url = this.tagDbs[doc.dbtag_hss].server,
-          lastChar = url.substr(-1);
-      return url + (lastChar != "/" ? "/substance/" : "substance/")
-    } else {
-      return this.baseUrl;
-    }
+  getBaseUrl: function(doc) {
+    return jT.fixBaseUrl(this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].server || 
+        this.settings.baseUrl || this.baseUrl);
   },
 	
   renderComposition: function (doc, defValue) {
@@ -2171,7 +2167,6 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		this.settings = $.extend(true, {}, StudyKit.defaults, settings); // i.e. defaults from jToxStudy
 		this.settings.tab = this.settings.tab || jT.ui.fullUrl.hash;
-		this.settings.baseUrl += '/'; // We know it has passed fixBaseUrl()
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
@@ -2202,8 +2197,11 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		});
 
 		// when all handlers are setup - make a call, if needed.
-		if (this.settings['substanceUri'] != null) {
-			this.querySubstance(this.settings['substanceUri']);
+		if (!!this.settings.substanceUri) {
+			this.querySubstance(this.settings.substanceUri);
+		}
+		else if(!!this.settings.substanceId) {
+			this.querySubstance(this.settings.baseUrl + 'substance/' + this.settings.substanceId);
 		}
 	};
 
@@ -2365,20 +2363,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 					jT.tables.equalizeHeights.apply(window, $('td.jtox-multi table tbody', nRow).toArray());
 				},
 
-				"language": $.extend({
-					"processing": "<img src='" + self.settings.baseUrl + "/images/24x24_ambit.gif' border='0'>",
-					"loadingRecords": "No studies found.",
-					"zeroRecords": "No studies found.",
-					"emptyTable": "No studies available.",
-					"info": "Showing _TOTAL_ study(s) (_START_ to _END_)",
-					"lengthMenu": 'Display <select>' +
-						'<option value="10">10</option>' +
-						'<option value="20">20</option>' +
-						'<option value="50">50</option>' +
-						'<option value="100">100</option>' +
-						'<option value="-1">all</option>' +
-						'</select> studies.'
-				}, self.settings.language)
+				"language": self.settings.language
 			});
 
 			$(theTable).DataTable().columns.adjust();
@@ -2586,6 +2571,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	StudyKit.prototype.querySubstance = function (substanceURI) {
 		var self = this;
 
+		this.settings.baseUrl = jT.formBaseUrl(substanceURI);
+
 		jT.ambit.call(self, substanceURI, function (substance) {
 			if (!!substance && !!substance.substance && substance.substance.length > 0) {
 				substance = substance.substance[0];
@@ -2633,7 +2620,20 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	StudyKit.defaults = {
 		tab: null,
 		dom: "rt<Fip>",
-		language: null,
+		language: {
+			processing: '<img src="/assets/images/waiting_small.gif" border="0">',
+			loadingRecords: "No studies found.",
+			zeroRecords: "No studies found.",
+			emptyTable: "No studies available.",
+			info: "Showing _TOTAL_ study(s) (_START_ to _END_)",
+			lengthMenu: 'Display <select>' +
+				'<option value="10">10</option>' +
+				'<option value="20">20</option>' +
+				'<option value="50">50</option>' +
+				'<option value="100">100</option>' +
+				'<option value="-1">all</option>' +
+				'</select> studies.'
+		},
 		errorDefault: "Err",	// Default text shown when errQualifier is missing
 		// events
 		onSummary: null,		// invoked when the summary is loaded
@@ -2797,8 +2797,9 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			colId.title = '';
 		}
 
+		// Leave that here, because `self` is used...
 		self.settings.columns.substance['Owner'].render = function (data, type, full) {
-			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + '/substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
+			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + 'substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
 		};
 
 		var opts = {
@@ -2867,6 +2868,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	SubstanceKit.prototype.querySubstance = function (uri) {
 		this.substanceUri = jT.ambit.grabPaging(this, uri);
+		this.settings.baseUrl = jT.formBaseUrl(uri);
 		this.queryEntries(this.pageStart);
 	};
 
@@ -2887,10 +2889,10 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
 		onLoaded: null, // called when the set of substances (for this page) is loaded.
 		language: {
-			"loadingRecords": "No substances found.",
-			"zeroRecords": "No substances found.",
-			"emptyTable": "No substances available.",
-			"info": "Showing _TOTAL_ substance(s) (_START_ to _END_)"
+			loadingRecords: "No substances found.",
+			zeroRecords: "No substances found.",
+			emptyTable: "No substances available.",
+			info: "Showing _TOTAL_ substance(s) (_START_ to _END_)"
 		},
 
 		pageStart: 0,

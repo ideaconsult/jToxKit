@@ -48,8 +48,9 @@
 			colId.title = '';
 		}
 
+		// Leave that here, because `self` is used...
 		self.settings.columns.substance['Owner'].render = function (data, type, full) {
-			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + '/substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
+			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + 'substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
 		};
 
 		var opts = {
@@ -118,6 +119,7 @@
 
 	SubstanceKit.prototype.querySubstance = function (uri) {
 		this.substanceUri = jT.ambit.grabPaging(this, uri);
+		this.settings.baseUrl = jT.formBaseUrl(uri);
 		this.queryEntries(this.pageStart);
 	};
 
@@ -138,10 +140,10 @@
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
 		onLoaded: null, // called when the set of substances (for this page) is loaded.
 		language: {
-			"loadingRecords": "No substances found.",
-			"zeroRecords": "No substances found.",
-			"emptyTable": "No substances available.",
-			"info": "Showing _TOTAL_ substance(s) (_START_ to _END_)"
+			loadingRecords: "No substances found.",
+			zeroRecords: "No substances found.",
+			emptyTable: "No substances available.",
+			info: "Showing _TOTAL_ substance(s) (_START_ to _END_)"
 		},
 
 		pageStart: 0,

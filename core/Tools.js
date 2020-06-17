@@ -137,18 +137,21 @@ jT = a$.extend(jT, {
     return a.href;
   },
 
-  /* Fix the baseUrl - remove the trailing slash if any
+  /* Fix the baseUrl - ensure it has trailing slash
    */
   fixBaseUrl: function (url) {
-    if (url != null && url.charAt(url.length - 1) == '/')
-      url = url.slice(0, -1);
+    if (url && url.charAt(url.length - 1) != '/')
+      url += '/';
     return url;
   },
 
   // form the "default" baseUrl if no other is supplied
   formBaseUrl: function (url) {
-    var burl = !!url.host ? url.protocol + "://" + url.host + (url.port.length > 0 ? ":" + url.port : '') + '/' + url.segments[0] : null;
-    console.log("Deduced base URL: " + burl + " (from: " + url.source + ")");
+    var burl = url.match(/^((http[s]?|ftp):\/)?\/?([^:\/\s]+)(:\d+)?(\/\w+)/);
+    if (burl)
+      burl = burl[0] + '/';
+
+    console.log("Deduced base URL: " + burl + " (from: " + url + ")");
     return burl;
   },
 

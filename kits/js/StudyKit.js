@@ -14,7 +14,6 @@
 
 		this.settings = $.extend(true, {}, StudyKit.defaults, settings); // i.e. defaults from jToxStudy
 		this.settings.tab = this.settings.tab || jT.ui.fullUrl.hash;
-		this.settings.baseUrl += '/'; // We know it has passed fixBaseUrl()
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
@@ -45,8 +44,11 @@
 		});
 
 		// when all handlers are setup - make a call, if needed.
-		if (this.settings['substanceUri'] != null) {
-			this.querySubstance(this.settings['substanceUri']);
+		if (!!this.settings.substanceUri) {
+			this.querySubstance(this.settings.substanceUri);
+		}
+		else if(!!this.settings.substanceId) {
+			this.querySubstance(this.settings.baseUrl + 'substance/' + this.settings.substanceId);
 		}
 	};
 
@@ -208,20 +210,7 @@
 					jT.tables.equalizeHeights.apply(window, $('td.jtox-multi table tbody', nRow).toArray());
 				},
 
-				"language": $.extend({
-					"processing": "<img src='" + self.settings.baseUrl + "/images/24x24_ambit.gif' border='0'>",
-					"loadingRecords": "No studies found.",
-					"zeroRecords": "No studies found.",
-					"emptyTable": "No studies available.",
-					"info": "Showing _TOTAL_ study(s) (_START_ to _END_)",
-					"lengthMenu": 'Display <select>' +
-						'<option value="10">10</option>' +
-						'<option value="20">20</option>' +
-						'<option value="50">50</option>' +
-						'<option value="100">100</option>' +
-						'<option value="-1">all</option>' +
-						'</select> studies.'
-				}, self.settings.language)
+				"language": self.settings.language
 			});
 
 			$(theTable).DataTable().columns.adjust();
@@ -429,6 +418,8 @@
 	StudyKit.prototype.querySubstance = function (substanceURI) {
 		var self = this;
 
+		this.settings.baseUrl = jT.formBaseUrl(substanceURI);
+
 		jT.ambit.call(self, substanceURI, function (substance) {
 			if (!!substance && !!substance.substance && substance.substance.length > 0) {
 				substance = substance.substance[0];
@@ -476,7 +467,20 @@
 	StudyKit.defaults = {
 		tab: null,
 		dom: "rt<Fip>",
-		language: null,
+		language: {
+			processing: '<img src="/assets/images/waiting_small.gif" border="0">',
+			loadingRecords: "No studies found.",
+			zeroRecords: "No studies found.",
+			emptyTable: "No studies available.",
+			info: "Showing _TOTAL_ study(s) (_START_ to _END_)",
+			lengthMenu: 'Display <select>' +
+				'<option value="10">10</option>' +
+				'<option value="20">20</option>' +
+				'<option value="50">50</option>' +
+				'<option value="100">100</option>' +
+				'<option value="-1">all</option>' +
+				'</select> studies.'
+		},
 		errorDefault: "Err",	// Default text shown when errQualifier is missing
 		// events
 		onSummary: null,		// invoked when the summary is loaded

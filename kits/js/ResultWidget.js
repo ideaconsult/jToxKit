@@ -4,7 +4,7 @@ var htmlLink = '<a href="{{href}}" title="{{hint}}" target="{{target}}" class="{
     plainLink = '<span title="{{hint}}" class="{{css}}">{{value}}</span>';
   
 jT.ItemListWidget = function (settings) {
-	settings.baseUrl = jT.fixBaseUrl(settings.baseUrl) + "/";
+	settings.baseUrl = jT.fixBaseUrl(settings.baseUrl);
   a$.extend(true, this, a$.common(settings, this));
 
   this.lookupMap = settings.lookupMap || {};
@@ -52,7 +52,7 @@ jT.ItemListWidget.prototype = {
     }
   },
   renderLinks: function (doc) {
-    var baseUrl = this.getBaseUrl(doc),
+    var baseUrl = this.getBaseUrl(doc) + "substance/",
         item = {};
 
     // Check if external references are provided and prepare and show them.
@@ -151,14 +151,9 @@ jT.ItemListWidget.prototype = {
     return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
-  getBaseUrl: function(doc){
-    if(this.tagDbs[doc.dbtag_hss] !== undefined){
-      var url = this.tagDbs[doc.dbtag_hss].server,
-          lastChar = url.substr(-1);
-      return url + (lastChar != "/" ? "/substance/" : "substance/")
-    } else {
-      return this.baseUrl;
-    }
+  getBaseUrl: function(doc) {
+    return jT.fixBaseUrl(this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].server || 
+        this.settings.baseUrl || this.baseUrl);
   },
 	
   renderComposition: function (doc, defValue) {

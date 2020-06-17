@@ -117,7 +117,7 @@ jT.ui = a$.extend(jT.ui, {
   		    queryParams = url.params;
   		
   		if (!self.rootSettings.baseUrl)
-  		  queryParams.baseUrl = jT.formBaseUrl(url);
+  		  queryParams.baseUrl = jT.formBaseUrl(document.location.href);
   		else if (!!queryParams.baseUrl)
     		queryParams.baseUrl = jT.fixBaseUrl(queryParams.baseUrl);
 
