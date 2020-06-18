@@ -17,7 +17,7 @@ jT.ItemListWidget = function (settings) {
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
-  imagesRoot: "images/",
+  imagesRoot: "../img/",
   tagDbs: {},
   onCreated: null,
   onClick: null,

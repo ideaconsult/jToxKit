@@ -67,11 +67,11 @@ div.tippy-box div.annotip-severity {
 }
 
 .jtox-foldable.folded>.title {
-  background: url(images/sort_desc.png) right top no-repeat;
+  background: url(../img/sort_desc.png) right top no-repeat;
 }
 
 .jtox-foldable>.title {
-  background: url(images/sort_asc.png) right top no-repeat;
+  background: url(../img/sort_asc.png) right top no-repeat;
   background-size: 19px 19px;
 }
 
@@ -264,7 +264,7 @@ div.tippy-box div.annotip-severity {
 }
 
 .jtox-toolkit .loading {
-  background: url(images/waiting_small.gif) right top no-repeat;
+  background: url(../img/waiting_small.gif) right top no-repeat;
   background-size: 16px 16px;
   min-width: 16px;
   min-height: 16px;
@@ -581,7 +581,7 @@ td.jtox-multi table {
 }
 
 .jtox-ds-tables .jt-processing .message {
-  background: url("images/waiting_big.gif") left center no-repeat;
+  background: url("../img/waiting_big.gif") left center no-repeat;
   background-size: 30px 30px;
   width: auto;
   min-height: 30px;
@@ -726,7 +726,7 @@ div.jtox-substance {
 }
 
 div.jtox-study-tab.unloaded  {
-  background: url(images/waiting_big.gif) center center no-repeat;
+  background: url(../img/waiting_big.gif) center center no-repeat;
   background-size: 30px 30px;
 }
 
@@ -748,7 +748,7 @@ div.jtox-study .title {
 }
 
 div.jtox-foldable.jtox-study.unloaded>.title {
-  background: url(images/waiting_small.png) right top no-repeat;
+  background: url(../img/waiting_small.png) right top no-repeat;
   background-size: 16px 16px;
 }
 
@@ -1384,7 +1384,7 @@ div.jtox-substance {
 }
 
 div.jtox-study-tab.unloaded  {
-  background: url(images/waiting_big.gif) center center no-repeat;
+  background: url(../img/waiting_big.gif) center center no-repeat;
   background-size: 30px 30px;
 }
 
@@ -1406,7 +1406,7 @@ div.jtox-study .title {
 }
 
 div.jtox-foldable.jtox-study.unloaded>.title {
-  background: url(images/waiting_small.png) right top no-repeat;
+  background: url(../img/waiting_small.png) right top no-repeat;
   background-size: 16px 16px;
 }
 

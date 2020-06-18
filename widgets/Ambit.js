@@ -135,7 +135,7 @@ jT.ambit = {
 	},
 
 	getDatasetValue: function (fid, old, value) {
-		return _.union(old, value != null ? value.trim().toLowerCase().split("|") : [value]).compact();
+		return _.compact(_.union(old, value != null ? value.trim().toLowerCase().split("|") : [value]));
 	},
 
 	getDiagramUri: function (URI) {

@@ -1895,7 +1895,7 @@ jT.ItemListWidget = function (settings) {
 jT.ItemListWidget.prototype = {
   baseUrl: "",
   summaryPrimes: [ "RESULTS" ],
-  imagesRoot: "images/",
+  imagesRoot: "../img/",
   tagDbs: {},
   onCreated: null,
   onClick: null,
@@ -2621,7 +2621,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		tab: null,
 		dom: "rt<Fip>",
 		language: {
-			processing: '<img src="/assets/images/waiting_small.gif" border="0">',
+			processing: '<img src="/assets/img/waiting_small.gif" border="0">',
 			loadingRecords: "No studies found.",
 			zeroRecords: "No studies found.",
 			emptyTable: "No studies available.",
