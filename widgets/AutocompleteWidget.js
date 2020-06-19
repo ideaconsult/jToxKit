@@ -97,13 +97,13 @@ jT.AutocompleteWidget.prototype = {
     var self = this,
         list = [];
         
-    a$.each(a$.path(response, this.facetPath), function (facet, fid) {
+    _.each(_.get(response, this.facetPath), function (facet, fid) {
       if (list.length >= self.maxResults ||
           typeof facet !== "object" || 
           self.activeFacets && self.activeFacets[fid] === false)
         return;
         
-      a$.each(self.useJson ? facet.buckets : facet, function (entry, key) {
+      _.each(self.useJson ? facet.buckets : facet, function (entry, key) {
         if (list.length >= self.maxResults)
           return;
           

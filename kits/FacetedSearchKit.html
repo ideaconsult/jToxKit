@@ -29,7 +29,7 @@
         data-base-url="http://localhost:8080/ambit2/"></div>
 
     <div class="jtox-template">
-<!--[[ jToxKit.ui.templates['faceted-search-kit'] -->
+<!--[[ jT.ui.templates['faceted-search-kit'] -->
         <div class="query-container">
             <!-- left -->
             <div id="query" class="query-left">
@@ -108,71 +108,59 @@
             <!-- query container -->
         </div>
 <!-- // end of #faceted-search-kit ]]-->
-<!--[[ jToxKit.ui.templates['faceted-search-templates'] -->
-
-        <section id="result-item">
-            <article id="{{item_id}}" class="item">
-                <header>{{title}}</header>
-                <a href="{{link}}" title="{{link_title}}" class="avatar" target="{{link_target}}"><img jt-src="{{logo}}" /></a>
-                <div class="composition">{{composition}}</div>
-                {{summary}}
-                <footer class="links">
-                    {{footer}}
-                    <a href="#" class="add jtox-fadable command">Add to Selection</a>
-                    <a href="#" class="remove jtox-fadable command">Remove from Selection</a>
-                    <a href="#" class="none jtox-fadable command">Already added</a>
-                </footer>
-            </article>
-        </section>
-
-        <div id="summary-item">
-            <div class="one-summary">
-                <span class="topic">{{topic}}:</span>
-                <span class="value">{{content}}</span>
+<!--[[ jT.ui.templates['result-item'] -->
+        <article id="{{item_id}}" class="item">
+            <header>{{title}}</header>
+            <a href="{{link}}" title="{{link_title}}" class="avatar" target="{{link_target}}"><img src="{{logo}}" /></a>
+            <div class="composition">{{composition}}</div>
+            {{summary}}
+            <footer class="links">
+                {{footer}}
+                <a href="#" class="add jtox-fadable command">Add to Selection</a>
+                <a href="#" class="remove jtox-fadable command">Remove from Selection</a>
+                <a href="#" class="none jtox-fadable command">Already added</a>
+            </footer>
+        </article>
+<!-- // end of #result-item ]]-->
+<!--[[ jT.ui.templates['summary-item'] -->
+        <div class="one-summary">
+            <span class="topic">{{topic}}:</span>
+            <span class="value">{{content}}</span>
+        </div>
+<!-- // end of #summary-item ]]-->
+<!--[[ jT.ui.templates['tag-facet'] -->
+        <ul class="tags tag-group folded"></ul>
+<!-- // end of #tag-facet ]]-->
+<!--[[ jT.ui.templates['query-item'] -->
+        <article id="{{id}}" class="item">
+            <header>{{title}}</header>
+            <div class="composition">
+                {{description}}
+                <a href="#" title="Apply the query" style="width: 100%;"><span style="float:right;margin:0;">Apply</span></a>
             </div>
-        </div>
-
-        <div id="tag-facet">
-            <ul class="tags tag-group folded"></ul>
-        </div>
-
-        <section id="query-item">
-            <article id="{{id}}" class="item">
-                <header>{{title}}</header>
-                <div class="composition">
-                    {{description}}
-                    <a href="#" title="Apply the query" style="width: 100%;"><span style="float:right;margin:0;">Apply</span></a>
-                </div>
-            </article>
-        </section>
-    
-        <div id="tab-topcategory">
-            <h3 id="{{id}}_header" class="nested-tab">{{title}}</h3>
-            <div id="{{id}}" class="widget-content widget-root">
-                <div>
-                    <input type="text" placeholder="Filter_" class="widget-filter" />
-                    <input type="button" class="switcher" value="OR" />
-                </div>
-                <ul class="widget-content tags remove-bottom" data-color="{{color}}"></ul>
+        </article>
+<!-- // end of #query-item ]]-->
+<!--[[ jT.ui.templates['tab-topcategory'] -->
+        <h3 id="{{id}}_header" class="nested-tab">{{title}}</h3>
+        <div id="{{id}}" class="widget-content widget-root">
+            <div>
+                <input type="text" placeholder="Filter_" class="widget-filter" />
+                <input type="button" class="switcher" value="OR" />
             </div>
+            <ul class="widget-content tags remove-bottom" data-color="{{color}}"></ul>
         </div>
-
-        <div id="slider-one">
-            <input type="hidden" />
+<!-- // end of #tab-top-category ]]-->
+<!--[[ jT.ui.templates['slider-one'] -->
+        <input type="hidden" />
+<!-- // end of #slider-one ]]-->
+<!--[[ jT.ui.templates['export-type'] -->
+        <option value="{{index}}">{{name}}</button>
+<!-- // end of #export-type ]]-->
+<!--[[ jT.ui.templates['export-format'] -->
+        <div class="jtox-inline jtox-ds-download jtox-fadable">
+            <a target="_blank" data-name="{{name}}" data-mime="{{mime}}" href="#"><img class="borderless" src="{{icon}}" /></a>
         </div>
-
-        <div id="export-type">
-            <option value="{{index}}">{{name}}</button>
-        </div>
-
-        <div id="export-format">
-            <div class="jtox-inline jtox-ds-download jtox-fadable">
-                <a target="_blank" data-name="{{name}}" data-mime="{{mime}}" href="#"><img class="borderless"
-                        jt-src="{{icon}}" /></a>
-            </div>
-        </div>
-<!-- // end of #faceted-search-templates ]]-->
-
+<!-- // end of #export-format ]]-->
     </div>
 
     <script src="../libs/jquery.js"></script>

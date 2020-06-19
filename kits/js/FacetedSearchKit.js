@@ -69,7 +69,7 @@
             if (uiUpdateTimer != null)
                 clearTimeout(uiUpdateTimer);
             uiUpdateTimer = setTimeout(function () {
-                var state = jT.ui.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
+                var state = jT.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
 
                 if (!!state)
                     window.history.pushState({
@@ -150,7 +150,7 @@
         $(settings.target).html(jT.ui.templates['faceted-search-kit']);
         delete this.target;
 
-        var uiConf = jT.ui.parseURL(window.location.href).params['ui'];
+        var uiConf = jT.parseURL(window.location.href).params['ui'];
         if (uiConf != null)
             uiConfiguration = JSON.parse(decodeURIComponent(uiConf));
 
@@ -318,7 +318,7 @@
                         Basket.enumerateItems(function (d) {
                             s += d.s_uuid + ";";
                         });
-                        if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
+                        if (!!(s = jT.modifyURL(window.location.href, "basket", s)))
                             window.history.pushState({
                                 query: window.location.search
                             }, document.title, s);
@@ -353,7 +353,7 @@
                     ui = uiConfiguration[f.id],
                     w = new TagWidget($.extend({
                         target: this.accordion,
-                        expansionTemplate: "#tab-topcategory",
+                        expansionTemplate: "tab-topcategory",
                         subtarget: "ul",
                         runMethod: toggleAggregate,
                         multivalue: this.multipleSelection,
@@ -385,7 +385,7 @@
                 id: "studies",
                 target: this.accordion,
                 subtarget: "ul",
-                expansionTemplate: "#tab-topcategory",
+                expansionTemplate: "tab-topcategory",
                 before: "#cell_header",
                 field: "loValue_d",
                 lookupMap: this.lookupMap,
@@ -438,7 +438,7 @@
                     Basket.enumerateItems(function (d) {
                         s += d.s_uuid + ";";
                     });
-                    if (!!(s = jT.ui.modifyURL(window.location.href, "basket", s)))
+                    if (!!(s = jT.modifyURL(window.location.href, "basket", s)))
                         window.history.pushState({
                             query: window.location.search
                         }, document.title, s);
@@ -480,7 +480,7 @@
 
                 butts.button("enable").each(function () {
                     var me$ = $(this);
-                    me$.button("option", "label", jT.ui.formatString(me$.data('format'), { source: sourceText, format: formatText }));
+                    me$.button("option", "label", jT.formatString(me$.data('format'), { source: sourceText, format: formatText }));
                 });
             }
         },
@@ -494,7 +494,7 @@
             });
             
             this.queries.renderItem = function (query) {
-                el$ = jT.ui.fillTemplate("#query-item", query);
+                el$ = jT.ui.fillTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     var queryDef = $(this).data('query');
@@ -576,7 +576,7 @@
                             .prop("checked", hasBasket)
                             .prop("disabled", !hasBasket)
                             .toggleClass("disabled", !hasBasket);
-                            
+
                         $("input#filtered_data")
                             .prop("checked", hasFilter && !hasBasket)
                             .prop("disabled", !hasFilter)
@@ -645,7 +645,7 @@
                         if (!(blob instanceof Blob))
                             blob = new Blob([blob]);
 
-                        jT.ui.activateDownload(
+                        jT.activateDownload(
                             null, 
                             blob, 
                             "Report-" + (new Date().toISOString().replace(":", "_")) + "." + exFormat, 
@@ -657,12 +657,12 @@
                 if (!exDef.template || exFormat !== 'xlsx') {
                     ajaxOpts.dataType = 'application/json';
                     ajaxOpts.settings = { responseType: "arraybuffer" }
-                    jT.ui.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);
+                    jT.promiseXHR(ajaxOpts).then(downloadFn).catch(doneFn);
                 }
                 else { // We're in templating mode!
                     Promise.all([
                         $.ajax(ajaxOpts),
-                        jT.ui.promiseXHR($.extend({
+                        jT.promiseXHR($.extend({
                             url: exDef.template,
                             settings: { responseType: "arraybuffer" }
                         }, this.ajaxSettings))
@@ -711,7 +711,7 @@
                 self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.fillTemplate("#export-format", this.exportFormats[i]);
+                var el = jT.ui.fillTemplate("export-format", this.exportFormats[i]);
                 el.data("index", i);
                 exportEl.append(el);
 
@@ -752,7 +752,10 @@
                 };
 
             for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
-                exportEl.append(jT.ui.fillTemplate("#export-type", $.extend({ index: i }, this.exportTypes[i])));
+                exportEl.append(jT.ui.fillTemplate("export-type", $.extend({ 
+                    index: i,
+                    selected: (i == 0) ? 'checked="checked"' : ''
+                }, this.exportTypes[i])));
             
             exportEl.on("change", function (e) { 
                 updateFormats(self.exportTypes[parseInt(this.value)].formats); 

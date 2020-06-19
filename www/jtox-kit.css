@@ -1,3 +1,27 @@
+div.tippy-box * {
+	font-size: .8rem;
+}
+
+div.tippy-box.openned .annotip-actions {
+	padding: 5px;
+}
+
+div.tippy-box div.annotip-dlg form {
+	border-bottom: #fff 1px solid;
+}
+
+div.tippy-box div.annotip-dlg form .padded-control {
+	padding: 2px
+}
+
+div.tippy-box div.annotip-dlg form>div {
+	margin: 10px 5px;
+}
+
+div.tippy-box div.annotip-severity {
+	text-align: right;
+}
+
 /* jtoxkit.css - Styling for all jToxKit parts
 */
 .jtox-panel,
@@ -43,11 +67,11 @@
 }
 
 .jtox-foldable.folded>.title {
-  background: url(../images/sort_desc.png) right top no-repeat;
+  background: url(../img/sort_desc.png) right top no-repeat;
 }
 
 .jtox-foldable>.title {
-  background: url(../images/sort_asc.png) right top no-repeat;
+  background: url(../img/sort_asc.png) right top no-repeat;
   background-size: 19px 19px;
 }
 
@@ -189,6 +213,7 @@
 .jtox-toolkit table.dataTable th {
   border:1px solid #ccc;
   overflow: hidden;
+  padding: 3px;
 }
 
 .jtox-toolkit .shortened {
@@ -239,7 +264,7 @@
 }
 
 .jtox-toolkit .loading {
-  background: url(../images/waiting_small.gif) right top no-repeat;
+  background: url(../img/waiting_small.gif) right top no-repeat;
   background-size: 16px 16px;
   min-width: 16px;
   min-height: 16px;
@@ -556,7 +581,7 @@ td.jtox-multi table {
 }
 
 .jtox-ds-tables .jt-processing .message {
-  background: url("../images/waiting_big.gif") left center no-repeat;
+  background: url("../img/waiting_big.gif") left center no-repeat;
   background-size: 30px 30px;
   width: auto;
   min-height: 30px;
@@ -701,7 +726,7 @@ div.jtox-substance {
 }
 
 div.jtox-study-tab.unloaded  {
-  background: url(../images/waiting_big.gif) center center no-repeat;
+  background: url(../img/waiting_big.gif) center center no-repeat;
   background-size: 30px 30px;
 }
 
@@ -723,7 +748,7 @@ div.jtox-study .title {
 }
 
 div.jtox-foldable.jtox-study.unloaded>.title {
-  background: url(../images/waiting_small.png) right top no-repeat;
+  background: url(../img/waiting_small.png) right top no-repeat;
   background-size: 16px 16px;
 }
 
@@ -747,6 +772,21 @@ div.jtox-study-tab .dataTables_wrapper {
 
 .jtox-toolkit .jtox-study table td {
   word-wrap: break-word;
+}
+.jtox-toolkit table.composition-info.dataTable td,
+.jtox-toolkit table.composition-info.dataTable th {
+  border: 0px;
+  padding-bottom: 0px;
+  padding-top: 0px;
+}
+
+.jtox-toolkit table.composition-info.dataTable th {
+  width: 20%;
+  text-align: right;
+}
+
+.jtox-toolkit table.composition-table td {
+  vertical-align: top;
 }
 a,
 section.item-list article.item a,
@@ -1325,4 +1365,72 @@ input.widget-filter {
 .jtox-log .logline .details {
   margin-left: 18px;
   vertical-align: top;
+}
+/* toxtstudy.css - Styling for toxstudy engine
+*/
+
+div.jtox-study,
+div.jtox-compo-tab,
+div.jtox-substance {
+  display: block;
+  font-size: small;
+  border-radius: 5px;
+  padding: 5px 5px 35px 5px;
+}
+
+.jtox-compo-tab {
+  margin-top: 25px;
+  margin-bottom: 45px;  
+}
+
+div.jtox-study-tab.unloaded  {
+  background: url(../img/waiting_big.gif) center center no-repeat;
+  background-size: 30px 30px;
+}
+
+div.jtox-study-tab.unloaded div.jtox-study {
+  display: none;
+}
+
+div.jtox-study.folded {
+  padding-bottom: 5px;
+}
+
+div.jtox-study .title {
+  font-weight: bold;
+  clear: both;
+  padding: 0px;
+  margin: 0px;
+  border: 0px;
+  width: 100%;
+}
+
+div.jtox-foldable.jtox-study.unloaded>.title {
+  background: url(../img/waiting_small.png) right top no-repeat;
+  background-size: 16px 16px;
+}
+
+div.jtox-study-tab.ui-tabs-panel {
+  padding-left: 0px;
+  padding-bottom: 0px;
+  padding-right: 0px;
+  width: 100%;
+  height: 100%;
+}
+
+div.jtox-study-tab div button {
+	font-size: 80%;
+	padding:4px 8px 4px 8px;
+}
+
+div.jtox-study-tab .dataTables_wrapper {
+  overflow: hidden;  
+  width: 100%;
+}
+
+.jtox-toolkit .jtox-study table td {
+  word-wrap: break-word;
+}
+.jtox-substance table td div.shortened {
+  width: 120px;
 }

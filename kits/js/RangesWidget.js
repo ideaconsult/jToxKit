@@ -205,7 +205,7 @@
       for (var i = 0, rangeCnt = current.length; i < rangeCnt; ++i) {
         var ref = current[i],
             full = allVals.find(function (e) { return e.pattern === ref.pattern }) || ref,
-            el$ = jT.ui.fillTemplate("#slider-one"),
+            el$ = jT.ui.fillTemplate("slider-one"),
             setup = {
               id: ref.id,
               targetValue: value,
@@ -218,7 +218,7 @@
               valuePattern: ref.pattern + "{{v}}",
               automatic: true,
               title: this.buildTitle(ref, /^unit[_shd]*|^effectendpoint[_shd]*/),
-              units: ref.id == "unit" ? jT.ui.formatUnits(ref.val) : "",
+              units: ref.id == "unit" ? jT.formatUnits(ref.val) : "",
               useJson: this.useJson,
               domain: this.domain,
               sliderRoot: this

@@ -127,13 +127,13 @@ var	Settings = {
         }
       ],
   		exportFormats: [
-        { mime: "application/json", name:"json", icon: "images/types/json64.png", server: 'solrUrl'},
-        { mime: "text/csv", name:"csv", icon: "images/types/csv64.png", server: 'solrUrl'},
-        { mime: "text/tsv", name:"tsv", icon: "images/types/txt64.png", server: 'solrUrl'},
-        { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name:"xslx", icon: "images/types/xlsx.png", server: 'ambitUrl'},
-        { mime: "application/rdf+xml", name:"rdf", icon: "images/types/rdf64.png", server: 'ambitUrl'},
-        { mime: "application/ld+json", name:"json-ld", icon: "images/types/json-ld.png", server: 'ambitUrl'},
-        { mime: "application/isa+json", name:"isa-json", icon: "images/types/isa.png", server: 'ambitUrl'}
+        { mime: "application/json", name:"json", icon: "../img/types/json64.png", server: 'solrUrl'},
+        { mime: "text/csv", name:"csv", icon: "../img/types/csv64.png", server: 'solrUrl'},
+        { mime: "text/tsv", name:"tsv", icon: "../img/types/txt64.png", server: 'solrUrl'},
+        { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name:"xslx", icon: "../img/types/xlsx.png", server: 'ambitUrl'},
+        { mime: "application/rdf+xml", name:"rdf", icon: "../img/types/rdf64.png", server: 'ambitUrl'},
+        { mime: "application/ld+json", name:"json-ld", icon: "../img/types/json-ld.png", server: 'ambitUrl'},
+        { mime: "application/isa+json", name:"isa-json", icon: "../img/types/isa.png", server: 'ambitUrl'}
       ],
       exportMaxRows: 999999,
       reportDefinition: {

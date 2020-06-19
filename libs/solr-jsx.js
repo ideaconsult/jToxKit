@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.15.10" };
+  Solr = { version: "0.15.11" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -558,12 +558,12 @@ Solr.QueryingURL.prototype = {
   
 
 var paramIsUrlOnly = function(name) {
-  return name.match(/^(json\.nl|json\.wrf|q|wt|start)/);
+  return name.match(/^(json\.nl|json\.wrf|json2.+|q|wt|start)$/);
 };
 
 var paramJsonName = function (name) {
-  var m = name.match(/^json\.?(.*)/);
-  return m && m[1];
+  var m = name.match(/^json(\.|$)(.*)/);
+  return m && m[2];
 };
 
 Solr.QueryingJson = function (settings) {
@@ -605,6 +605,8 @@ Solr.QueryingJson.prototype = {
 
       if (val == undefined)
         return;
+      else if (jname === '')
+        a$.extend(json, val);
       else if (jname !== null)
         a$.path(json, jname, val);
       else

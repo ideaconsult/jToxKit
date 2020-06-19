@@ -9,7 +9,7 @@
     vals += "&#x2026;" + (stats.max == null ? "&#x221E;" : stats.max);
   						
     if (isUnits)
-      vals += " " + jT.ui.formatUnits(stats.val)
+      vals += " " + jT.formatUnits(stats.val)
         .replace(/<sup>(2|3)<\/sup>/g, "&#x00B$1;")
         .replace(/<sup>(\d)<\/sup>/g, "^$1");
         
@@ -163,7 +163,7 @@
           if (target.children().length > 1) // the input field.
             cont$ = $("#" + fid, target[0]).show();
           else {
-				    cont$ = jT.ui.fillTemplate($("#tag-facet"), faceter).attr("id", fid);
+				    cont$ = jT.ui.fillTemplate("tag-facet", faceter).attr("id", fid);
             
     				f.title = f.val;
     				f.onMain = this.clickHandler(faceter.id + ":" + f.val);

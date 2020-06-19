@@ -31,7 +31,7 @@ jT.ui = a$.extend(jT.ui, {
   	  parent = self;
 
     dataParams = $.extend(true, topSettings, dataParams);
-    dataParams.baseUrl = self.fixBaseUrl(dataParams.baseUrl);
+    dataParams.baseUrl = jT.fixBaseUrl(dataParams.baseUrl);
     dataParams.target = element;
     
     if (dataParams.id === undefined)
@@ -73,7 +73,7 @@ jT.ui = a$.extend(jT.ui, {
 	  // first, get the configuration, if such is passed
 	  if (dataParams.configFile != null) {
 	    // we'll use a trick here so the baseUrl parameters set so far to take account... thus passing 'fake' kit instance
-	    // as the first parameter of jT.call();
+	    // as the first parameter of jT.ambit.call();
   	  $.ajax({ settings: "GET", url: dataParams.configFile }, function(config){
     	  if (!!config)
     	    $.extend(true, dataParams, config);
@@ -81,10 +81,15 @@ jT.ui = a$.extend(jT.ui, {
   	  });
 	  }
 	  else {
-	    if (typeof dataParams.configuration == "string" && !!window[dataParams.configuration]) {
-	      var config = window[dataParams.configuration];
-	      $.extend(true, dataParams, (typeof config === 'function' ? config.call(kit, dataParams, kit) : config));
-      }
+      var config = dataParams.configuration;
+      if (typeof config === 'string')
+        config = window[config];
+      if (typeof config === 'function')
+        config = config.call(kit, dataParams, kit);
+      if (typeof config === 'object')
+        $.extend(true, dataParams, config);
+
+      delete dataParams.configuration;
 
       var kitObj = realInit(dataParams, element);
       element.data('jtKit', kitObj);
@@ -97,10 +102,8 @@ jT.ui = a$.extend(jT.ui, {
   	var self = this;
 
   	if (!root) {
-    	self.initTemplates();
-
       // make this handler for UUID copying. Once here - it's live, so it works for all tables in the future
-      $(document).on('click', '.jtox-kit span.ui-icon-copy', function () { this.copyToClipboard($(this).data('uuid')); return false;});
+      $(document).on('click', '.jtox-kit span.ui-icon-copy', function () { jT.copyToClipboard($(this).data('uuid')); return false;});
       // install the click handler for fold / unfold
       $(document).on('click', '.jtox-foldable>.title', function(e) { $(this).parent().toggleClass('folded'); });
       // install diagram zooming handlers
@@ -110,13 +113,13 @@ jT.ui = a$.extend(jT.ui, {
       });
 
       // scan the query parameter for settings
-  		var url = this.parseURL(document.location),
+  		var url = jT.parseURL(document.location),
   		    queryParams = url.params;
   		
   		if (!self.rootSettings.baseUrl)
-  		  queryParams.baseUrl = self.formBaseUrl(url);
+  		  queryParams.baseUrl = jT.formBaseUrl(document.location.href);
   		else if (!!queryParams.baseUrl)
-    		queryParams.baseUrl = self.fixBaseUrl(queryParams.baseUrl);
+    		queryParams.baseUrl = jT.fixBaseUrl(queryParams.baseUrl);
 
       self.rootSettings = $.extend(true, self.rootSettings, queryParams); // merge with defaults
       self.fullUrl = url;
@@ -158,25 +161,6 @@ jT.ui = a$.extend(jT.ui, {
     return query;
   },
 
-	initTemplates: function() {
-	  var self = this;
-
-    var root = $('.jtox-template')[0];
-    if (!root) {
-    	root = document.createElement('div');
-    	root.className = 'jtox-template';
-    	document.body.appendChild(root);
-    }
-
-	  var html = root.innerHTML;
-  	for (var t in self.templates) {
-    	html += self.templates[t];
-  	}
-
-  	root.innerHTML = html;
-  	self.templateRoot = root;
-	},
-
 	insertTool: function (name, root) {
 	  var html = this.tools[name];
 	  if (html != null) {
@@ -184,26 +168,6 @@ jT.ui = a$.extend(jT.ui, {
   	  this.init(root); // since we're pasting as HTML - we need to make re-traverse and initiazaltion of possible jTox kits.
     }
     return root;
-	},
-
-  installHandlers: function (kit, root) {
-    if (root == null)
-      root = kit.rootElement;
-
-    jT.$('.jtox-handler', root).each(function () {
-      var name = jT.$(this).data('handler');
-      var handler = null;
-      if (kit.settings.configuration != null && kit.settings.configuration.handlers != null)
-        handler = kit.settings.configuration.handlers[name];
-      handler = handler || window[name];
-
-      if (!handler)
-        console.log("jToxQuery: referring unknown handler: " + name);
-      else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
-        jT.$(this).on('change', handler).on('keydown', jT.ui.enterBlur);
-      else // all the rest respond on click
-        jT.$(this).on('click', handler);
-    });
-  },
+	}
 
 });
