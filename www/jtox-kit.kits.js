@@ -13,8 +13,6 @@
 		this.selector = settings.selector;
 		
 		this.annoTip = new AnnoTip({
-			context: this.context,
-			// Handlers. All accept @see {Anno} as an argument.
 			onSelection: function (anno) { return self.analyzeAnno(anno); },
 			onAction: function (action, anno) { return self.onAction(action, anno); },
 			onClose: null
@@ -31,49 +29,59 @@
 		inputSize: 30,
 		matchers: [{
 			selector: "*",		// String - CSS selector
-			extractor: null,	// String | Function 
-			presenter: null,	// String - HTML | Function
+			processor: null,	// String | Function 
 			exclusive: false	// Boolean - terminate matching
 		}]
 	};
 
 	AnnotationKit.prototype.start = function () {
 		this.annoTip.attach(this.selector);
+
+		// TODO: Load annos from the server and call this:
+		// this.annoTip.applyAnnos(rootElement, annoList, function (anno) { self.applyAnno(anno); });
 	};
 
 	AnnotationKit.prototype.onAction = function (action, anno) {
 		if (action === 'edit') {			
-			if (typeof this.controlsPrepack === 'function')
-				anno = this.controlsPrepack(data, anno);
-
-			anno.content = this.controlsPacker(anno);
+			anno.content = jT.formatString(jT.ui.templates['anno-form'], this);
 			this.annoTip.update(anno);
-			this.beautify(anno.element);
-			$(anno.element).addClass('openned');
-			return;
+			
+			if (typeof this.controlsSetup === 'function')
+				anno = this.controlsSetup(data, anno);
+
+			// Nothing meaningful, but it's nicer this way...
+			return this.beautify();
 		}
 		if (action === 'ok') {
 			var data = this.dataPacker(anno);
+			
+			data.suggestion = _.set({}, data.operation.scope, data.suggestion);
+			data.timestamp = new Date().toUTCString();
 
 			if (typeof this.dataPostprocess === 'function')
 				data = this.dataPostprocess(data, anno);
 
 			if (data)
 				$.ajax($.extend(true, this.ajaxSettings, { data:  data }));
+
+			// TODO: Potentially make this to be the success handler of the above!
+			this.applyAnno(anno);
 		}
 		
-		$(".annotip-severity", anno.element).buttonset('destroy');
+		$(".annotip-buttonset", this.annoTip.getFrame()).buttonset('destroy');
 		this.annoTip.discard();
 	};
 
 	AnnotationKit.prototype.analyzeAnno = function (anno) {
-		var dataInfo = this.dataExtractor(anno.element),
+		var dataInfo = this.dataExtractor(anno),
 			data = dataInfo.data,
 			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
-			matchers = this.matchers;
-			
-		anno.reference = {};
-		anno.controls = [];
+			matchers = this.matchers,
+			kit = jT.ui.kit(anno.root),
+			self = this;
+
+		anno.context = kit && typeof kit.getContext === 'function' && kit.getContext();
+		anno.reference = null;
 		for (var i = 0;i < matchers.length; ++i) {
 			var m = matchers[i],
 				found = false;
@@ -82,22 +90,16 @@
 				var v = null;
 
 				// First, deal with value extraction...
-				if (typeof m.extractor === 'function')
-					v = m.extractor(data, anno, el);
-				else if (typeof m.extractor === 'string' || Array.isArray(m.extractor))
-					v = _.set({}, m.extractor, _.get(data, m.extractor));
-				else if (m.extractor != null)
-					v = m.extractor;
+				if (typeof m.processor === 'function')
+					v = m.processor.call(self, data, anno, el);
+				else if (typeof m.processor === 'string' || Array.isArray(m.processor))
+					v = _.set({}, m.processor, _.get(data, m.processor));
+				else if (m.processor != null)
+					v = m.processor;
 				
 				// ... and merge it to the main data inside the anno object.
 				if (v != null)
-					anno.reference = $.extend(true, anno.reference, v);
-
-				// The, proceed with ui building.
-				if (typeof m.presenter === 'string')
-					anno.controls.push(jT.ui.formatString(m.presenter, anno));
-				else if (typeof m.presenter === 'function')
-					anno.controls.push(m.presenter(data, anno, el));
+					anno.reference = $.extend(true, anno.reference || {}, v);
 
 				found = true;
 			});
@@ -105,26 +107,26 @@
 			if (found && m.exclusive) break;
 		}
 
-		return anno.controls.length > 0;
+		return anno.reference !== null;
 	};
 
-	AnnotationKit.prototype.controlsPacker = function (anno) {
-		anno.controls.push(
-			jT.formatString(jT.ui.templates['anno-description'], this),
-			jT.formatString(jT.ui.templates['anno-severity'], this)
-		);
+	AnnotationKit.prototype.applyAnno = function (anno) {
+		// TODO: Make this real!
+		$(anno.element).css({ "background-color": "yellow" });
+	};
 
-		return '<form><div>' + anno.controls.join('</div>\n<div>') + '</div></form>';
-  	};
+	AnnotationKit.prototype.beautify = function () {
+		var annoFrame = this.annoTip.getFrame();
 
-	AnnotationKit.prototype.beautify = function (element) {
-		$(".annotip-severity", element).buttonset();
-		$("input", element).attr('size', this.inputSize - 1);
-		$("textarea", element).attr('cols', this.inputSize);
+		$(".annotip-buttonset", annoFrame).buttonset();
+		$("input", annoFrame).attr('size', this.inputSize - 1);
+		$("textarea", annoFrame).attr('cols', this.inputSize);
+
+		$(annoFrame).addClass('openned');
 	};
 
 	AnnotationKit.prototype.dataPreprocess = function (data, anno) {
-		$('form', anno.element).serializeArray().forEach(function (el) {
+		$('form', this.annoTip.getFrame()).serializeArray().forEach(function (el) {
 			_.set(data, el.name, el.value);
 		});
 		
@@ -135,22 +137,67 @@
 		return this.dataPreprocess({
 			context: anno.context,
 			reference: anno.reference,
-			operation: anno.operation,
-			suggestion: anno.suggestion
+			suggestion: anno.suggestion,
+			operation: {
+				selected: anno.selection,
+				reverseSelector: anno.reverseSelector
+			}
 		}, anno);
 	};
 
-	AnnotationKit.prototype.dataExtractor = function (el) {
-		var target = $(el).closest('table.dataTable>tbody>tr')[0],
-			table = jT.tables.getTable(target);
+	AnnotationKit.prototype.controlsSetup = function (data, anno) {
+		var self = this,
+			annoFrame = this.annoTip.getFrame(),
+			scopes = _.map(anno.scopes, function (s) { 
+				var title = (self.pathHandlers[s] && self.pathHandlers[s].title) || lookup[s] || s;
+				return { value: s, title: title };
+			});
 		
-		return {
-			target: target,
-			data: table.row(target).data()		
-		};
+		$(".annotip-scope select", annoFrame)
+			.html(_.map(scopes, function (s) { return jT.formatString(jT.ui.templates['anno-select-option'], s); }))
+			.on('change', function (e) {
+				var newScope = $(this).val(),
+					pathHnd = self.pathHandlers[newScope],
+					newControl = pathHnd && pathHnd.control,
+					target$ = $('.annotip-suggestion', annoFrame).empty();
+
+				if (typeof newControl === 'string')
+					target$.append(jT.formatString(newControl, { name: newScope, value: pathHnd.title}));
+				else if (typeof newControl === 'function')
+					newControl.call(self, target$, data, anno);
+				else
+					return;
+
+				// nicify what was just added!
+				target$.children('input, select, textarea').addClass('ui-widget ui-corner-all padded-control');
+			});
+		return anno;
 	};
 
-	AnnotationKit.prototype.dataInserter = function (el, data) { };
+	
+	AnnotationKit.prototype.buildScopes = function (rootPath, pathList, data, anno) {
+		var idFields = this.pathHandlers[rootPath] && this.pathHandlers[rootPath].idFields,
+			obj = {};
+
+		pathList = !pathList ? [''] : pathList.split(/\s+/);
+		if (!!idFields)
+			idFields = _.difference(idFields, pathList); // We leave only pure id fields.
+
+		anno.scopes.push(rootPath);
+		_.each(pathList.concat(idFields), function (path) {
+			if (path != '') {
+				// We only add to scope non-pure id fields.
+				if (_.indexOf(idFields, path) == -1)
+					anno.scopes.push(rootPath + '.' + path);
+
+				path = path.split('.');
+				_.set(obj, path, _.get(data, path, null));
+			} else
+				obj = $.extend(obj, data);
+		});
+
+		return obj;
+	};
 
 	jT.ui.Annotation = AnnotationKit;
 })(asSys, jQuery, jToxKit);
@@ -287,6 +334,12 @@
 		this.queryComposition(uri);
 	};
 
+	CompositionKit.prototype.getContext = function () {
+		return {
+			subject: 'composition',
+			compositionUri: this.compositionUri
+		}
+	};
 
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		selectionHandler: null, // selection handler, if needed for selection checkbox, which will be inserted if this is non-null
@@ -534,8 +587,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             savedQueries: [],
             listingFields: [],
             facets: [],
-            summaryRenderers: {},
-            annotationSettings: {}
+            summaryRenderers: {}
         },
 
         uiUpdateTimer = null,
@@ -777,17 +829,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 self = this;
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
-            this.annoWidget = new jT.AnnotationWidget($.extend(true, {
-                target: resultTarget,
-                context: {
-                    url: document.location.href,
-                    subject: "substance"
-                }
-            }, this.annotationSettings));
             
-            // TODO: This should most likely happen after some button click.
-            this.annoWidget.start();
-
             Manager.addListeners(new jT.ResultWidget($.extend(true, {
                 id: 'result',
                 target: resultTarget,
@@ -814,7 +856,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 },
                 onCreated: function (doc) {
                     $("footer", this).addClass("add");
-                    self.annoWidget.dataInserter(this, doc);
                 }
             }, this)));
 
@@ -2335,7 +2376,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					}, { anno: 'effects ' + c});
+					}, { anno: 'conditions.' + c});
 				};
 				return col;
 			});
@@ -2618,6 +2659,15 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		this.querySubstance(uri);
 	};
 
+	StudyKit.prototype.getContext = function () {
+		return {
+			subject: 'study',
+			substanceUri: this.substance.URI,
+			substanceId: this.substance.i5uuid,
+			owner: this.substance.ownerName
+		}
+	};
+
 	StudyKit.getFormatted = function (data, type, format) {
 		var value = null;
 		if (typeof format === 'function')
@@ -2699,7 +2749,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				if (data.result.errorValue != null)
 					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
 				return resText
-			}, { anno: "result result.errQualifier result.errValue"});
+			}, { anno: "result result.unit result.errValue result.errQualifier"});
 		}
 	},
 	{
@@ -2978,36 +3028,49 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 })(asSys, jQuery, jToxKit);
 jT.ui.templates['anno-input']  = 
-"<input name=\"{{ name }}\" placeholder=\"{{ value }} \" class=\"ui-widget ui-corner-all padded-control\"/>" +
+"<input name=\"{{ name }}\" placeholder=\"{{ value }} \" class=\"ui-widget ui-corner-all padded-control\" />" +
 "";// end of anno-input 
-
-jT.ui.templates['anno-description']  = 
-"<textarea name=\"description\" rows=\"3\" class=\"ui-widget ui-corner-all padded-control\"></textarea>" +
-"";// end of anno-description 
-
-jT.ui.templates['anno-severity']  = 
-"<div class=\"annotip-severity\">" +
-"<div>Severity:</div>" +
-"<input type=\"radio\" value=\"low\" name=\"severity\" id=\"annotip-severity-low\" checked=\"checked\"/>" +
-"<label for=\"annotip-severity-low\">Low</label>" +
-"<input type=\"radio\" value=\"medium\" name=\"severity\" id=\"annotip-severity-medium\"/>" +
-"<label for=\"annotip-severity-medium\">Medium</label>" +
-"<input type=\"radio\" value=\"high\" name=\"severity\" id=\"annotip-severity-high\"/>" +
-"<label for=\"annotip-severity-high\">High</label>" +
-"</div>" +
-"";// end of anno-severity 
-
-jT.ui.templates['anno-select']  = 
-"<select name=\"{{ name }}\" value=\"{{ value }}\" class=\"ui-widget ui-corner-all padded-control\">{{ options }}</select>" +
-"";// end of anno-select 
 
 jT.ui.templates['anno-select-option']  = 
 "<option value=\"{{ value }}\">{{ title }}</option>" +
 "";// end of anno-select-option 
 
+jT.ui.templates['anno-form']  = 
+"<form>" +
+"<p>Scope:</p>" +
+"<div class=\"annotip-scope\">" +
+"<select name=\"operation.scope\" class=\"ui-widget ui-corner-all padded-control\"></select>" +
+"</div>" +
+"<div class=\"annotip-suggestion\"></div>" +
+"<div class=\"annotip-description\">" +
+"<textarea name=\"description\" rows=\"3\" class=\"ui-widget ui-corner-all padded-control\"></textarea>" +
+"</div>" +
+"<p class=\"go-right\">Operation:</p>" +
+"<div class=\"annotip-buttonset annotip-action go-right\">" +
+"<input type=\"radio\" value=\"add\" name=\"operation.action\" id=\"annotip-action-add\" />" +
+"<label for=\"annotip-action-add\">Add</label>" +
+"<input type=\"radio\" value=\"replace\" name=\"operation.action\" id=\"annotip-action-replace\" />" +
+"<label for=\"annotip-action-replace\">Replace</label>" +
+"<input type=\"radio\" value=\"delete\" name=\"operation.action\" id=\"annotip-action-delete\" />" +
+"<label for=\"annotip-action-delete\">Delete</label>" +
+"<input type=\"radio\" value=\"synonyms\" name=\"operation.action\" id=\"annotip-action-synonyms\" />" +
+"<label for=\"annotip-action-synonyms\">Synonyms</label>" +
+"</div>" +
+"<p class=\"go-right\">Severity:</p>" +
+"<div class=\"annotip-buttonset annotip-severity go-right\">" +
+"<input type=\"radio\" value=\"low\" name=\"operation.severity\" id=\"annotip-severity-low\"/>" +
+"<label for=\"annotip-severity-low\">Low</label>" +
+"<input type=\"radio\" value=\"medium\" name=\"operation.severity\" id=\"annotip-severity-medium\" />" +
+"<label for=\"annotip-severity-medium\">Medium</label>" +
+"<input type=\"radio\" value=\"high\" name=\"operation.severity\" id=\"annotip-severity-high\" />" +
+"<label for=\"annotip-severity-high\">High</label>" +
+"</div>" +
+"</form>" +
+"";// end of anno-form 
+
 jT.ui.templates['all-composition']  = 
 "<div class=\"jtox-composition unloaded\">" +
-"<table class=\"dataTable composition-info font-small display\">" +
+"<table class=\"dataTable composition-info font-small display jtox-annotatable\">" +
 "<thead>" +
 "<tr><th>Composition name:</th><td class=\"camelCase\">{{ name }}</td></tr>" +
 "<tr><th>Composition UUID:</th><td>{{ uuid }}</td></tr>" +
@@ -3183,7 +3246,7 @@ jT.ui.templates['all-studies']  =
 "<li><a href=\"#jtox-compo-tab\">Composition</a></li>" +
 "</ul>" +
 "<div id=\"jtox-substance\" class=\"jtox-substance\">" +
-"<table class=\"dataTable display\">" +
+"<table class=\"dataTable display jtox-annotatable\">" +
 "<thead>" +
 "<tr>" +
 "<th class=\"right size-third\">IUC Substance name:</th>" +
@@ -3260,7 +3323,7 @@ jT.ui.templates['one-study']  =
 "<p class=\"counter\">{{ title }}</p>" +
 "</div>" +
 "<div class=\"content\">" +
-"<table class=\"jtox-study-table content display\"></table>" +
+"<table class=\"jtox-study-table content display jtox-annotatable\"></table>" +
 "</div>" +
 "</div>" +
 ""; // end of #jtox-study 
@@ -3280,7 +3343,7 @@ jT.ui.templates['all-substance']  =
 "<input type=\"text\" class=\"filterbox\" placeholder=\"Filter...\" />" +
 "</div>" +
 "<div>" +
-"<table class=\"display\"></table>" +
+"<table class=\"display jtox-annotatable\"></table>" +
 "</div>" +
 "</div>" +
 ""; // end of #jtox-substance 
