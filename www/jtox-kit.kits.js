@@ -2459,7 +2459,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			filterTimeout = setTimeout(function () {
 				var tabList = $('.jtox-study-table', tab);
 				for (var t = 0, tlen = tabList.length; t < tlen; ++t) {
-					$(tabList[t]).DataTable().filter(field.value).draw();
+					$(tabList[t]).DataTable().search(field.value).draw();
 				}
 			}, 300);
 		};
