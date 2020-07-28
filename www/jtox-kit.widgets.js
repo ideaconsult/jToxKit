@@ -58,8 +58,8 @@
             });
         },
 
-        fillTemplate: function (selector, info, def) {
-            return jT.ui.fillHtml(jT.ui.templates[selector], info, def);
+        fillTemplate: function (id, info, def) {
+            return jT.ui.fillHtml(jT.ui.templates[id], info, def);
         },
 
         updateCounter: function (str, count, total) {

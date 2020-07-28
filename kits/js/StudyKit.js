@@ -430,15 +430,16 @@
 
 				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
 
-				// go and query for the reference query
+				// go and query for the reference substance
 				jT.ambit.call(self, substance.referenceSubstance.uri, function (dataset) {
 					if (!!dataset && dataset.dataEntry.length > 0) {
 						jT.ambit.processDataset(dataset, null, jT.ambit.getDatasetValue);
-						jT.ui.updateTree($('.jtox-substance', self.rootElement), dataset.dataEntry[0]);
+						jT.ui.updateTree($('.jtox-substance', self.rootElement), $.extend(substance, dataset.dataEntry[0]));
 					}
 				});
 
 				jT.fireCallback(self.settings.onLoaded, self, substance.substance);
+				
 				// query for the summary and the composition too.
 				self.querySummary(substance.URI + "/studysummary");
 				self.insertComposition(substance.URI + "/composition");
