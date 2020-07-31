@@ -213,6 +213,7 @@ import "AutocompleteWidget";
 import "SimpleItemWidget";
 import "AccordionExpansion";
 import "SliderWidget";
+import "CurrentSearchWidget";
 import "Switching";
 import "Running";
 import "TableTools";

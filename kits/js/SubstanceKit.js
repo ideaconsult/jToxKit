@@ -53,9 +53,7 @@
 			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + 'substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
 		};
 
-		var opts = {
-			"sDom": "rti"
-		};
+		var opts = { "dom": "rti" };
 		if (self.settings.showControls) {
 			jT.tables.bindControls(self, {
 				nextPage: function () { self.nextPage(); },

@@ -374,103 +374,1322 @@
 	jT.ui.Composition = CompositionKit;
 
 })(asSys, jQuery, jToxKit);
-(function (Solr, a$, $, jT) {
+/* CompoundKit - General, universal compound dataset visualizer. Migrated.
+ *
+ * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
+ * Created by Ivan Georgiev
+ **/
 
-CurrentSearchWidgeting = function (settings) {
-  a$.extend(true, this, a$.common(settings, this));
-  
-  this.target = settings.target;
-  this.id = settings.id;
-  
-  this.manager = null;
-  this.facetWidgets = {};
-  this.fqName = this.useJson ? "json.filter" : "fq";
-};
+(function (_, $, jT) {
 
-CurrentSearchWidgeting.prototype = {
-  useJson: false,
-  renderItem: null,
-  
-  init: function (manager) {
-    a$.pass(this, CurrentSearchWidgeting, "init", manager);
-        
-    this.manager = manager;
-  },
-  
-  registerWidget: function (widget, pivot) {
-    this.facetWidgets[widget.id] = pivot;
-  },
-  
-  afterTranslation: function (data) {
-    var self = this,
-        links = [],
-        q = this.manager.getParameter('q'),
-        fq = this.manager.getAllValues(this.fqName);
-        
-    // add the free text search as a tag
-    if (!!q.value && !q.value.match(/^(\*:)?\*$/)) {
-        links.push(self.renderItem({ title: q.value, count: "x", onMain: function () {
-          q.value = "";
-          self.manager.doRequest();
-          return false;
-        } }).addClass("tag_fixed"));
-    }
+	/* define the standard features-synonymes, working with 'sameAs' property. Beside the title we define the 'data' property
+	as well which is used in processEntry() to location value(s) from given (synonym) properties into specific property of the compound entry itself.
+	'data' can be an array, which results in adding value to several places.
+	*/
+	var baseFeatures = {
+		"http://www.opentox.org/api/1.1#REACHRegistrationDate": {
+			title: "REACH Date",
+			data: "compound.reachdate",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#CASRN": {
+			title: "CAS",
+			data: "compound.cas",
+			accumulate: true,
+			basic: true,
+			primary: true
+		},
+		"http://www.opentox.org/api/1.1#ChemicalName": {
+			title: "Name",
+			data: "compound.name",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#TradeName": {
+			title: "Trade Name",
+			data: "compound.tradename",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#IUPACName": {
+			title: "IUPAC Name",
+			data: ["compound.name", "compound.iupac"],
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#EINECS": {
+			title: "EINECS",
+			data: "compound.einecs",
+			accumulate: true,
+			basic: true,
+			primary: true
+		},
+		"http://www.opentox.org/api/1.1#InChI": {
+			title: "InChI",
+			data: "compound.inchi",
+			shorten: true,
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#InChI_std": {
+			title: "InChI",
+			data: "compound.inchi",
+			shorten: true,
+			accumulate: true,
+			sameAs: "http://www.opentox.org/api/1.1#InChI",
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#InChIKey": {
+			title: "InChI Key",
+			data: "compound.inchikey",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#InChIKey_std": {
+			title: "InChI Key",
+			data: "compound.inchikey",
+			accumulate: true,
+			sameAs: "http://www.opentox.org/api/1.1#InChIKey",
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#InChI_AuxInfo": {
+			title: "InChI Aux",
+			data: "compound.inchiaux",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#InChI_AuxInfo_std": {
+			title: "InChI Aux",
+			data: "compound.inchiaux",
+			accumulate: true,
+			sameAs: "http://www.opentox.org/api/1.1#InChI_AuxInfo",
+			basic: true
+		},
+		"http://www.opentox.org/api/1.1#IUCLID5_UUID": {
+			title: "IUCLID5 UUID",
+			data: "compound.i5uuid",
+			shorten: true,
+			accumulate: true,
+			basic: true,
+			primary: true
+		},
+		"http://www.opentox.org/api/1.1#SMILES": {
+			title: "SMILES",
+			data: "compound.smiles",
+			shorten: true,
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/dblinks#CMS": {
+			title: "CMS",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/dblinks#ChEBI": {
+			title: "ChEBI",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/dblinks#Pubchem": {
+			title: "PubChem",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/dblinks#ChemSpider": {
+			title: "ChemSpider",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/dblinks#ChEMBL": {
+			title: "ChEMBL",
+			accumulate: true,
+			basic: true
+		},
+		"http://www.opentox.org/api/dblinks#ToxbankWiki": {
+			title: "Toxbank Wiki",
+			accumulate: true,
+			basic: true
+		},
+	};
+	var instanceCount = 0;
 
-    // now scan all the filter parameters for set values
-    for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
-	    var f = fq[i],
-          vals = null,
-          w;
-	    
-      for (var wid in self.facetWidgets) {
-  	    w = self.manager.getListener(wid);
-        vals = w.fqParse(f);
-  	    if (!!vals)
-  	      break;
-  	  }
-  	  
-  	  if (vals == null) continue;
-  	    
-  	  if (!Array.isArray(vals))
-  	    vals = [ vals ];
-  	        
-      for (var j = 0, fvl = vals.length; j < fvl; ++j) {
-        var v = vals[j], el, 
-            info = (typeof w.prepareTag === "function") ? 
-              w.prepareTag(v) : 
-              {  title: v,  count: "x",  color: w.color, onMain: w.unclickHandler(v) };
-        
-    		links.push(el = self.renderItem(info).addClass("tag_selected " + (!!info.onAux ? "tag_open" : "tag_fixed")));
+	// constructor
+	function CompountKit(root, settings) {
+		var self = this;
+		self.rootElement = root;
+		$(root).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
-    		if (fvl > 1)
-    		  el.addClass("tag_combined");
-      }
-      
-      if (fvl > 1)
-		    el.addClass("tag_last");
-    }
-    
-    if (links.length) {
-      links.push(self.renderItem({ title: "Clear", onMain: function () {
-        q.value = "";
-        for (var wid in self.facetWidgets)
-    	    self.manager.getListener(wid).clearValues();
-    	    
-        self.manager.doRequest();
-        return false;
-      }}).addClass('tag_selected tag_clear tag_fixed'));
-      
-      this.target.empty().addClass('tags').append(links);
-    }
-    else
-      this.target.removeClass('tags').html('<li>No filters selected!</li>');
-  }
+		self.settings = $.extend(true, 
+			{ configuration: { baseFeatures: baseFeatures } }, 
+			CompountKit.defaults, 
+			settings);
 
-};
+		// make a dull copy here, because, otherwise groups are merged... which we DON'T want
+		if (settings != null && settings.configuration != null && settings.configuration.groups != null)
+			self.settings.configuration.groups = settings.configuration.groups;
 
-jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
+		self.instanceNo = instanceCount++;
+		if (self.settings.rememberChecks && self.settings.showTabs)
+			self.featureStates = {};
 
-})(Solr, asSys, jQuery, jToxKit);
+		// finally make the query, if Uri is provided
+		if (self.settings['datasetUri'] != null) {
+			self.queryDataset(self.settings['datasetUri']);
+		}
+	};
+
+	// now follow the prototypes of the instance functions.
+	CompoundKit.prototype.init = function () {
+		var self = this;
+
+		self.feature = null; // features, as downloaded from server, after being processed.
+		self.dataset = null; // the last-downloaded dataset.
+		self.groups = null; // computed groups, i.e. 'groupName' -> array of feature list, prepared.
+		self.fixTable = self.varTable = null; // the two tables - to be initialized in prepareTables.
+		self.entriesCount = null;
+		self.suspendEqualization = false;
+		self.orderList = [];
+		self.usedFeatures = [];
+		self.pageStart = self.settings.pageStart;
+		self.pageSize = self.settings.pageSize;
+
+		if (!self.settings.noInterface) {
+			self.rootElement.appendChild(jT.getTemplate('#jtox-compound'));
+
+			jT.ui.bindControls(self, {
+				nextPage: function () {
+					self.nextPage();
+				},
+				prevPage: function () {
+					self.prevPage();
+				},
+				sizeChange: function () {
+					self.queryEntries(self.pageStart, parseInt($(this).val()));
+				},
+				filter: function () {
+					self.updateTables()
+				}
+			});
+
+			self.$procDiv = $('.jt-processing', self.rootElement);
+			self.$errDiv = $('.jt-error', self.rootElement);
+
+		}
+	};
+
+	CompoundKit.prototype.clearDataset = function () {
+		if (this.usedFeatures !== undefined) {
+			if (!this.settings.noInterface)
+				$(this.rootElement).empty();
+			for (var i = 0, fl = this.usedFeatures.length; i < fl; ++i) {
+				var fid = this.usedFeatures[i];
+				this.feature[fid].used = false;
+			}
+		}
+	};
+
+	/* make a tab-based widget with features and grouped on tabs. It relies on filled and processed 'self.feature' as well
+	as created 'self.groups'.
+	*/
+	CompoundKit.prototype.prepareTabs = function (root, isMain, groupFn) {
+		var self = this;
+
+		var all = document.createElement('div');
+		all.style.display = "none"; // we suppress the re-layouting engine this way, we'll show it at the end.
+		root.appendChild(all);
+		ulEl = document.createElement('ul');
+		all.appendChild(ulEl);
+
+		var createATab = function (grId, name) {
+			var liEl = document.createElement('li');
+			ulEl.appendChild(liEl);
+			var aEl = document.createElement('a');
+			aEl.href = "#" + grId;
+			aEl.innerHTML = name;
+			liEl.appendChild(aEl);
+			return liEl;
+		};
+
+		var emptyList = [];
+		var idx = 0;
+		for (var gr in self.groups) {
+			var grId = "jtox-ds-" + gr.replace(/\s/g, "_") + "-" + self.instanceNo + (isMain ? '' : '-details');
+			var grName = gr.replace(/_/g, " ");
+			var tabLi = createATab(grId, grName);
+			if (isMain)
+				tabLi.title = "Select which columns to be displayed";
+
+			// now prepare the content...
+			var divEl = document.createElement('div');
+			divEl.id = grId;
+			all.appendChild(divEl);
+			// add the group check multi-change
+			if (self.settings.groupSelection && isMain) {
+				var sel = jT.getTemplate("#jtox-ds-selection");
+				divEl.appendChild(sel);
+				$('.multi-select', sel).on('click', function (e) {
+					var par = $(this).closest('.ui-tabs-panel')[0];
+					var doSel = $(this).hasClass('select');
+					$('input', par).each(function () {
+						this.checked = doSel;
+						$(this).trigger('change');
+					});
+				});
+			}
+
+			if (groupFn(divEl, gr)) {
+				if (self.settings.hideEmpty) {
+					$(divEl).remove();
+					$(tabLi).remove();
+					--idx;
+				} else
+					emptyList.push(idx);
+			}
+			++idx;
+
+			jT.fireCallback(self.settings.onTab, self, divEl, tabLi, grName, isMain);
+		}
+
+		if (isMain && self.settings.showExport) {
+			var tabId = "jtox-ds-export-" + self.instanceNo;
+			var liEl = createATab(tabId, "Export");
+			$(liEl).addClass('jtox-ds-export');
+			var divEl = jT.getTemplate('#jtox-ds-export')
+			divEl.id = tabId;
+			all.appendChild(divEl);
+			divEl = $('.jtox-exportlist', divEl)[0];
+
+			for (var i = 0, elen = self.settings.configuration.exports.length; i < elen; ++i) {
+				var expo = self.settings.configuration.exports[i];
+				var el = jT.getTemplate('#jtox-ds-download');
+				divEl.appendChild(el);
+
+				$('a', el)[0].href = jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type));
+				var img = el.getElementsByTagName('img')[0];
+				img.alt = img.title = expo.type;
+				img.src = self.settings.baseUrl + '/' + expo.icon;
+			}
+
+			jT.fireCallback(self.settings.onTab, self, divEl, liEl, "Export", isMain);
+		}
+
+		// now show the whole stuff and mark the disabled tabs
+		all.style.display = "block";
+		return $(all).tabs({
+			collapsible: isMain,
+			active: (self.settings.tabsFolded && isMain) ? false : 0,
+			disabled: emptyList,
+			heightStyle: isMain ? "content" : (self.settings.detailsHeight == 'auto' ? 'auto' : 'fill')
+		});
+	};
+
+	CompoundKit.prototype.equalizeTables = function () {
+		var self = this;
+		if (!self.suspendEqualization && self.fixTable != null && self.varTable != null) {
+			jT.tables.equalizeHeights(self.fixTable.tHead, self.varTable.tHead);
+			jT.tables.equalizeHeights(self.fixTable.tBodies[0], self.varTable.tBodies[0]);
+
+			// now we need to equalize openned details boxes, if any.
+			var tabRoot = $('.jtox-ds-tables', self.rootElement)[0];
+			var varWidth = $('.jtox-ds-variable', tabRoot).width();
+
+			$('.jtox-details-box', self.rootElement).each(function (i) {
+				var cell = $(this).data('rootCell');
+				if (!!cell) {
+					this.style.display = 'none';
+					var ps = ccLib.positionTo(cell, tabRoot);
+					this.style.top = ps.top + 'px';
+					this.style.left = ps.left + 'px';
+					var cellW = $(cell).parents('.dataTables_wrapper').width() - cell.offsetLeft;
+					this.style.width = (cellW + varWidth) + 'px';
+					this.style.display = 'block';
+
+					var rowH = $(cell).parents('tr').height();
+					var cellH = cell.offsetHeight;
+					var meH = $(this).height();
+
+					if (cellH < rowH)
+						$(cell).height(cellH = rowH);
+					if (cellH < meH)
+						$(cell).height(cellH = meH);
+
+					if (meH < cellH) {
+						$(this).height(cellH);
+						$('.ui-tabs').tabs('refresh');
+					}
+				}
+			});
+		}
+	};
+
+	CompoundKit.prototype.featureValue = function (fId, entry, type) {
+		var self = this;
+		var feature = self.feature[fId];
+		var val = (feature.data !== undefined) ? (_.get(entry, $.isArray(feature.data) ? feature.data[0] : feature.data)) : entry.values[fId];
+		return (typeof feature.render == 'function') ?
+			feature.render(val, !!type ? type : 'filter', entry) :
+			jT.ui.renderObjValue(val, feature.units, type);
+	};
+
+	CompoundKit.prototype.featureUri = function (fId) {
+		return this.feature[fId].URI || fId;
+	};
+
+	CompoundKit.prototype.featureData = function (entry, set, scope) {
+		if (scope == null)
+			scope = 'details';
+		var self = this;
+		var data = [];
+		ccLib.enumObject(set, function (fId, idx, level) {
+			var feat = $.extend({}, self.feature[fId]);
+			var vis = feat.visibility;
+			if (!!vis && vis != scope)
+				return;
+			var title = feat.title;
+			feat.value = self.featureValue(fId, entry, scope);
+			if (!!title && (!self.settings.hideEmptyDetails || !!feat.value)) {
+				if (!feat.value)
+					feat.value = '-';
+				data.push(feat);
+			}
+		});
+
+		return data;
+	};
+
+	CompoundKit.prototype.prepareColumn = function (fId, feature) {
+		var self = this;
+		if (feature.visibility == 'details')
+			return null;
+
+		// now we now we should show this one.
+		var col = {
+			"title": !feature.title ? '' : jT.ui.valueWithUnits(feature.title.replace(/_/g, ' '), (!self.settings.showUnits ? null : feature.units)),
+			"sDefaultContent": "-",
+		};
+
+		if (typeof feature.column == 'function')
+			col = feature.column.call(self, col, fId);
+		else if (feature.column != null)
+			col = $.extend(col, feature.column);
+
+		col["data"] = (feature.data != null) ? feature.data : 'values';
+
+		if (feature.render != null)
+			col["render"] = feature.data != null ? feature.render : function (data, type, full) {
+				return feature.render(full.values[fId], type, full);
+			};
+		else if (!!feature.shorten)
+			col["render"] = function (data, type, full) {
+				if (!feature.data) data = data[fId];
+				return (type != "display") ? '' + data : jT.ui.shortenedData(data, "Press to copy the value in the clipboard");
+			};
+		else if (feature.data == null) // in other cases we want the default presenting of the plain value
+			col["render"] = (function (featureId, units) {
+				return function (data, type, full) {
+					var val = full.values[featureId] || '-';
+					if (typeof val != 'object')
+						return val;
+					if (!$.isArray(val))
+						val = [val];
+					var html = '';
+					for (var i = 0; i < val.length; ++i) {
+						html += (type == 'display') ? '<div>' : '';
+						html += jT.ui.renderObjValue(val[i], units, type);
+						html += (type == 'display') ? '</div>' : ',';
+					}
+					return html;
+				};
+			})(fId, feature.unit);
+
+		// other convenient cases
+		if (!!feature.shorten)
+			col["sWidth"] = "75px";
+
+		return col;
+	};
+
+	CompoundKit.prototype.getVarRow = function (idx) {
+		if (idx.tagName != null)
+			idx = jT.ui.rowIndex(idx);
+
+		return document.getElementById('jtox-var-' + this.instanceNo + '-' + idx);
+	};
+
+	CompoundKit.prototype.prepareTables = function () {
+		var self = this;
+		var varCols = [];
+		var fixCols = [];
+
+		// first, some preparation of the first, IdRow column
+		var idFeature = self.settings.configuration.baseFeatures['#IdRow'];
+		if (!idFeature.render) {
+			idFeature.render = self.settings.hasDetails ?
+				function (data, type, full) {
+					return (type != "display") ?
+						'' + data :
+						"&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>" +
+						'<span class="jtox-details-open ui-icon ui-icon-folder-collapsed" title="Press to open/close detailed info for this compound"></span>';
+				} : // no details case
+				function (data, type, full) {
+					return (type != "display") ?
+						'' + data :
+						"&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;";
+				};
+		}
+
+		fixCols.push(
+			self.prepareColumn('#IdRow', idFeature), {
+				"sClass": "jtox-hidden",
+				"data": "index",
+				"sDefaultContent": "-",
+				"bSortable": true,
+				"render": function (data, type, full) {
+					return self.orderList == null ? 0 : self.orderList[data];
+				}
+			} // column used for ordering
+		);
+
+		varCols.push({
+			"sClass": "jtox-hidden jtox-ds-details paddingless",
+			"data": "index",
+			"render": function (data, type, full) {
+				return '';
+			}
+		});
+
+		// prepare the function for column switching...
+		var fnShowColumn = function () {
+			var dt = $(this).data();
+			var cells = $(dt.sel + ' table tr .' + dt.column, self.rootElement);
+			if (this.checked) {
+				$(cells).show();
+				$("table tr .blank-col", self.rootElement).addClass('jtox-hidden');
+			} else {
+				$(cells).hide();
+				if ($(dt.sel + " table tr *:visible", self.rootElement).length == 0)
+					$("table tr .blank-col", self.rootElement).removeClass('jtox-hidden');
+			}
+			if (self.settings.rememberChecks)
+				self.featureStates[dt.id] = this.checked;
+			self.equalizeTables();
+		};
+
+		var fnExpandCell = function (cell, expand) {
+			var cnt = 0;
+			for (var c = cell; c; c = c.nextElementSibling, ++cnt)
+				$(c).toggleClass('jtox-hidden');
+
+			if (expand)
+				cell.setAttribute('colspan', '' + cnt);
+			else
+				cell.removeAttribute('colspan');
+		};
+
+		var fnShowDetails = (self.settings.hasDetails ? function (row, event) {
+			var cell = $(".jtox-ds-details", row)[0];
+			var idx = $(row).data('jtox-index');
+
+			if (self.settings.preDetails != null && !jT.fireCallback(self.settings.preDetails, self, idx, cell) || !cell)
+				return; // the !cell  means you've forgotten to add #DetailedInfoRow feature somewhere.
+			$(row).toggleClass('jtox-detailed-row');
+			var toShow = $(row).hasClass('jtox-detailed-row');
+
+			// now go and expand both fixed and variable table details' cells.
+			fnExpandCell(cell, toShow);
+			var varCell = self.getVarRow(idx).firstElementChild;
+			fnExpandCell(varCell, toShow);
+
+			$('.jtox-details-open', row).toggleClass('ui-icon-folder-open ui-icon-folder-collapsed');
+
+			if (toShow) {
+				// i.e. we need to show it - put the full sized diagram in the fixed part and the tabs in the variable one...
+				var entry = self.dataset.dataEntry[idx];
+
+				var detDiv = document.createElement('div');
+				detDiv.className = 'jtox-details-box jtox-details';
+
+				var tabRoot = $('.jtox-ds-tables', self.rootElement)[0];
+				var width = $(cell).width() + $('.jtox-ds-variable', tabRoot).width();
+				$(detDiv).width(width);
+
+				if (self.settings.detailsHeight == null || self.settings.detailsHeight == 'fill')
+					$(detDiv).height($(cell).height() * 2);
+				else if (parseInt(self.settings.detailsHeight) > 0)
+					$(detDiv).height(self.settings.detailsHeight)
+
+				tabRoot.appendChild(detDiv);
+
+				self.prepareTabs(detDiv, false, function (parent, gr) {
+					var data = self.featureData(entry, self.groups[gr]);
+
+					if (data.length > 0 || !self.settings.hideEmpty) {
+						$(parent).addClass('jtox-details-table');
+						var tabTable = document.createElement('table');
+						parent.appendChild(tabTable);
+						$(tabTable).dataTable({
+							"bPaginate": false,
+							"bProcessing": true,
+							"bLengthChange": false,
+							"bAutoWidth": true,
+							"sDom": "rt<f>",
+							"aoColumns": jT.ui.processColumns(self, 'compound'),
+							"bSort": true,
+						});
+						$(tabTable).dataTable().fnAddData(data);
+						$(tabTable).dataTable().fnAdjustColumnSizing();
+					}
+
+					return data.length == 0;
+				});
+
+				$(cell).height(detDiv.offsetHeight);
+				jT.fireCallback(self.settings.onDetails, self, detDiv, entry, cell);
+				$(cell).data('detailsDiv', detDiv);
+				$(detDiv).data('rootCell', cell);
+			} else {
+				// i.e. we need to hide
+				$(cell).data('detailsDiv').remove();
+				$(cell).data('detailsDiv', null);
+				cell.style.height = '';
+			}
+
+			self.equalizeTables();
+		} : null); // fnShowDetails definition end
+
+		// now proceed to enter all other columns
+		for (var gr in self.groups) {
+			ccLib.enumObject(self.groups[gr], function (fId, idx, level) {
+				if (idx == "name")
+					return;
+
+				var feature = self.feature[fId];
+				var col = self.prepareColumn(fId, feature);
+				if (!col)
+					return;
+
+				// finally - assign column switching to the checkbox of main tab.
+				var colList = !!feature.primary ? fixCols : varCols;
+				var colId = 'col-' + colList.length;
+				col.sClass = (!!col.sClass ? col.sClass + ' ' : '') + colId;
+
+				$('.jtox-ds-features input.jtox-checkbox[value="' + fId + '"]', self.rootElement).data({
+					sel: !!feature.primary ? '.jtox-ds-fixed' : '.jtox-ds-variable',
+					column: colId,
+					id: fId
+				}).on('change', fnShowColumn)
+
+				// and push it into the proper list.
+				colList.push(col);
+			});
+		}
+
+		// now - sort columns and create the tables...
+		if (self.settings.fixedWidth != null)
+			$(".jtox-ds-fixed", self.rootElement).width(self.settings.fixedWidth);
+
+		jT.ui.sortColDefs(fixCols);
+		self.fixTable = ($(".jtox-ds-fixed table", self.rootElement).dataTable({
+			"bPaginate": false,
+			"bLengthChange": false,
+			"bAutoWidth": true,
+			"sDom": "rt",
+			"aoColumns": fixCols,
+			"bSort": false,
+			"fnCreatedRow": function (nRow, aData) {
+				// attach the click handling
+				var iDataIndex = aData.index;
+				if (self.settings.hasDetails)
+					$('.jtox-details-open', nRow).on('click', function (e) {
+						fnShowDetails(nRow, e);
+					});
+				$(nRow).data('jtox-index', iDataIndex);
+
+				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
+				jT.ui.installHandlers(self, nRow);
+				$('.jtox-diagram span.ui-icon', nRow).on('click', function () {
+					setTimeout(function () {
+						$(self.fixTable).dataTable().fnAdjustColumnSizing();
+						self.equalizeTables();
+					}, 50);
+				});
+			},
+			"oLanguage": {
+				"sEmptyTable": '<span class="jt-feeding">' + (self.settings.oLanguage.sProcess || 'Feeding data...') + '</span>'
+			}
+		}))[0];
+
+		// we need to put a fake column to stay, when there is no other column here, or when everything is hidden..
+		varCols.push({
+			"sClass": "center blank-col" + (varCols.length > 1 ? " jtox-hidden" : ""),
+			"data": "index",
+			"render": function (data, type, full) {
+				return type != 'display' ? data : '...';
+			}
+		});
+
+		jT.ui.sortColDefs(varCols);
+		self.varTable = ($(".jtox-ds-variable table", self.rootElement).dataTable({
+			"bPaginate": false,
+			"bProcessing": true,
+			"bLengthChange": false,
+			"bAutoWidth": false,
+			"sDom": "rt",
+			"bSort": true,
+			"aoColumns": varCols,
+			"bScrollCollapse": true,
+			"fnCreatedRow": function (nRow, aData) {
+				var iDataIndex = aData.index;
+				nRow.id = 'jtox-var-' + self.instanceNo + '-' + iDataIndex;
+
+				// equalize multi-rows, if there are any
+				jT.tables.equalizeHeights.apply(window, $('td.jtox-multi table tbody', nRow).toArray());
+
+				$(nRow).addClass('jtox-row');
+				$(nRow).data('jtox-index', iDataIndex);
+				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
+				jT.ui.installHandlers(self, nRow);
+			},
+			"fnDrawCallback": function (oSettings) {
+				// this is for synchro-sorting the two tables
+				var sorted = $('.jtox-row', this);
+				for (var i = 0, rlen = sorted.length; i < rlen; ++i) {
+					var idx = $(sorted[i]).data('jtox-index');
+					self.orderList[idx] = i;
+				}
+
+				if (rlen > 0)
+					$(self.fixTable).dataTable().fnSort([
+						[1, "asc"]
+					]);
+			},
+			"oLanguage": {
+				"sEmptyTable": "-"
+			}
+		}))[0];
+	};
+
+	CompoundKit.prototype.updateTables = function () {
+		var self = this;
+		if (self.settings.hasDetails)
+			$('div.jtox-details-box', self.rootElement).remove();
+
+		self.filterEntries($('.jtox-controls input', self.rootElement).val());
+	};
+
+	/* Prepare the groups and the features.
+	 */
+	CompoundKit.prototype.prepareGroups = function (miniset) {
+		var self = this;
+
+		var grps = self.settings.configuration.groups;
+		if (typeof grps == 'function')
+			grps = grps(miniset, self);
+
+		self.groups = {};
+		for (var i in grps) {
+			var grp = grps[i];
+			if (grp == null)
+				continue;
+
+			var grpArr = (typeof grp == "function" || typeof grp == "string") ? jT.fireCallback(grp, self, i, miniset) : grp;
+			self.groups[i] = [];
+			ccLib.enumObject(grpArr, function (fid, idx) {
+				var isUsed = false;
+				CompountKit.enumSameAs(fid, self.feature, function (feature) {
+					isUsed |= feature.used;
+				});
+				if (idx != "name" && !isUsed) {
+					self.groups[i].push(fid);
+					// these we need to be able to return back to original state.
+					self.usedFeatures.push(fid);
+					self.feature[fid].used = true;
+				}
+			});
+		}
+	};
+
+	/* Enumerate all recofnized features, caling fnMatch(featureId, groupId) for each of it.
+	Return true from the function to stop enumeration, which in turn will return true if it was stopped.
+	*/
+	CompoundKit.prototype.enumerateFeatures = function (fnMatch) {
+		var self = this;
+		var stopped = false;
+		for (var gr in self.groups) {
+			for (var i = 0, glen = self.groups[gr].length; i < glen; ++i) {
+				if (stopped = fnMatch(self.groups[gr][i], gr))
+					break;
+			}
+
+			if (stopped)
+				break;
+		}
+
+		return stopped;
+	};
+
+	CompoundKit.prototype.filterEntries = function (needle) {
+		var self = this;
+
+		if (needle == null)
+			needle = '';
+		else
+			needle = needle.toLowerCase();
+
+		var dataFeed = [];
+		if (needle != '') {
+			for (var i = 0, slen = self.dataset.dataEntry.length; i < slen; ++i) {
+				var entry = self.dataset.dataEntry[i];
+
+				var match = self.enumerateFeatures(function (fId, gr) {
+					var feat = self.feature[fId];
+					if (feat.search !== undefined && !feat.search)
+						return false;
+					var val = self.featureValue(fId, entry, 'sort');
+					return val != null && val.toString().toLowerCase().indexOf(needle) >= 0;
+				});
+
+
+				if (match)
+					dataFeed.push(entry);
+			}
+		} else {
+			dataFeed = self.dataset.dataEntry;
+		}
+
+		$(self.fixTable).dataTable().fnClearTable();
+		$(self.varTable).dataTable().fnClearTable();
+		$(self.fixTable).dataTable().fnAddData(dataFeed);
+		$(self.varTable).dataTable().fnAddData(dataFeed);
+		$('.jt-feeding', self.rootElement).html(self.settings.oLanguage.sZeroRecords || 'No records matching the filter.');
+
+		ccLib.fillTree($('.jtox-controls', self.rootElement)[0], {
+			"filtered-text": !needle ? " " : ' (filtered to <span class="high">' + dataFeed.length + '</span>) '
+		});
+
+		if (self.settings.showTabs) {
+			self.suspendEqualization = true;
+			$('.jtox-ds-features .jtox-checkbox', self.rootElement).trigger('change');
+			self.suspendEqualization = false;
+		}
+
+		// finally
+		self.equalizeTables();
+	};
+
+	CompoundKit.prototype.queryUri = function (scope) {
+		var self = this;
+		if (self.datasetUri == null)
+			return null;
+		if (scope == null)
+			scope = {
+				from: self.pageStart,
+				size: self.pageSize
+			};
+		if (scope.from < 0)
+			scope.from = 0;
+		if (scope.size == null)
+			scope.size = self.pageSize;
+
+		return jT.addParameter(self.datasetUri, "page=" + Math.floor(scope.from / scope.size) + "&pagesize=" + scope.size);
+	};
+
+	// make the actual query for the (next) portion of data.
+	CompoundKit.prototype.queryEntries = function (from, size, dataset) {
+		var self = this;
+		var scope = {
+			'from': from,
+			'size': size
+		};
+		var qUri = self.queryUri(scope);
+		$('.jtox-controls select', self.rootElement).val(scope.size);
+		self.dataset = null;
+
+		// the function for filling
+		var fillFn = function (dataset) {
+			if (!!dataset) {
+				// first, arrange the page markers
+				self.pageSize = scope.size;
+				var qStart = self.pageStart = Math.floor(scope.from / scope.size) * scope.size;
+				if (dataset.dataEntry.length < self.pageSize) // we've reached the end!!
+					self.entriesCount = qStart + dataset.dataEntry.length;
+
+				// then process the dataset
+				self.dataset = CompountKit.processDataset(dataset, $.extend(true, {}, dataset.feature, self.feature), self.settings.fnAccumulate, self.pageStart);
+				// time to call the supplied function, if any.
+				jT.fireCallback(self.settings.onLoaded, self, dataset);
+				if (!self.settings.noInterface) {
+					// ok - go and update the table, filtering the entries, if needed
+					self.updateTables();
+					if (self.settings.showControls) {
+						// finally - go and update controls if they are visible
+						self.updateControls(qStart, dataset.dataEntry.length);
+					}
+				}
+			} else {
+				jT.fireCallback(self.settings.onLoaded, self, dataset);
+			}
+			jT.fireCallback(self.settings.onComplete, self);
+		};
+
+		// we may be passed dataset, if the initial, setup query was 404: Not Found - to avoid second such query...
+		if (dataset != null)
+			fillFn(dataset)
+		else
+			jT.call(self, qUri, fillFn);
+	};
+
+	/* Retrieve features for provided dataserUri, using settings.featureUri, if provided, or making automatice page=0&pagesize=1 query
+	 */
+	CompoundKit.prototype.queryFeatures = function (featureUri, callback) {
+		var self = this;
+		var dataset = null;
+
+		// first, build the proper
+		var queryUri = featureUri || self.settings.featureUri || self.settings.feature_uri;
+		if (!queryUri) // rollback this is the automatic way, which makes a false query in the beginning
+			queryUri = jT.addParameter(self.datasetUri, "page=0&pagesize=1");
+
+		// now make the actual call...
+		jT.call(self, queryUri, function (result, jhr) {
+			if (!result && jhr.status != 200) {
+				self.$procDiv.hide();
+				self.$errDiv.show().find('.message').html('Server error: ' + jhr.statusText);
+			}
+
+			// remove the loading pane in anyways..
+			if (!!result) {
+				self.feature = result.feature;
+
+				CompountKit.processFeatures(self.feature, self.settings.configuration.baseFeatures);
+				var miniset = {
+					dataEntry: [],
+					feature: self.feature
+				};
+				if (!self.settings.noInterface) {
+					self.prepareGroups(miniset);
+					if (self.settings.showTabs) {
+						// tabs feature building
+						var nodeFn = function (id, name, parent) {
+							var fEl = jT.getTemplate('#jtox-ds-feature');
+							parent.appendChild(fEl);
+							ccLib.fillTree(fEl, {
+								title: name.replace(/_/g, ' '),
+								uri: self.featureUri(id)
+							});
+
+							var checkEl = $('input[type="checkbox"]', fEl)[0];
+							if (!checkEl)
+								return;
+							checkEl.value = id;
+							if (self.settings.rememberChecks)
+								checkEl.checked = (self.featureStates[id] === undefined || self.featureStates[id]);
+
+							return fEl;
+						};
+
+						self.prepareTabs($('.jtox-ds-features', self.rootElement)[0], true, function (divEl, gr) {
+							var empty = true;
+							ccLib.enumObject(self.groups[gr], function (fId, idx, level) {
+								var vis = (self.feature[fId] || {})['visibility'];
+								if (!!vis && vis != 'main')
+									return;
+								empty = false;
+								if (idx == "name")
+									var fEl = nodeFn(null, fId, divEl);
+								else if (level == 1) {
+									var title = self.feature[fId].title;
+									if (title != null)
+										nodeFn(fId, title, divEl);
+								}
+							});
+
+							return empty;
+						});
+					}
+
+					jT.fireCallback(self.settings.onPrepared, self, miniset, self);
+					self.prepareTables(); // prepare the tables - we need features to build them - we have them!
+					self.equalizeTables(); // to make them nicer, while waiting...
+				} else {
+					jT.fireCallback(self.settings.onPrepared, self, miniset, self);
+				}
+
+				// finally make the callback for
+				callback(dataset);
+			}
+		});
+	};
+
+	/* Makes a query to the server for particular dataset, asking for feature list first, so that the table(s) can be
+	prepared.
+	*/
+	CompoundKit.prototype.queryDataset = function (datasetUri, featureUri) {
+		var self = this;
+		// if some oldies exist...
+		this.clearDataset();
+		this.init();
+
+		datasetUri = jT.grabPaging(self, datasetUri);
+
+		self.settings.baseUrl = self.settings.baseUrl || jT.grabBaseUrl(datasetUri);
+
+		// remember the _original_ datasetUri and make a call with one size length to retrieve all features...
+		self.datasetUri = (datasetUri.indexOf('http') != 0 ? self.settings.baseUrl : '') + datasetUri;
+
+		self.$procDiv.show();
+		self.$errDiv.hide();
+		if (!!self.settings.oLanguage.sLoadingRecords)
+			$('.message', procDiv).html(self.settings.oLanguage.sLoadingRecords);
+
+		self.queryFeatures(featureUri, function (dataset) {
+			self.$procDiv.hide();
+			self.queryEntries(self.pageStart, self.pageSize, dataset);
+		});
+	};
+
+	/* This is a needed shortcut that jToxQuery routine will call
+	 */
+	CompoundKit.prototype.query = function (uri) {
+		this.queryDataset(uri);
+	};
+	// end of prototype
+
+	CompoundKit.prototype.nextPage = jT.tables.nextPage;
+	CompoundKit.prototype.prevPage = jT.tables.prevPage;
+	CompoundKit.prototype.updateControls = jT.tables.updateControls;
+
+	// merge them for future use..
+	CompountKit.baseFeatures = $.extend({}, baseFeatures, CompoundKit.defaults.configuration.baseFeatures);
+
+	// some public, static methods
+	CompountKit.processEntry = function (entry, features, fnValue) {
+		if (!fnValue)
+			fnValue = CompoundKit.defaults.fnAccumulate;
+
+		for (var fid in entry.values) {
+			var feature = features[fid];
+			if (!feature)
+				continue;
+			var newVal = entry.values[fid];
+
+			// if applicable - location the feature value to a specific location whithin the entry
+			if (!!feature.accumulate && !!newVal && !!feature.data) {
+				var fn = typeof feature.accumulate == 'function' ? feature.accumulate : fnValue;
+				var accArr = feature.data;
+				if (!$.isArray(accArr))
+					accArr = [accArr];
+
+				for (var v = 0; v < accArr.length; ++v)
+					_.set(entry, accArr[v], jT.fireCallback(fn, this, fid, /* oldVal */ _.get(entry, accArr[v]), newVal, features));
+			}
+		}
+
+		return entry;
+	};
+
+	CompountKit.extractFeatures = function (entry, features, callback) {
+		var data = [];
+		for (var fId in features) {
+			var feat = $.extend({}, features[fId]);
+			feat.value = entry.values[fId];
+			if (!!feat.title) {
+				if (jT.fireCallback(callback, null, feat, fId, data.length) !== false) {
+					if (!feat.value)
+						feat.value = '-';
+					data.push(feat);
+				}
+			}
+		};
+
+		return data;
+	};
+
+	CompountKit.enumSameAs = function (fid, features, callback) {
+		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
+		// This, final feature should be considered "main" and title and others taken from it.
+		var feature = features[fid];
+		var base = fid.replace(/(http.+\/feature\/).*/g, "$1");
+		var retId = fid;
+
+		for (;;) {
+			jT.fireCallback(callback, null, feature, retId);
+			if (feature.sameAs == null || feature.sameAs == fid || fid == base + feature.sameAs)
+				break;
+			if (features[feature.sameAs] !== undefined)
+				retId = feature.sameAs;
+			else {
+				if (features[base + feature.sameAs] !== undefined)
+					retId = base + feature.sameAs;
+				else
+					break;
+			}
+
+			feature = features[retId];
+		}
+
+		return retId;
+	};
+
+	CompountKit.processFeatures = function (features, bases) {
+		if (bases == null)
+			bases = baseFeatures;
+		features = $.extend(features, bases);
+
+		for (var fid in features) {
+			var theFeat = features[fid];
+			if (!theFeat.URI)
+				theFeat.URI = fid;
+			CompountKit.enumSameAs(fid, features, function (feature, id) {
+				var sameAs = feature.sameAs;
+				feature = $.extend(true, feature, theFeat);
+				theFeat = $.extend(true, theFeat, feature);
+				feature.sameAs = sameAs;
+			});
+		}
+
+		return features;
+	};
+
+	CompountKit.processDataset = function (dataset, features, fnValue, startIdx) {
+		if (!features) {
+			CompountKit.processFeatures(dataset.feature);
+			features = dataset.feature;
+		}
+
+		if (!fnValue)
+			fnValue = CompoundKit.defaults.fnAccumulate;
+
+		if (!startIdx)
+			startIdx = 0;
+
+		for (var i = 0, dl = dataset.dataEntry.length; i < dl; ++i) {
+			CompountKit.processEntry(dataset.dataEntry[i], features, fnValue);
+			dataset.dataEntry[i].number = i + 1 + startIdx;
+			dataset.dataEntry[i].index = i;
+		}
+
+		return dataset;
+	};
+
+	CompountKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
+		"noInterface": false, // runs in interface-less mode, so that it can be used only for information retrieval.
+		"showTabs": true, // should we show tabs with groups, or not
+		"tabsFolded": false, // should present the feature-selection tabs folded initially
+		"showExport": true, // should we add export tab up there
+		"showControls": true, // should we show the pagination/navigation controls.
+		"showUnits": true, // should we show units in the column title.
+		"hideEmpty": false, // whether to hide empty groups instead of making them inactive
+		"groupSelection": true, // wether to show select all / unselect all links in each group
+		"hasDetails": true, // whether browser should provide the option for per-item detailed info rows.
+		"hideEmptyDetails": true, // hide feature values, when they are empty (only in detailed view)
+		"detailsHeight": "fill", // what is the tabs' heightStyle used for details row
+		"fixedWidth": null, // the width (in css units) of the left (non-scrollable) part of the table
+		"pageSize": 20, // what is the default (startint) page size.
+		"pageStart": 0, // what is the default startint point for entries retrieval
+		"rememberChecks": false, // whether to remember feature-checkbox settings between queries
+		"featureUri": null, // an URI for retrieving all feature for the dataset, rather than 1-sized initial query, which is by default
+		"metricFeature": "http://www.opentox.org/api/1.1#Similarity", // This is the default metric feature, if no other is specified
+		"onTab": null, // invoked after each group's tab is created - function (element, tab, name, isMain);
+		"onLoaded": null, // invoked when a set of compounds is loaded.
+		"onComplete": null, // invoked when the component is all ready.
+		"onPrepared": null, // invoked when the initial call for determining the tabs/columns is ready
+		"onDetails": null, // invoked when a details pane is openned
+		"preDetails": null, // invoked prior of details pane creation to see if it is going to happen at all
+		"oLanguage": {}, // some default language settings, which apply to first (static) table only
+		"fnAccumulate": function (fId, oldVal, newVal, features) {
+			if (newVal == null)
+				return oldVal;
+			newVal = newVal.toString();
+			if (oldVal == null || newVal.toLowerCase().indexOf(oldVal.toLowerCase()) >= 0)
+				return newVal;
+			if (oldVal.toLowerCase().indexOf(newVal.toLowerCase()) >= 0)
+				return oldVal;
+			return oldVal + ", " + newVal;
+		},
+		"configuration": {
+			"groups": {
+				"Identifiers": [
+					"http://www.opentox.org/api/1.1#Diagram",
+					"#DetailedInfoRow",
+					"http://www.opentox.org/api/1.1#CASRN",
+					"http://www.opentox.org/api/1.1#EINECS",
+					"http://www.opentox.org/api/1.1#IUCLID5_UUID"
+				],
+
+				"Names": [
+					"http://www.opentox.org/api/1.1#ChemicalName",
+					"http://www.opentox.org/api/1.1#TradeName",
+					"http://www.opentox.org/api/1.1#IUPACName",
+					"http://www.opentox.org/api/1.1#SMILES",
+					"http://www.opentox.org/api/1.1#InChIKey",
+					"http://www.opentox.org/api/1.1#InChI",
+					"http://www.opentox.org/api/1.1#REACHRegistrationDate"
+				],
+
+				"Calculated": function (name, miniset) {
+					var arr = [];
+					if (miniset.dataEntry.length > 0 && miniset.dataEntry[0].compound.metric != null)
+						arr.push(this.settings.metricFeature);
+
+					for (var f in miniset.feature) {
+						var feat = miniset.feature[f];
+						if (feat.source == null || feat.source.type == null || !!feat.basic)
+							continue;
+						else if (feat.source.type.toLowerCase() == "algorithm" || feat.source.type.toLowerCase() == "model") {
+							arr.push(f);
+						}
+					}
+					return arr;
+				},
+
+				"Other": function (name, miniset) {
+					var arr = [];
+					for (var f in miniset.feature) {
+						if (!miniset.feature[f].used && !miniset.feature[f].basic)
+							arr.push(f);
+					}
+					return arr;
+				}
+			},
+			"exports": [{
+					type: "chemical/x-mdl-sdfile",
+					icon: "images/sdf64.png"
+				},
+				{
+					type: "chemical/x-cml",
+					icon: "images/cml64.png"
+				},
+				{
+					type: "chemical/x-daylight-smiles",
+					icon: "images/smi64.png"
+				},
+				{
+					type: "chemical/x-inchi",
+					icon: "images/inchi64.png"
+				},
+				{
+					type: "text/uri-list",
+					icon: "images/lnk64.png"
+				},
+				{
+					type: "application/pdf",
+					icon: "images/pdf64.png"
+				},
+				{
+					type: "text/csv",
+					icon: "images/csv64.png"
+				},
+				{
+					type: "text/plain",
+					icon: "images/txt64.png"
+				},
+				{
+					type: "text/x-arff",
+					icon: "images/arff.png"
+				},
+				{
+					type: "text/x-arff-3col",
+					icon: "images/arff-3.png"
+				},
+				{
+					type: "application/rdf+xml",
+					icon: "images/rdf64.png"
+				},
+				{
+					type: "application/json",
+					icon: "images/json64.png"
+				},
+				{
+					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+					icon: "images/xlsx.png"
+				}
+			],
+
+			// These are instance-wide pre-definitions of default baseFeatures as described below.
+			"baseFeatures": {
+				// and one for unified way of processing diagram. This can be used as template too
+				"http://www.opentox.org/api/1.1#Diagram": {
+					title: "Diagram",
+					search: false,
+					visibility: "main",
+					primary: true,
+					data: "compound.URI",
+					column: {
+						sClass: "paddingless",
+						sWidth: "125px"
+					},
+					render: function (data, type, full) {
+						dUri = jT.ui.diagramUri(data);
+						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><span class="ui-icon ui-icon-zoomin"></span><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
+					}
+				},
+				'#IdRow': {
+					used: true,
+					basic: true,
+					data: "number",
+					column: {
+						"sClass": "middle"
+					}
+				},
+				"#DetailedInfoRow": {
+					title: "Diagram",
+					search: false,
+					data: "compound.URI",
+					basic: true,
+					primary: true,
+					column: {
+						sClass: "jtox-hidden jtox-ds-details paddingless",
+						sWidth: "0px"
+					},
+					visibility: "none",
+					render: function (data, type, full) {
+						return '';
+					}
+				},
+
+				"http://www.opentox.org/api/1.1#Similarity": {
+					title: "Similarity",
+					data: "compound.metric",
+					search: true
+				},
+			},
+			"columns": {
+				"compound": {
+					"Name": {
+						title: "Name",
+						data: 'title',
+						render: function (data, type, full) {
+							return '<span>' + data + '</span>' + jT.ui.putInfo(full.URI);
+						}
+					},
+					"Value": {
+						title: "Value",
+						data: 'value',
+						sDefaultContent: "-"
+					},
+					"SameAs": {
+						title: "SameAs",
+						data: 'sameAs',
+						sDefaultContent: "-"
+					},
+					"Source": {
+						title: "Source",
+						data: 'source',
+						sDefaultContent: "-",
+						render: function (data, type, full) {
+							return !data || !data.type ? '-' : '<a target="_blank" href="' + data.URI + '">' + data.type + '</a>';
+						}
+					}
+				}
+			}
+		}
+	};
+
+	jT.ui.Compound = CompountKit;
+
+})(_, jQuery, jToxKit);
 /** jToxKit - chem-informatics multi-tool-kit.
  * The combined, begamoth kit providing full faceted search capabilites.
  *
@@ -479,8 +1698,10 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
  */
 
 (function (Solr, a$, $, jT) {
+
     var
         mainLookupMap = {},
+        uiConfiguration = {},
         defaultSettings = {
             servlet: "select",
             multipleSelection: true,
@@ -535,11 +1756,19 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             summaryRenderers: {}
         },
 
-        storeSelection = function (selection) {
-            window.history.pushState(
-                selection, 
-                document.title, 
-                jT.modifyURL(window.location.href, "sel", encodeURIComponent(JSON.stringify(selection))));
+        uiUpdateTimer = null,
+        uiUpdate = function () {
+            if (uiUpdateTimer != null)
+                clearTimeout(uiUpdateTimer);
+            uiUpdateTimer = setTimeout(function () {
+                var state = jT.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
+
+                if (!!state)
+                    window.history.pushState({
+                        query: window.location.search
+                    }, document.title, state);
+                uiUpdateTimer = null;
+            }, 1000);
         },
 
         tagRender = function (tag) {
@@ -574,6 +1803,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             var hdr = this.getHeaderText();
             hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
             a$.act(this, this.header.data("refreshPanel"));
+
+            var ui = uiConfiguration[this.id] || {};
+            ui.values = this.getValues();
+            uiConfiguration[this.id] = ui;
+            uiUpdate();
         },
 
         toggleAggregate = function (el) {
@@ -586,6 +1820,11 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             for (var i = 0; i < pars.length; ++i)
                 this.addValue(pars[i]);
             this.doRequest();
+
+            var ui = uiConfiguration[this.id] || {};
+            ui.aggregate = !option;
+            uiConfiguration[this.id] = ui;
+            uiUpdate();
         };
 
     jT.ui.FacetedSearch = function (settings) {
@@ -602,6 +1841,10 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
         $(settings.target).html(jT.ui.templates['faceted-search-kit']);
         delete this.target;
+
+        var uiConf = jT.parseURL(window.location.href).params['ui'];
+        if (uiConf != null)
+            uiConfiguration = JSON.parse(decodeURIComponent(uiConf));
 
         this.initDom();
         this.initComm();
@@ -745,13 +1988,13 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         /** The actual widget and communication initialization routine!
          */
         initComm: function () {
-            var Manager, Basket, Persister,
+            var Manager, Basket,
                 PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
                 TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
 
-            Manager.addListeners(new jT.ResultWidget($.extend(true, {}, this, {
+            Manager.addListeners(new jT.ResultWidget($.extend(true, {
                 id: 'result',
                 target: $('#docs'),
                 itemId: "s_uuid",
@@ -778,7 +2021,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 onCreated: function (doc) {
                     $("footer", this).addClass("add");
                 }
-            })));
+            }, this)));
 
             Manager.addListeners(new(a$(Solr.Widgets.Pager))({
                 id: 'pager',
@@ -799,13 +2042,14 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             // Now the actual initialization of facet widgets
             for (var i = 0, fl = this.facets.length; i < fl; ++i) {
                 var f = this.facets[i],
+                    ui = uiConfiguration[f.id],
                     w = new TagWidget($.extend({
                         target: this.accordion,
                         expansionTemplate: "tab-topcategory",
                         subtarget: "ul",
                         runMethod: toggleAggregate,
                         multivalue: this.multipleSelection,
-                        aggregate: this.aggregateFacets,
+                        aggregate: ui === undefined || ui.aggregate === undefined ? this.aggregateFacets : ui.aggregate,
                         exclusion: this.multipleSelection || this.keepAllFacets,
                         useJson: true,
                         renderItem: tagRender,
@@ -866,7 +2110,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             }));
 
             // Now add the basket.
-            this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {}, this, {
+            this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {
                 id: 'basket',
                 target: $('#basket-docs'),
                 summaryRenderers: this.summaryRenderers,
@@ -897,19 +2141,21 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 onCreated: function (doc) {
                     $("footer", this).addClass("remove");
                 }
-            }));
+            }, this));
 
-            Manager.addListeners(Persister = new Solr.UrlPersistency({
-                id: 'persist',
-                storedParams: ['q', 'fq', 'json.filter']
-            }));
             a$.act(this, this.onPreInit, Manager);
             Manager.init();
 
-            // Resture the previous state, if such exists in the URL
-            Persister.restore();
+            // Scan the ui-persistency values
+            for (var fid in uiConfiguration) {
+                var vals = uiConfiguration[fid].values,
+                    w = Manager.getListener(fid);
+                a$.each(vals, function (v) {
+                    w.addValue(v)
+                });
+            }
 
-            // Make the request
+            // now get the search parameters passed via URL
             Manager.doRequest();
         },
 
@@ -932,7 +2178,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
         },
 
         initQueries: function () {
-            var self = this;
+            var manager = this.manager;
 
             this.queries = new(a$(jT.ListWidget))({
                 id: 'queries',
@@ -943,7 +2189,23 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 el$ = jT.ui.fillTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
-                    self.executeQuery($(this).data('query'));
+                    var queryDef = $(this).data('query');
+
+                    // Clear the current search - whatever it is.
+                    manager.removeParameters("fq");
+                    manager.removeParameters("json.filter");
+                    manager.getParameter("q").value = "";
+
+                    queryDef.forEach(function (par) {
+                        if (par.faceter)
+                            manager.getListener(par.faceter).addValue(par.value);
+                        else if (typeof par.parameter === "object")
+                            manager.addParameter(par.parameter);
+                        else
+                            manager.addParameter(par.name, par.value, par.domain);
+                    });
+
+                    manager.doRequest();
                     $("#result-tabs").tabs("option", "active", 0);
                 });
                 return el$;
@@ -979,7 +2241,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         console.error(error);
 
                         if (typeof error === 'object')
-                            error = error.message || "Wrong request!";
+                            error = error.message || error.status || "Wrong request!";
                     }
 
                     // Ensure at least 900ms of showtime for the "Downloading..." label
@@ -1022,24 +2284,6 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             });
         },
 
-        executeQuery: function (queryDef) {
-            var manager = this.manager;
-
-            // Clear the current search - whatever it is.
-            manager.removeParameters("fq");
-            manager.removeParameters("json.filter");
-            manager.getParameter("q").value = "";
-
-            queryDef.forEach(function (par) {
-                if (par.id)
-                    manager.getListener(par.id).addValue(par.value);
-                else
-                    manager.addParameter(par);
-            });
-
-            manager.doRequest();
-        },
-
         makeExport: function (form, doneFn) {
             var self = this,
                 exFormat = this.exportFormats[$('.data_formats .selected').data('index')],
@@ -1047,8 +2291,8 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 exDef = _.defaultsDeep($.extend(true, {}, exType.definition), this.exportDefaultDef),
                 server = exType.server || exFormat.server,
                 selectedIds = this.getSelectedIds(form),
-                formAmbitUrl = function (ids) { 
-                    form.search.value = ids.join(" ");
+                formAmbitUrl = function () { 
+                    form.search.value = selectedIds.join(" ");
                     form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                 };
 
@@ -1067,7 +2311,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             if (server == 'ambitUrl') {
                 // If we already have the selected Ids - we don't even need to bother calling Solr.
                 if (!!selectedIds)
-                    formAmbitUrl(selectedIds);
+                    formAmbitUrl();
                 else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
                     async: false,
                     dataType: "json",
@@ -1077,7 +2321,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                             ids.push(value.s_uuid_hs);
                         });
 
-                        formAmbitUrl(ids);
+                        formAmbitUrl();
                         doneFn();
                     },
                     error: function (jhr, status, errText) { doneFn(errText); }
@@ -1087,8 +2331,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                         exFormat == "tsv"
                             ? [{ name: "wt", value: "json" }, { name: "json2tsv", value: true }]
                             : [{ name: 'wt', value: exFormat === 'xlsx' ? 'json' : exFormat }],
-                        selectedIds,
-                        false
+                        selectedIds
                         ).getAjax(this.solrUrl),
                     downloadFn = function (blob) {
                         if (!(blob instanceof Blob))
@@ -1407,6 +2650,1907 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
     }
   };
 })(asSys, jQuery, jToxKit);
+/* MatrixKit - Read-across UI tool. Migrated.
+ *
+ * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
+ * Created by Ivan Georgiev
+**/
+
+(function (_, $, jT) {
+
+	function MatrixKit(settings) {
+		var self = this;
+
+		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
+		this.settings = $.extend(true, {}. MatrixKit.defaults, settings);
+
+		// deal with some configuration
+		if (typeof this.settings.studyTypeList === 'string')
+			this.settings.studyTypeList = window[this.settings.studyTypeList];
+
+		// the (sub)action in the panel
+		var loadAction = function () {
+			if (!this.checked)
+				return;
+			document.body.className = this.id;
+			var method = $(this).parent().data('action');
+			if (!method)
+				return;
+			jT.fireCallback(self[method], self, this.id, $(this).closest('.ui-tabs-panel')[0], false);
+		};
+
+		var loadPanel = function(panel) {
+			if (panel) {
+				var subs = $('.jq-buttonset.action input:checked', panel);
+				if (subs.length > 0)
+					subs.each(loadAction);
+				else
+					jT.fireCallback(self[$(panel).data('action')], self, panel.id, panel, true);
+			}
+		};
+
+		// initialize the tab structure for several versions of dataTables.
+		$(root).tabs({
+			"disabled": [1, 2, 3, 4],
+			"heightStyle": "fill",
+			"select" : function(event, ui) {
+				loadPanel(ui.panel);
+			},
+			"activate" : function(event, ui) {
+				if (ui.newPanel)
+					loadPanel(ui.newPanel[0]);
+			},
+			"create" : function(event, ui) {
+				if (ui.panel)
+					loadPanel(ui.panel[0]);
+			}
+		});
+
+		$('.jq-buttonset', root).buttonset();
+		$('.jq-buttonset.action input', root).on('change', loadAction);
+
+		var updateUsers = function() {
+			var el = $(this.parentNode).find('select');
+			$(el.parentNode).addClass('loading');
+			var property = (el[0].id == 'users-write') ? 'canWrite' : 'canRead';
+			var data = 'bundle_number=' + self.bundle.number;
+			var users = el.val();
+			if (users) {
+				for (var i = 0, l = users.length; i < l; i++){
+					data += '&' + property + '=' + users[i];
+				}
+			}
+			jT.ambit.call(self, self.settings.baseUrl + '/myaccount/users', { method: 'POST', data: data }, function(result) {
+				$(el.parentNode).removeClass('loading');
+			});
+		}
+
+		$('.jtox-users-select', root).tokenize({
+			datas: self.settings.baseUrl + '/myaccount/users',
+			searchParam: 'q',
+			valueField: 'id',
+			textField: 'name'
+			//onAddToken: updateUsers,
+			//onRemoveToken: updateUsers
+		});
+
+		$('.jtox-users-submit', root).on('click', updateUsers);
+
+		self.onIdentifiers(null, $('#jtox-identifiers', self.rootElement)[0]);
+		// finally, if provided - load the given bundleUri
+		var bUri = self.settings.bundleUri;
+		if (!!bUri)
+			self.load(bUri);
+
+		return self;
+	};
+
+	MatrixKit.prototype.starHighlight = function (root, stars) {
+		$('span', root).each(function (idx) {
+			if (idx < stars)
+				$(this).removeClass('transparent');
+			else
+				$(this).addClass('transparent');
+		});
+	};
+
+	MatrixKit.prototype.onIdentifiers = function (id, panel) {
+		var self = this;
+		if (!panel) return;
+		if (!$(panel).hasClass('initialized')) {
+			$(panel).addClass('initialized');
+
+			self.createForm = $('form', panel)[0];
+
+			self.createForm.onsubmit = function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+
+				if (jT.validateForm(self.createForm)) {
+					jT.ambit.call(self, self.settings.baseUrl + '/bundle', { method: 'POST', data: $(self.createForm).serializeArray()},
+						function (bundleUri, jhr) {
+						if (!!bundleUri) {
+							self.load(bundleUri);
+							var url = jT.parseURL( window.location.href );
+							if (url.query != '' )
+								url.query += '&bundleUri=' + bundleUri;
+							else
+								url.query = '?bundleUri=' + bundleUri;
+							var href = url.protocol + '://' + url.host + ( (url.port != '') ? ':' + url.port : '' ) + url.path + url.query + ( (url.hash != '') ? '#' + url.hash : '' );
+							if ( 'pushState' in window.history )
+								window.history.pushState(null, '', href );
+							else
+								document.location = href;
+						}
+						else {
+							// TODO: report an error
+							console.log("Error on creating bundle [" + jhr.status + "]: " + jhr.statusText);
+						}
+					});
+				}
+			};
+
+			self.createForm.assFinalize.onclick = function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!self.bundleUri) return;
+
+				var $this = $(this),
+					data = { status: 'published' };
+
+				$this.addClass('loading');
+				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+					$this.removeClass('loading');
+					if (!result) // i.e. on error - request the old data
+						self.load(self.bundleUri);
+					else
+						$('.data-field[data-field="status"]').html(formatStatus('published'));
+				});
+			};
+
+			self.createForm.assNewVersion.onclick = function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!self.bundleUri) return;
+
+				var $this = $(this),
+					data = { status: 'archived' };
+
+				$this.addClass('loading');
+				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+					$this.removeClass('loading');
+					if (!result) // i.e. on error - request the old data
+						self.load(self.bundleUri);
+				});
+
+				jT.ambit.call(self, self.bundleUri + '/version', { method: 'POST' }, function (bundleUri, jhr) {
+					if (!!bundleUri)
+						self.load(bundleUri);
+					else
+						// TODO: report an error
+						console.log("Error on creating bundle [" + jhr.status + ": " + jhr.statusText);
+				});
+			};
+
+			self.createForm.assFinalize.style.display = 'none';
+			self.createForm.assNewVersion.style.display = 'none';
+
+			var starsEl = $('.data-stars-field', self.createForm)[0];
+			starsEl.innerHTML += jT.ui.putStars(self, 0, "Assessment rating");
+			$('span.ui-icon-star', starsEl)
+				.on('mouseover', function (e) {
+					for (var el = this; !!el; el = el.previousElementSibling)
+						$(el).removeClass('transparent');
+					for (var el = this.nextElementSibling; !!el; el = el.nextElementSibling)
+						$(el).addClass('transparent');
+				})
+				.on('click', function (e) {
+					var cnt = 0;
+					for (var el = this; !!el; el = el.previousElementSibling, ++cnt);
+					self.createForm.stars.value = cnt;
+					$(self.createForm.stars).trigger('change');
+				})
+				.parent().on('mouseout', function (e) {
+					self.starHighlight(this, parseInt(self.createForm.stars.value));
+				});
+
+			// install change handlers so that we can update the values
+			$('input, select, textarea', self.createForm).on('change', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!self.bundleUri) return;
+
+				var el = this;
+				if (jT.fireCallback(checkForm, el, e)) {
+					var data = {};
+					data[el.name] = el.value;
+					$(el).addClass('loading');
+					jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+						$(el).removeClass('loading');
+						if (!result) { // i.e. on error - request the old data
+							self.load(self.bundleUri);
+						}
+					});
+				}
+			});
+
+			var link = $('#source-link')[0], $source = $('#source');
+			link.href = $source[0].value;
+			$source.on('change', function() { link.href = this.value; });
+		}
+	};
+
+	// called when a sub-action in bundle details tab is called
+	MatrixKit.prototype.onMatrix = function (panId, panel) {
+		var self = this;
+		if (!$(panel).hasClass('initialized')) {
+
+			var saveButton = $('.save-button', panel)[0];
+			saveButton.disabled = true;
+			var dressButton = function() {
+				if (self.edit.study.length < 1) {
+					saveButton.disabled = true;
+					$(saveButton).removeClass('jt-alert').addClass('jt-disabled');
+					saveButton.innerHTML = "Saved";
+				}
+				else {
+					saveButton.disabled = false;
+					$(saveButton).addClass('jt-alert').removeClass('jt-disabled');
+					saveButton.innerHTML = "Save";
+				}
+			};
+
+			$(saveButton).on('click', function() {
+				if (self.edit.study.length > 0) {
+					var toAdd = JSON.stringify({ study: self.edit.study });
+
+					// make two nested calls - for adding and for deleting
+					$(saveButton).addClass('loading');
+					jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
+						if (!!result) {
+							jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
+								$(saveButton).removeClass('loading');
+								if (!!result) {
+									self.edit.study = [];
+									self.matrixKit.query(self.bundleUri + '/matrix');
+									dressButton();
+								}
+							});
+						}
+						else {
+							$(saveButton).removeClass('loading');
+						}
+					});
+				}
+			});
+
+			var onEditClick = function (data) {
+				var boxOptions = {
+					overlay: true,
+					closeOnEsc: true,
+					closeOnClick: "overlay",
+					addClass: "popup-box jtox-toolkit ui-front",
+					animation: "zoomIn",
+					target: $(this),
+					maxWidth: 600,
+					zIndex: 90,
+					onCloseComplete: function () { this.destroy(); }
+				};
+
+				var isDelete = $(this).hasClass('delete-popup');
+				var jel = (isDelete ? $('a', this.parentNode) : $(this));
+
+				var featureId = jel.data('feature');
+				var valueIdx = jel.data('index');
+				var feature = self.matrixKit.dataset.feature[featureId];
+				if (!jel.hasClass('edit-popup')) {
+
+					$('.dynamic-condition', infoDiv).remove();
+					var dynHead = $('tr.conditions', infoDiv)[0];
+					var postCell = $('td.postconditions', infoDiv)[0];
+
+					for (var i = 0, cl = feature.annotation.length; i < cl; ++i) {
+						var ano = feature.annotation[i];
+						// first add the column
+						var el = document.createElement('th');
+						el.className = 'dynamic-condition';
+						el.innerHTML = ano.p;
+						dynHead.appendChild(el);
+						// now add the value
+						el = document.createElement('td');
+						el.className = 'dynamic-condition';
+						el.innerHTML = ano.o;
+						postCell.parentNode.insertBefore(el, postCell);
+					}
+
+					// make sure there is at least one cell.
+					if (cl < 1) {
+						el = document.createElement('td');
+						el.className = 'dynamic-condition';
+						el.innerHTML = '-';
+						postCell.parentNode.insertBefore(el, postCell);
+					}
+
+					$('th.conditions', infoDiv).attr('colspan', cl);
+
+					var val = data.values[featureId];
+					if (!feature.isMultiValue || !$.isArray(val))
+						val = [val];
+					
+					jT.ui.updateTree(infoDiv, {
+						endpoint: feature.title,
+						guidance: feature.creator,
+						value: jT.ui.renderObjValue(val[valueIdx], feature.units, 'display'),
+					});
+
+					if (isDelete) {
+						$('.delete-box', infoDiv).show();
+						boxOptions.onOpen = function () {
+							var box = this;
+							var content = this.content[0];
+							if(val[valueIdx].deleted) {
+								// If the value is already deleted, show remarks
+								$('button.jt-alert', content).hide();
+								$('textarea', content).val(val[valueIdx].remarks);
+							}
+							else
+								$('button.jt-alert', content).on('click', function (){ deleteFeature(data, featureId, valueIdx, $('textarea', content).val(), jel[0]); box.close(); });
+						};
+					}
+					else
+						$('.delete-box', infoDiv).hide();
+
+					boxOptions.content = infoDiv.innerHTML;
+					new jBox('Tooltip', boxOptions).open();
+				} else { // edit mode
+					var parse = jT.ambit.parseFeatureId(featureId);
+					// map between UI fields and JSON properties
+					var valueMap = {
+						endpoint: 'effects[0].endpoint',
+						value: 'effects[0].result',
+						interpretation_result: 'interpretation.result',
+
+						type: 'reliability.r_studyResultType',
+						reference: 'citation.title',
+						justification: 'protocol.guideline[0]',
+						remarks: 'interpretation.criteria'
+					};
+
+					// the JSON that is about to be sent on Apply
+					var featureJson = {
+						owner: {
+							substance: {
+								uuid: data.compound.i5uuid
+							}
+						},
+						protocol: {
+							topcategory: parse.topcategory,
+							category: {
+								code: parse.category
+							},
+							endpoint: feature.title,
+							guideline: ['']
+						},
+						citation: {
+							year: (new Date()).getFullYear().toString()
+						},
+						parameters: { },
+						interpretation: { },
+						reliability: { },
+						effects: [{
+							result: { },
+							conditions: { }
+						}]
+					};
+
+					// we're taking the original jToxEndpoint editor here and glue our part after it.
+					boxOptions.content = jT.getTemplate('#jtox-endeditor').innerHTML + editDiv.innerHTML;
+					boxOptions.title = feature.title || parse.category;
+					boxOptions.closeButton = "box";
+					boxOptions.confirmButton = "Add";
+					boxOptions.cancelButton = "Cancel";
+					var endSetValue = function (e, field, value) {
+						var f = valueMap[field];
+						if (!f)
+							featureJson.effects[0].conditions[field] = value;
+						else
+							_.set(featureJson, f, value);
+					};
+
+					boxOptions.onOpen = function () {
+						var box = this;
+						var content = this.content[0];
+						jToxEndpoint.linkEditors(self.matrixKit, content, { category: parse.category, top: parse.topcategory, onchange: endSetValue, conditions: true });
+						$('input[type=button]', content).on('click', function (){ addFeature(data, featureId, featureJson, jel[0]); box.close();});
+					};
+					new jBox('Modal', boxOptions).open();
+				}
+			};
+
+			var addFeature = function(data, fId, value, element) {
+				self.edit.study.push(value);
+				dressButton();
+
+				// now fix the UI a bit, so we can see the
+				fId += '/' + self.edit.study.length;
+
+				var catId = jT.ambit.parseFeatureId(fId).category,
+						config = jT.$.extend(true, {}, self.matrixKit.settings.configuration.columns["_"], self.matrixKit.settings.configuration.columns[catId]),
+						f = null;
+
+				self.matrixKit.dataset.feature[fId] = f = {};
+				f.sameAs = "http://www.opentox.org/echaEndpoints.owl#" + catId;
+				f.title = value.effects[0].endpoint || (value.citation.title || "");
+				f.creator = value.protocol.guideline[0];
+				f.isMultiValue = true;
+				f.annotation = [];
+				for (var cId in value.effects[0].conditions) {
+					f.annotation.push({
+						'p': cId,
+						'o': jT.ui.renderObjValue(value.effects[0].conditions[cId])
+					});
+				}
+
+				data.values[fId] = [value.effects[0].result];
+
+				var preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? f.title : null;
+				preVal = [f.creator, preVal].filter(function(value){return value!==null}).join(' ');
+
+				var html = 	'<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.edit.study.length - 1) + '"></span>&nbsp;' + 
+							'<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderObjValue(value.effects[0].result, null, 'display', preVal) + '</a>',
+					span = document.createElement('div');
+
+				span.innerHTML = html;
+				element.parentNode.insertBefore(span, element);
+				self.matrixKit.equalizeTables();
+
+				$('.info-popup', span).on('click', function (e) { onEditClick.call(this, data); });
+				$('.delete-popup', span).on('click', function (e) {
+					var idx = $(this).data('index');
+					self.edit.study.splice(idx, 1);
+					$(this.parentNode).remove();
+					dressButton();
+				});
+			};
+
+			var deleteFeature = function (data, featureId, valueIdx, reason, element) {
+				self.edit.study.push({
+					owner: { substance: { uuid: data.compound.i5uuid } },
+					effects_to_delete: [{
+						result: {
+							idresult: data.values[featureId][valueIdx].idresult,
+							deleted: true,
+							remarks: reason
+						},
+					}]
+				});
+				dressButton();
+
+				// Now deal with the UI
+				$(element).addClass('unsaved-study');
+				$('span', element.parentNode)
+					.removeClass('ui-icon-circle-minus')
+					.addClass('ui-icon-circle-plus')
+					.data('index', self.edit.study.length - 1)
+					.on('click.undodelete', function () {
+						var idx = $(this).data('index');
+						$(this).addClass('ui-icon-circle-minus').removeClass('ui-icon-circle-plus').off('click.undodelete').data('index', null);
+						$('a', this.parentNode).removeClass('unsaved-study');
+						self.edit.study.splice(idx, 1);
+						dressButton();
+					});
+			};
+
+			var infoDiv = $('#info-box')[0];
+			var editDiv = $('#edit-box')[0];
+
+			// now, fill the select with proper values...
+			var df = document.createDocumentFragment();
+			for (var id in self.settings.studyTypeList) {
+				var opt = document.createElement('option');
+				opt.value = id;
+				opt.innerHTML = self.settings.studyTypeList[id].title;
+				df.appendChild(opt);
+			}
+
+			$('select.type-list', editDiv)[0].appendChild(df);
+
+			self.matrixKit = self.prepareMatrixKit($('.jtox-toolkit', panel)[0]);
+
+			self.matrixKit.settings.onRow = function (row, data, index) {
+				// equalize multi-rows, if there are any
+				jT.$('td.jtox-multi .jtox-diagram span.ui-icon', row).on('click', function () {
+					setTimeout(function () {
+						jT.tables.equalizeHeights.apply(window, jT.$('td.jtox-multi table tbody', row).toArray());
+					}, 50);
+				});
+
+				$('.info-popup, .edit-popup, .delete-popup', row).on('click', function (e) {
+					if (!$(this).hasClass('delete-popup') || $(this).data('index') == null)
+						onEditClick.call(this, data);
+				});
+
+				var self = this;
+				$('button.jtox-up', row).on('click', function(){
+					var i = $(self.fixTable).find('> tbody > tr').index(row);
+					var varRow = $(self.varTable).find('> tbody > tr')[i];
+					$(row).insertBefore( $(row.previousElementSibling) );
+					$(varRow).insertBefore( $(varRow.previousElementSibling) );
+				});
+				$('button.jtox-down', row).on('click', function(){
+					var i = $(self.fixTable).find('> tbody > tr').index(row);
+					var varRow = $(self.varTable).find('> tbody > tr')[i];
+					$(row).insertAfter( $(row.nextElementSibling) );
+					$(varRow).insertAfter( $(varRow.nextElementSibling) );
+				});
+			};
+
+			$('.create-button', panel).on('click', function () {
+				var el = this;
+				$(el).addClass('loading');
+				jT.ambit.call(self, self.bundleUri + '/matrix/working', { method: 'POST', data: { deletematrix:  false } }, function (result, jhr) {
+					$(el).removeClass('loading');
+					if (!!result) {
+						$('.jtox-toolkit', panel).show();
+						$('.save-button', panel).show();
+						$('.create-button', panel).hide();
+						$('#xfinal').button('enable');
+						self.bundleSummary.matrix++;
+						self.edit.matrixEditable = true;
+						self.matrixKit.query(self.bundleUri + '/matrix/working');
+					}
+				});
+			});
+
+			$(panel).addClass('initialized');
+		}
+
+		// finally decide what query to make, depending on the
+		$('.save-button', panel).hide();
+		$('.create-button', panel).hide();
+		var queryUri = null;
+		if (panId == 'xinitial') {
+			$('.jtox-toolkit', panel).show();
+			self.edit.matrixEditable = false;
+			queryUri = self.bundleUri + '/dataset?mergeDatasets=true';
+		}
+		else {
+			var queryPath = (panId == 'xfinal') ? '/matrix/final' : '/matrix/working',
+					editable = (panId != 'xfinal');
+					
+			if (self.bundleSummary.matrix > 0) {
+				$('.jtox-toolkit', panel).show();
+				queryUri = self.bundleUri + queryPath;
+				self.edit.matrixEditable = editable;
+				if (editable)
+					$('.save-button', panel).show();
+				else
+					$('.save-button', panel).hide();
+			}
+			else {
+				$('.jtox-toolkit', panel).hide();
+				$('.create-button', panel).show();
+			}
+		}
+
+		if (!!queryUri)
+			self.matrixKit.query(queryUri);
+	};
+
+	// called when a sub-action in endpoint selection tab is called
+	MatrixKit.prototype.onEndpoint = function (id, panel) {
+		var self = this;
+		var sub = $(".tab-" + id.substr(3), panel)[0];
+		sub.parentNode.style.left = (-sub.offsetLeft) + 'px';
+		var bUri = encodeURIComponent(self.bundleUri);
+
+		if (id == "endsubstance") {
+
+			if (!self.substancesQueryKit) {
+				self.substancesQueryKit = self.prepareSubstanceKit($('#jtox-substance-query')[0]);
+
+				/* Setup expand/collaps all buttons */
+				$('#structures-expand-all').on('click', function(){
+					$('#jtox-substance-query .jtox-details-open.ui-icon-folder-collapsed').each(function(){
+						this.click();
+					});
+				});
+				$('#structures-collapse-all').on('click', function(){
+					$('#jtox-substance-query .jtox-details-open.ui-icon-folder-open').each(function(){
+						this.click();
+					});
+				});
+
+			}
+
+			self.substancesQueryKit.kit().queryDataset(self.bundleUri + '/compound');
+		}
+		else { // i.e. endpoints
+			var checkAll = $('input', sub)[0];
+			if (sub.childElementCount == 1) {
+				var root = document.createElement('div');
+				sub.appendChild(root);
+				self.endpointKit = new jToxEndpoint(root, {
+					selectionHandler: "onSelectEndpoint",
+					onRow: function (row, data, index) {
+						if (!data.bundles)
+							return;
+						var bundleInfo = data.bundles[self.bundleUri];
+						if (!!bundleInfo && bundleInfo.tag == "selected")
+							$('input.jtox-handler', row).attr('checked', 'checked');
+					}
+				});
+				$(checkAll).on('change', function (e) {
+					var qUri = self.settings.baseUrl + "/query/study?mergeDatasets=true&bundleUri=" + bUri;
+					if (!this.checked)
+						qUri += "&selected=substances&filterbybundle=" + bUri;
+					self.endpointKit.loadEndpoints(qUri);
+				});
+			}
+			$(checkAll).trigger('change'); // i.e. initiating a proper reload
+		}
+	};
+
+	// called when a sub-action in structures selection tab is called
+	MatrixKit.prototype.onStructures = function (id, panel) {
+		var self = this;
+		if (!self.queryKit) {
+			self.queryKit = jT.kit($('#jtox-query')[0]);
+			self.queryKit.setWidget("bundle", self.rootElement);
+			self.queryKit.kit().settings.fixedWidth = '200px';
+			// provid onRow function so the buttons can be se properly...
+			self.queryKit.kit().settings.onRow = function (row, data, index) {
+				if (!data.bundles)
+					return;
+
+				var bundleInfo = data.bundles[self.bundleUri] || {};
+				// we need to setup remarks field regardless of bundleInfo presence
+				var noteEl = $('textarea.remark', row).on('change', function (e) {
+					var data = jT.ui.rowData(this),
+							el = this,
+							bInfo = data.bundles[self.bundleUri] || {};
+					$(el).addClass('loading');
+					jT.ambit.call(self, self.bundleUri + '/compound', {
+						'method': 'PUT',
+						'data': {
+							compound_uri: data.compound.URI,
+							command: 'add',
+							tag: bInfo.tag,
+							remarks: $(el).val()
+						}
+					}, function (result) {
+						$(el).removeClass('loading');
+					});
+				});
+
+				if (!!bundleInfo.tag) {
+					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
+					noteEl.val(bundleInfo.remarks);
+				}
+				else
+					noteEl.prop('disabled', true).val(' ');
+			};
+		}
+
+		if (id == 'structlist')
+			self.queryKit.kit().queryDataset(self.bundleUri + '/compound');
+		else
+			self.queryKit.query();
+	};
+
+	MatrixKit.prototype.onReport = function(id, panel){
+		var self = this;
+
+		if (!$(panel).hasClass('initialized')) {
+
+			jT.ui.updateTree(panel, self.bundle);
+
+			$('#generate-doc').on('click', function(){
+				var loadFile = function(url, callback){
+					JSZipUtils.getBinaryContent(url, callback);
+				}
+
+				function get(url) {
+					// Return a new promise.
+					return new Promise(function(resolve, reject) {
+						// Do the usual XHR stuff
+						var req = new XMLHttpRequest();
+						req.open('GET', url);
+						req.responseType = 'arraybuffer';
+
+						req.onload = function() {
+							// This is called even on 404 etc
+							// so check the status
+							if (req.status == 200) {
+								// Resolve the promise with the response text
+								resolve(req.response);
+							}
+							else {
+								// Otherwise reject with the status text
+								// which will hopefully be a meaningful error
+								reject(Error(req.statusText));
+							}
+						};
+
+						// Handle network errors
+						req.onerror = function() {
+							reject(Error("Network Error"));
+						};
+
+						// Make the request
+						req.send();
+					});
+				}
+
+				function getData() {
+
+					return new Promise(function(resolve, reject){
+
+						var data = $.extend(true, {}, self.bundle);
+						data.created = formatDate(self.bundle.created);
+						data.updated = formatDate(self.bundle.updated);
+						data.structures = [];
+
+						var imagePromises = [];
+
+						var structuresFixRows = $('#jtox-report-query .jtox-ds-fixed tbody tr');
+						var structuresVarRows = $('#jtox-report-query .jtox-ds-variable tbody tr');
+						structuresFixRows.each(function(index){
+							var structure = {"index": index + 1}, fr = $(this), vr = $(structuresVarRows[index]);
+							structure.tag = fr.find('td:first-child button.active').text();
+
+							var image = fr.find('img.jtox-smalldiagram')[0];
+
+							var imagePromise = get(image.src).then(function(data){
+									structure.image = {
+										"data": data.slice(0),
+										"size": [image.width, image.height]
+									}
+								});
+
+							imagePromises.push(imagePromise);
+
+							var cells = vr.find('td:not(.jtox-hidden)');
+							structure.casrn = $(cells[0]).text();
+							structure.ecnum = $(cells[1]).text();
+							structure.names = $(cells[2]).text();
+							structure.rationale = $(cells[3]).find('textarea').val();
+							structure.substances = [];
+							data.structures.push(structure);
+						});
+
+						var substanceContainers = $('#jtox-report-substance-query .jtox-substance');
+						substanceContainers.each(function(index){
+							var structure = data.structures[index],
+									substanceRows = $(this).find('tbody tr');
+							substanceRows.each(function(i){
+								var cells = $(this).find('td'),
+										substance = {};
+								substance.i = i + 1;
+								substance.name = $(cells[1]).text();
+								substance.uuid = $(cells[2]).text();
+								substance.type = $(cells[3]).text();
+								substance.pubname = $(cells[4]).text();
+								substance.refuuid = $(cells[5]).text();
+								substance.owner = $(cells[6]).text();
+								substance.info = $(cells[7]).text();
+								substance.contained = $(cells[8]).text();
+								structure.substances.push(substance);
+							});
+						});
+
+						data.matrix = [];
+						var matrixRows = $('#jtox-report-matrix .jtox-ds-fixed .dataTable > tbody > tr');
+						matrixRows.each(function(){
+							var rowData = {};
+							var cells = $(this).find('> td:not(.jtox-hidden)');
+							rowData.cas = $(cells[1]).text();
+							rowData.substancename = $(cells[2]).text();
+							rowData.i5uuid = $(cells[3]).text();
+							rowData.datasource = $(cells[4]).text();
+							rowData.tag = $(cells[5]).text();
+							rowData.constituentname = $(cells[7]).text();
+							rowData.content = $(cells[8]).text();
+							rowData.containedas = $(cells[9]).text();
+							data.matrix.push(rowData);
+						});
+
+						var structuresCount = data.matrix.length;
+						var groups = Math.ceil(structuresCount/3);
+
+						data.dataMatrix = [];
+						var structureRows = $('#jtox-report-final thead tr');
+						var dataRows = $('#jtox-report-final tbody tr');
+						var tagCells = $(structureRows[0]).find('th');
+						var nameCells = $(structureRows[1]).find('th');
+						var casCells = $(structureRows[2]).find('th');
+						for (var i = 0; i < groups; i++) {
+							var dataGroup = {
+								tag1: '',
+								tag2: '',
+								tag3: '',
+								name1: '',
+								name2: '',
+								name3: '',
+								cas1: '',
+								cas2: '',
+								cas3: '',
+								data: []
+							};
+							for (var c = 1, cl = Math.min(3, tagCells.length - 3*i); c <= cl; c++) {
+								dataGroup['tag' + c] = $(tagCells[3*i + c]).text();
+							}
+							for (var c = 1, cl = Math.min(3, nameCells.length - 3*i); c <= cl; c++) {
+								dataGroup['name' + c] = $(nameCells[3*i + c]).text();
+							}
+							for (var c = 1, cl = Math.min(3, casCells.length - 3*i); c <= cl; c++) {
+								dataGroup['cas' + c] = $(casCells[3*i + c]).text();
+							}
+							dataRows.each(function(){
+								var cells = $(this).find('th, td');
+								var row = { title: '', value1: '', value2: '', value3: ''};
+								var prefix = '';
+								row.title = $(cells[0]).text();
+								for (var c = 1, cl = Math.min(3, nameCells.length - 3*i); c <= cl; c++) {
+									var parts = [];
+									if (cells[3*i + c] !== undefined) {
+										$(cells[3*i + c].childNodes).each(function(){
+											if ( $('.ui-icon-calculator', this).length > 0 ) {
+												prefix = '<w:r><w:rPr><w:color w:val="FF0000" /></w:rPr><w:t xml:space="preserve">';
+											}
+											else {
+												prefix = '<w:r><w:rPr><w:color w:val="0000FF" /></w:rPr><w:t xml:space="preserve">';
+											}
+											parts.push( prefix + _.escape($(this).text()) + '</w:t></w:r>' );
+										});
+									}
+									row['value' + c] = '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>';
+								}
+								dataGroup.data.push(row);
+							});
+							data.dataMatrix.push(dataGroup);
+						}
+
+						data.adstructures = [];
+						var adstructureEls = $('#jtox-report-gap-filling section');
+						adstructureEls.each(function(){
+
+							var structure = {name: $('h3', this).text(), features: []}
+
+							$(this).children('div').each(function(){
+								var feature = {name: $('h4', this).html(), data: []};
+								$('div.popup-box', this).each(function(){
+									var entry = {
+										endpoint: $('td.the-endpoint', this).text(),
+										value: $('td.the-value', this).text(),
+										guidance: $('td.postconditions', this).text(),
+										rationaleTitle: $('h5', this).text(),
+										rationale: $('p.justification', this).text(),
+										conditions: []
+									};
+									var dch = $('th.dynamic-condition', this);
+									var dcd = $('td.dynamic-condition', this);
+									dch.each(function(i){
+										entry.conditions.push({
+											condition: this.innerHTML,
+											value: dcd[i].innerHTML
+										});
+									});
+									feature.data.push(entry);
+								});
+								structure.features.push(feature);
+							});
+
+							data.adstructures.push(structure);
+
+						});
+
+						data.ddstructures = [];
+						var ddstructureEls = $('#jtox-report-deleting-data section');
+						ddstructureEls.each(function(){
+
+							var structure = {name: $('h3', this).text(), features: []}
+
+							$(this).children('div').each(function(){
+								var feature = {name: $('h4', this).html(), data: []};
+								$('div.popup-box', this).each(function(){
+									var entry = {
+										endpoint: $('td.the-endpoint', this).text(),
+										value: $('td.the-value', this).text(),
+										guidance: $('td.postconditions', this).text(),
+										rationale: $('p.justification', this).text(),
+										conditions: []
+									};
+									var dch = $('th.dynamic-condition', this);
+									var dcd = $('td.dynamic-condition', this);
+									dch.each(function(i){
+										entry.conditions.push({
+											condition: this.innerHTML,
+											value: dcd[i].innerHTML
+										});
+									});
+									feature.data.push(entry);
+								});
+								structure.features.push(feature);
+							});
+
+							data.ddstructures.push(structure);
+
+						});
+
+
+						// We use Promose.all to wait for the images to load
+						// and then resolve with data
+						return Promise.all(imagePromises).then(function(){
+							resolve(data);
+						}, reject);
+
+					});
+
+				} // End getData function
+
+				getData().then(function(data){
+
+					loadFile("../report/assessment-report.docx", function(err, content){
+						if (err) { throw err };
+
+						var doc = new Docxgen();
+
+						var imageModule = new ImageModule({centered:false});
+						imageModule.getSizeFromData=function(imgData) {
+							return [imgData.size[0] / 2, imgData.size[1] / 2];
+						}
+						imageModule.getImageFromData=function(imgData) {
+							return imgData.data.slice(0);
+						}
+						doc.attachModule(imageModule);
+
+						doc.load(content);
+
+						doc.setData( data ); //set the templateVariables
+						doc.render(); //apply them (replace all occurences of {first_name} by Hipp, ...)
+						var output = doc.getZip().generate({type:"blob", compression: 'DEFLATE'}); //Output the document using Data-URI
+						saveAs(output, "report.docx");
+					});
+
+				}, function(error){
+					console.log('Error', error);
+				});
+
+			});
+
+			$(panel).addClass('initialized');
+
+		}
+
+		if (!self.reportQueryKit) {
+			self.reportQueryKit = jT.kit($('#jtox-report-query')[0]);
+			self.reportQueryKit.setWidget("bundle", self.rootElement);
+			self.reportQueryKit.kit().settings.fixedWidth = '200px';
+			// provid onRow function so the buttons can be se properly...
+			self.reportQueryKit.kit().settings.onRow = function (row, data, index) {
+				if (!data.bundles)
+					return;
+
+				var bundleInfo = data.bundles[self.bundleUri] || {};
+				if (!!bundleInfo.tag) {
+					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
+				}
+				if (!!bundleInfo.remarks) {
+					$('textarea.remark', row).val(bundleInfo.remarks).prop('readonly', true);
+				}
+			};
+
+		}
+		self.reportQueryKit.kit().queryDataset(self.bundleUri + '/compound');
+
+		if (!self.reportSubstancesQueryKit) {
+
+			self.reportSubstancesQueryKit = self.prepareSubstanceKit($('#jtox-report-substance-query')[0]);
+
+			self.reportSubstancesQueryKit.kit().settings.onRow = function (row, data, index) {
+				if (!data.bundles){
+					return;
+				}
+				var bundleInfo = data.bundles[self.bundleUri] || {};
+				$('textarea.remark', row).val(bundleInfo.remarks).prop('readonly', true);
+				if (!!bundleInfo.tag) {
+					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
+				}
+			};
+
+		}
+
+		self.reportSubstancesQueryKit.kit().queryDataset(self.bundleUri + '/compound');
+
+
+		if (!self.reportMatrixKit) {
+
+			self.reportMatrixKit = self.prepareMatrixKit($('#jtox-report-matrix .jtox-toolkit')[0]);
+
+			self.reportMatrixKit.settings.showTabs = false;
+			self.reportMatrixKit.settings.showControls = false;
+			self.reportMatrixKit.settings.fixedWidth = "100%";
+
+			self.reportMatrixKit.settings.onComplete = function () {
+				var self = this,
+						table = $('<table class="dataTable"><thead></thead><tbody></tbody></table>'),
+						head = table.find('thead'),
+						body = table.find('tbody');
+
+				var ntr = $('<tr><th>Substance name</th></tr>');
+				var ttr = $('<tr><th>Tag</th></tr>');
+				var ctr = $('<tr><th>CAS No.</th></tr>');
+				$(self.fixTable).find('> tbody > tr').each(function(){
+					var cth = $('<th></th>').html( $(this).find('td')[2].innerHTML );
+					ctr.append(cth);
+					var nth = $('<th></th>').html( $(this).find('td')[3].innerHTML );
+					ntr.append(nth);
+					var tth = $('<th></th>').append( $($(this).find('td')[6]).find('button.active').clone() );
+					ttr.append(tth);
+				});
+				head.append(ttr).append(ntr).append(ctr);
+
+				$(self.varTable).find('thead th').each(function(index){
+					if (this.innerHTML == '') return;
+					var $this = $(this);
+					var tr = $('<tr></tr>').append('<th>' + $this.html() + '</th>');
+					$(self.varTable).find('tbody > tr').each(function(){
+						tr.append( '<td>' + $(this).find('td:nth-child(' + (index+1) + ')').html() + '</td>' );
+					});
+					body.append(tr);
+				});
+
+				$('#jtox-report-final > div').html('').append(table);
+
+				$(self.varTable).remove();
+				self.equalizeTables();
+
+				// Generate appendixes 2 and 3
+
+				var substanceSection = $('#jtox-report-substance'),
+					featureSection = $('#jtox-report-feature'),
+					infoDiv = $('#info-box'),
+					addedData = [],
+					deletedData = [];
+
+				for ( var i = 0, sl = self.dataset.dataEntry.length; i < sl; i++ ) {
+					var substance = self.dataset.dataEntry[i];
+					for ( var theId in substance.values ) {
+						if( $.isArray(substance.values[theId]) ){
+							var feature = self.dataset.feature[theId];
+							for ( var j = 0, vl = substance.values[theId].length; j < vl; j++ ) {
+								var value = substance.values[theId][j];
+								if (feature.isModelPredictionFeature || value.deleted ) {
+
+									for ( var fId in self.feature ) {
+										var f = self.feature[fId];
+										if ( f.sameAs == feature.sameAs ) {
+											var featureId = f.URI;
+										}
+									}
+
+									if ( feature.isModelPredictionFeature ) {
+										// Append data to Appendix 2
+										if( !addedData[i] ) {
+											addedData[i] = {};
+										}
+										if( !addedData[i][featureId] ){
+											addedData[i][featureId] = [];
+										}
+										addedData[i][featureId].push( {
+											feature: feature,
+											value: value
+										} );
+									}
+									if ( value.deleted ) {
+										// Append data to Appendix 3
+										if( !deletedData[i] ) {
+											deletedData[i] = {};
+										}
+										if( !deletedData[i][featureId] ){
+											deletedData[i][featureId] = [];
+										}
+										deletedData[i][featureId].push( {
+											feature: feature,
+											value: value
+										} );
+									}
+								}
+							}
+						}
+					}
+				}
+
+				for( var i = 0, al = addedData.length; i < al; i++ ){
+					if( !addedData[i] ) continue;
+					var newSection = substanceSection.clone().removeAttr('id');
+					var substance = self.dataset.dataEntry[i];
+					jT.ui.updateTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
+					for(fId in addedData[i]){
+						var set = addedData[i][fId];
+
+						var newFeature = featureSection.clone().removeAttr('id');
+						jT.ui.updateTree(newFeature[0], {title: self.dataset.feature[fId].title});
+
+						for ( var j = 0, sl = set.length; j < sl; j++ ) {
+
+							var newInfo = infoDiv.clone().removeAttr('id');
+							var feature = set[j].feature;
+							var value = set[j].value;
+
+							$('.dynamic-condition', newInfo).remove();
+							var dynHead = $('tr.conditions', newInfo)[0];
+							var postCell = $('td.postconditions', newInfo)[0];
+
+							for (var k = 0, cl = feature.annotation.length; k < cl; ++k) {
+								var ano = feature.annotation[k];
+								// first add the column
+								var el = document.createElement('th');
+								el.className = 'dynamic-condition';
+								el.innerHTML = ano.p;
+								dynHead.appendChild(el);
+								// now add the value
+								el = document.createElement('td');
+								el.className = 'dynamic-condition';
+								el.innerHTML = ano.o;
+								postCell.parentNode.insertBefore(el, postCell);
+							}
+
+							// make sure there is at least one cell.
+							if (cl < 1) {
+								el = document.createElement('td');
+								el.className = 'dynamic-condition';
+								el.innerHTML = '-';
+								postCell.parentNode.insertBefore(el, postCell);
+							}
+
+							$('th.conditions', newInfo).attr('colspan', cl);
+
+							jT.ui.updateTree(newInfo, {
+								endpoint: feature.title,
+								guidance: '',
+								value: jT.ui.renderObjValue(value, feature.units, 'display'),
+								remarks: feature.creator,
+								studyType: feature.source.type
+							});
+
+							newFeature.append( newInfo );
+						}
+
+						newSection.append( newFeature );
+					}
+
+					$('#jtox-report-gap-filling').append( newSection );
+				}
+
+				for( var i = 0, al = deletedData.length; i < al; i++ ){
+					if( !deletedData[i] ) continue;
+					var newSection = substanceSection.clone().removeAttr('id');
+					var substance = self.dataset.dataEntry[i];
+					jT.ui.updateTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
+					for(fId in deletedData[i]){
+
+						var set = deletedData[i][fId];
+						var newFeature = featureSection.clone().removeAttr('id');
+						jT.ui.updateTree(newFeature[0], {title: self.dataset.feature[fId].title});
+
+						for ( var j = 0, sl = set.length; j < sl; j++ ) {
+
+							var newInfo = infoDiv.clone().removeAttr('id');
+							var feature = set[j].feature;
+							var value = set[j].value;
+
+							$('.dynamic-condition', newInfo).remove();
+							var dynHead = $('tr.conditions', newInfo)[0];
+							var postCell = $('td.postconditions', newInfo)[0];
+
+							for (var k = 0, cl = feature.annotation.length; k < cl; ++k) {
+								var ano = feature.annotation[k];
+								// first add the column
+								var el = document.createElement('th');
+								el.className = 'dynamic-condition';
+								el.innerHTML = ano.p;
+								dynHead.appendChild(el);
+								// now add the value
+								el = document.createElement('td');
+								el.className = 'dynamic-condition';
+								el.innerHTML = ano.o;
+								postCell.parentNode.insertBefore(el, postCell);
+							}
+
+							// make sure there is at least one cell.
+							if (cl < 1) {
+								el = document.createElement('td');
+								el.className = 'dynamic-condition';
+								el.innerHTML = '-';
+								postCell.parentNode.insertBefore(el, postCell);
+							}
+
+							$('th.conditions', newInfo).attr('colspan', cl);
+
+							jT.ui.updateTree(newInfo, {
+								endpoint: feature.title,
+								guidance: feature.creator,
+								value: jT.ui.renderObjValue(value, feature.units, 'display'),
+								remarks: value.remarks
+							});
+
+							newInfo.find('h5').remove();
+
+							newFeature.append( newInfo );
+						}
+
+						newSection.append( newFeature );
+					}
+
+					$('#jtox-report-deleting-data').append( newSection );
+				}
+			};
+
+			self.reportMatrixKit.settings.onRow = function (row, data, index) {
+
+				// equalize multi-rows, if there are any
+				setTimeout(function () {
+					jT.tables.equalizeHeights.apply(window, jT.$('td.jtox-multi table tbody', row).toArray());
+				}, 50);
+			};
+		}
+
+		var queryUri = self.bundleUri + '/matrix/final';
+		if (!!queryUri) {
+			self.reportMatrixKit.query(queryUri);
+		}
+	};
+
+	MatrixKit.prototype.prepareSubstanceKit = function(rootEl){
+		var self = this;
+
+		var kit = jT.kit(rootEl);
+
+		kit.setWidget("bundle", self.rootElement);
+		kit.kit().settings.fixedWidth = '100%';
+		kit.kit().settings.bUri = self.bundleUri;
+
+		kit.kit().settings.configuration.baseFeatures['http://www.opentox.org/api/1.1#ChemicalName'].primary = true;
+		kit.kit().settings.configuration.baseFeatures['http://www.opentox.org/api/1.1#CASRN'].primary = true;
+		kit.kit().settings.configuration.baseFeatures['http://www.opentox.org/api/1.1#EINECS'].primary = true;
+		kit.kit().settings.configuration.baseFeatures['http://www.opentox.org/api/1.1#Reasoning'].primary = true;
+
+		// Modify the #IdRow not to show tag buttons and add #Tag column that show the selected tag.
+		kit.kit().settings.configuration.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "sClass": "center"}, render: function (data, type, full) {
+			if (type != 'display')
+				return data || 0;
+			var html = "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>";
+			html += '<span class="jtox-details-open ui-icon ui-icon-folder-collapsed" title="Press to open/close detailed info for this compound"></span>';
+			return html;
+		} };
+
+		kit.kit().settings.configuration.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "sClass": "center"}, render: function (data, type, full) {
+
+			if (type != 'display')
+				return data || 0;
+
+			var html = "";
+			var bInfo = full.bundles[self.bundleUri];
+			if (!bInfo) {
+				return html;
+			}
+			if (!!bInfo.tag) {
+				var tag = (bInfo.tag == 'cm') ? 'CM' : bInfo.tag.substr(0,1).toUpperCase();
+				html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
+			}
+
+			return html;
+		} };
+
+		kit.kit().settings.configuration.groups.Identifiers.push('#Tag');
+
+		return kit;
+	};
+
+	MatrixKit.prototype.prepareMatrixKit = function(rootEl){
+		var self = this;
+
+		jTConfig.matrix.groups = function(miniset, kit) {
+			var groups = { "Identifiers" : self.settings.matrixIdentifiers.concat(self.settings.matrixMultiRows) },
+				groupids = [],
+				endpoints = {};
+
+			var fRender = function (feat, theId) {
+				return function (data, type, full) {
+					if (type != 'display')
+						return '-';
+
+					var html = '';
+					for (var fId in kit.dataset.feature) {
+						var f = kit.dataset.feature[fId];
+						if (f.sameAs != feat.sameAs || full.values[fId] == null)
+							continue;
+
+						var catId = jT.ambit.parseFeatureId(fId).category,
+								config = jT.$.extend(true, {}, kit.settings.configuration.columns["_"], kit.settings.configuration.columns[catId]);
+
+						var theData = full.values[fId];
+						var preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>"+f.title+"</strong>" : null;
+
+						var icon = f.isModelPredictionFeature?"ui-icon-calculator":"ui-icon-tag";
+						var studyType = "<span class='ui-icon "+icon+"' title='" + f.source.type + "'></span>";
+						//preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : ');
+
+						var postVal = '', postValParts = [], parameters = [], conditions = [];
+						for (var i = 0, l = f.annotation.length; i < l; i++){
+							var a = f.annotation[i];
+							if ( a.type == 'conditions' && _.get(config, 'conditions["' + a.p.toLowerCase() + '"].inMatrix') == true ) {
+								var t = _.get(config, 'conditions["' + a.p.toLowerCase() + '"].sTitle') || a.p;
+								conditions.push(t + ' = ' + a.o);
+							}
+							else if (a.type == 'parameters') {
+								parameters.push(a.o);
+							}
+						}
+						if(parameters.length > 0){
+							postValParts.push('<span>' + parameters.join(', ') + '</span>');
+						}
+						if(conditions.length > 0){
+							postValParts.push('<span>' + conditions.join(', ') + '</span>');
+						}
+						if(_.get(config, 'protocol.guideline.inMatrix') == true){
+							if(f.creator !== undefined && f.creator != null && f.creator != '' && f.creator != 'null' && f.creator != 'no data'){
+								postValParts.push('<span class="shortened" title="'+f.creator+'">'+f.creator + '</span>');
+							}
+						}
+						postVal = (postValParts.length > 0) ? '(' + postValParts.join(', ') + ')' : '';
+
+						if (!f.isMultiValue || !$.isArray(theData)){
+							theData = [theData];
+						}
+
+						// now - ready to produce HTML
+						for (var i = 0, vl = theData.length; i < vl; ++i) {
+							var d = theData[i];
+							if (d.deleted && !self.edit.matrixEditable)
+								continue;
+							html += '<div>';
+							if (self.edit.matrixEditable) {
+								if (d.deleted){
+									html += '<span class="ui-icon ui-icon-info delete-popup"></span>&nbsp;';
+								}
+								else {
+									html += '<span class="ui-icon ui-icon-circle-minus delete-popup"></span>&nbsp;';
+								}
+							}
+							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderObjValue(d, f.units, 'display', preVal) + '</a>'
+									+ studyType
+									+ ' ' + postVal;
+							html += jT.ui.putInfo(full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId));
+							html += '</div>';
+						}
+					}
+
+					if (self.edit.matrixEditable)
+						html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
+
+					return  html;
+				};
+			};
+
+			for (var fId in miniset.feature) {
+				var feat = miniset.feature[fId];
+				if (feat.sameAs == null || feat.sameAs.indexOf("echaEndpoints.owl#") < 0)
+					continue;
+
+				var catId = jT.ambit.parseFeatureId(fId).topcategory;
+				var grp = groups[catId];
+				if (grp == null)
+					groups[catId] = grp = [];
+
+				if (endpoints[feat.sameAs] == null) {
+					endpoints[feat.sameAs] = true;
+					if (!feat.title)
+						feat.title = feat.sameAs.substr(feat.sameAs.indexOf('#') + 1);
+					feat.render = fRender(feat, fId);
+					feat.column = { sClass: "breakable", sWidth: "80px" };
+					grp.push(fId);
+				}
+			}
+
+			/*
+			* Sort columns alphabetically, in this case - by the category number.
+			*/
+			for(var grp in groups) {
+				if(grp != 'Identifiers'){
+					var group = groups[grp];
+					group.sort(function(a,b){
+						if (miniset.feature[a].title == miniset.feature[b].title) {
+							return 0;
+						}
+						return (miniset.feature[a].title < miniset.feature[b].title) ? -1 : 1;
+					});
+				}
+			}
+
+			/*
+			* Sort groups by the columns titles / category number.
+			* Since we are trying to sort an Object keys, which is
+			* itself nonsense in JavaScript, this may fail at any time.
+			*/
+			groupids = Object.keys(groups);
+
+			groupids.sort(function(a, b){
+				if (a == 'Identifiers') return -1;
+				if (b == 'Identifiers') return 1;
+				a = groups[a][0], b = groups[b][0];
+				if (miniset.feature[a].title == miniset.feature[b].title)
+					return 0;
+
+				return (miniset.feature[a].title < miniset.feature[b].title) ? -1 : 1;
+			})
+
+			var newgroups = {};
+
+			groupids.forEach(function(i, v) { newgroups[i] = groups[i]; });
+
+			groups = newgroups;
+
+			return groups;
+		};
+
+		var conf = $.extend(true, {}, jTConfig.matrix, config_study);
+
+		conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "sClass": "center"}, render: function (data, type, full) {
+			if (type != 'display')
+				return data || 0;
+			var bInfo = full.bundles[self.bundleUri];
+			var tag = 'target'; // the default
+			if (!!bInfo && !!bInfo.tag) {
+				tag = bInfo.tag;
+			}
+			var html = "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>";
+			if (self.edit.matrixEditable) {
+				html += '<button class="jt-toggle jtox-handler target' + ( (tag == 'target') ? ' active' : '') + '" data-tag="target" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Target">T</button>' +
+						'<button class="jt-toggle jtox-handler source' + ( (tag == 'source') ? ' active' : '') + '" data-tag="source" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Source">S</button>' +
+						'<button class="jt-toggle jtox-handler cm' + ( (tag == 'cm') ? ' active' : '') + '" data-tag="cm" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Category Member">CM</button>';
+			}
+			else {
+				tag = (tag == 'cm') ? 'CM' : tag.substr(0,1).toUpperCase();
+				html += '<button class="jt-toggle active" disabled="true">' + tag + '</button>';
+			}
+			html += '<div><button type="button" class="ui-button ui-button-icon-only jtox-up"><span class="ui-icon ui-icon-triangle-1-n">up</span></button><br />' +
+							'<button type="button" class="ui-button ui-button-icon-only jtox-down"><span class="ui-icon ui-icon-triangle-1-s">down</span></button><br /></div>'
+			return html;
+		} };
+
+		conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "sClass": "center"}, render: function (data, type, full) {
+
+			if (type != 'display')
+				return data || 0;
+
+			var html = "";
+			var bInfo = full.component.bundles[self.bundleUri];
+			if (!bInfo) {
+				return html;
+			}
+			if (!!bInfo.tag) {
+				var tag = (bInfo.tag == 'cm') ? 'CM' : bInfo.tag.substr(0,1).toUpperCase();
+				html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
+			}
+			if (!!bInfo.remarks && bInfo.remarks != '') {
+				html += jT.ui.putInfo(null, bInfo.remarks);
+			}
+
+			return html;
+		} };
+
+		conf.baseFeatures['http://www.opentox.org/api/1.1#CASRN'].primary = true;
+
+		var featuresInitialized = false;
+
+		matrixKit = new jToxCompound(rootEl, {
+			rememberChecks: true,
+			tabsFolded: true,
+			showDiagrams: true,
+			showUnits: false,
+			hasDetails: false,
+			fixedWidth: "650px",
+			configuration: conf,
+			featureUri: self.bundleUri + '/property',
+			onPrepared: function (miniset, kit) {
+				if (featuresInitialized)
+					return;
+				// this is when we have the features combined, so we can make the multi stuff
+				var getRender = function (fId, oldData, oldRender) {
+					return function (data, type, full) {
+						return typeof data != 'object' ? '-' : jT.ui.renderMulti(data, type, full, function (_data, _type, _full){
+							var dt = _.get(_data, (fId.indexOf('#Diagram') > 0 ? 'component.' : '') + oldData);
+							return (typeof oldRender == 'function' ? oldRender(dt, _type, fId.indexOf('#Diagram') > 0 ? _data.component : _data) : dt);
+						});
+					};
+				};
+
+				// and now - process the multi-row columns
+				for (var i = 0, mrl = self.settings.matrixMultiRows.length;i < mrl; ++i) {
+					var fId = self.settings.matrixMultiRows[i];
+					var mr = miniset.feature[fId];
+					mr.render = getRender(fId, mr.data, mr.render);
+					mr.data = 'composition';
+					var col = mr.column;
+					if (col == null)
+						mr.column = col = { sClass: "jtox-multi" };
+					else if (col.sClass == null)
+						col.sClass = "jtox-multi";
+					else
+						col.sClass += " jtox-multi";
+				}
+
+				featuresInitialized = true;
+			},
+
+			onLoaded: function (dataset) {
+				jToxCompound.processFeatures(dataset.feature, this.feature);
+
+				// we need to process
+				for (var i = 0, dl = dataset.dataEntry.length; i < dl; ++i) {
+					var data = dataset.dataEntry[i];
+					if (data.composition != null) {
+						for (var j = 0;j < data.composition.length; ++j) {
+							jToxCompound.processEntry(data.composition[j].component, dataset.feature);
+						}
+					}
+				}
+			}
+
+		});
+
+		return matrixKit;
+	};
+
+	MatrixKit.prototype.load = function(bundleUri) {
+		var self = this;
+		jT.call(self, bundleUri, function (bundle) {
+			if (!!bundle) {
+				bundle = bundle.dataset[0];
+				self.bundleUri = bundle.URI;
+				self.bundle = bundle;
+
+				if (!!self.createForm) {
+
+					jT.ui.updateTree(self.createForm, bundle);
+
+					$('#status-' + bundle.status).prop('checked', true);
+
+					self.starHighlight($('.data-stars-field div', self.createForm)[0], bundle.stars);
+					self.createForm.stars.value = bundle.stars;
+
+					// now take care for enabling proper buttons on the Identifiers page
+					self.createForm.assFinalize.style.display = '';
+					self.createForm.assNewVersion.style.display = '';
+					self.createForm.assStart.style.display = 'none';
+
+				}
+
+				$(self.rootElement).tabs('enable', 1);
+
+				// now request and process the bundle summary
+				jT.call(self, bundle.URI + "/summary", function (summary) {
+					if (!!summary) {
+						for (var i = 0, sl = summary.facet.length; i < sl; ++i) {
+							var facet = summary.facet[i];
+							self.bundleSummary[facet.value] = facet.count;
+						}
+					}
+					self.progressTabs();
+				});
+
+				self.loadUsers();
+
+				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
+				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+				$('#export-initial-matrix').prop('href', self.bundleUri + '/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+				jT.fireCallback(self.settings.onLoaded, self);
+			}
+		});
+	};
+
+	MatrixKit.prototype.loadUsers = function () {
+		var self = this;
+		var bundle = self.bundle;
+		// request and process users with write access
+		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+			if (!!users) {
+				var select = $('#users-write');
+				if (select.length == 0) return;
+				select.data('tokenize').clear();
+				for (var i = 0, l = users.length; i < l; ++i) {
+					var u = users[i];
+					select.data('tokenize').tokenAdd(u.id, u.name, true);
+				}
+			}
+		});
+
+		// request and process users with read only access
+		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+			if (!!users) {
+				var select = $('#users-read');
+				if (select.length == 0) return;
+				select.data('tokenize').clear();
+				for (var i = 0, l = users.length; i < l; ++i) {
+					var u = users[i];
+					select.data('tokenize').tokenAdd(u.id, u.name, true);
+				}
+			}
+		});
+	};
+
+	MatrixKit.prototype.progressTabs = function () {
+		$(this.rootElement).tabs(this.bundleSummary.compound > 0 ? 'enable' : 'disable', 2);
+		$(this.rootElement).tabs(this.bundleSummary.substance > 0  && this.bundleSummary.property > 0 ? 'enable' : 'disable', 3);
+		if (this.bundleSummary.matrix > 0) {
+			$('#xfinal').button('enable');
+			$(this.rootElement).tabs('enable', 4);
+		}
+		else
+			$('#xfinal').button('disable');
+	};
+
+	MatrixKit.prototype.selectStructure = function (uri, what, el) {
+		var self = this;
+		var activate = !$(el).hasClass('active');
+		$(el).addClass('loading');
+		var noteEl = $('textarea.remark', self.queryKit.kit().getVarRow(el))[0];
+		jT.ambit.call(self, self.bundleUri + '/compound', {
+			method: 'PUT',
+			data: {
+				compound_uri: uri,
+				command: activate ? 'add': 'delete',
+				tag: what,
+				remarks: $(noteEl).val()
+			}
+		}, function (result) {
+			$(el).removeClass('loading');
+			if (!!result) {
+				$(el).toggleClass('active');
+				if (activate) {
+					self.bundleSummary.compound++;
+					$('button', el.parentNode).removeClass('active');
+					$(el).addClass('active');
+				}
+				else
+					self.bundleSummary.compound--;
+
+				$(noteEl).prop('disabled', !activate).val(activate ? "" : " ");
+				self.progressTabs();
+			}
+		});
+	};
+
+	MatrixKit.prototype.structuresLoaded = function (kit, dataset) {
+		if (document.body.className == 'structlist') {
+			this.bundleSummary.compound = dataset.dataEntry.length;
+			this.progressTabs();
+		}
+	};
+
+	MatrixKit.prototype.selectSubstance = function (uri, el) {
+		var self = this;
+		$(el).addClass('loading');
+		jT.ambit.call(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: el.checked ? 'add' : 'delete' } }, function (result) {
+			$(el).removeClass('loading');
+			if (!result)
+				el.checked = !el.checked; // i.e. revert
+			else {
+				if (el.checked)
+					self.bundleSummary.substance++;
+				else
+					self.bundleSummary.substance--;
+				self.progressTabs();
+				//console.log("Substance [" + uri + "] selected");
+			}
+		});
+	};
+
+	MatrixKit.prototype.tagSubstance = function (uri, el) {
+		var self = this;
+		var activate = !$(el).hasClass('active');
+		if (activate) {
+			$(el).addClass('loading');
+			jT.ambit.call(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: 'add', tag : $(el).data('tag')} }, function (result) {
+				$(el.parentNode).find('button.jt-toggle').removeClass('active');
+				$(el).removeClass('loading').addClass('active');
+				if (!result)
+					el.checked = !el.checked; // i.e. revert
+				else {
+					//console.log("Substance [" + uri + "] tagged " + $(el).data('tag'));
+				}
+			});
+		}
+	};
+
+	MatrixKit.prototype.selectEndpoint = function (topcategory, endpoint, el) {
+		var self = this;
+		$(el).addClass('loading');
+		jT.ambit.call(self, self.bundleUri + '/property', {
+			method: 'PUT',
+			data: {
+				'topcategory': topcategory,
+				'endpointcategory': endpoint,
+				'command': el.checked ? 'add' : 'delete'
+			}
+		}, function (result) {
+			$(el).removeClass('loading');
+			if (!result)
+				el.checked = !el.checked; // i.e. revert
+			else {
+				if (el.checked)
+					self.bundleSummary.property++;
+				else
+					self.bundleSummary.property--;
+				self.progressTabs();
+				//console.log("Endpoint [" + endpoint + "] selected");
+			}
+		});
+	};
+
+	// Now some handlers - they should be outside, because they are called within windows' context.
+	function onSelectStructure(e) {
+		MatrixKit.selectStructure($(this).data('data'), $(this).data('tag'), this);
+	};
+
+	function onBrowserFilled(dataset) {
+		MatrixKit.structuresLoaded(this, dataset);
+	};
+
+	function onSelectSubstance(e) {
+		MatrixKit.selectSubstance(this.value, this);
+	};
+
+	function onTagSubstance(e) {
+		MatrixKit.tagSubstance($(this).data('uri'), this);
+	};
+
+	function onSelectEndpoint(e) {
+		var rowData = jT.ui.rowData(this);
+		MatrixKit.selectEndpoint(rowData.subcategory, rowData.endpoint, this);
+	};
+
+	function preDetailedRow(index, cell) {
+		var self = this;
+		var data = this.dataset.dataEntry[index];
+		var uri = this.settings.baseUrl + '/substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + '&filterbybundle=' + encodeURIComponent(this.settings.bUri) + '&bundleUri=' + encodeURIComponent(this.settings.bUri);
+
+		var $row = $(cell.parentNode),
+				$idcell = $row.find('td:first-child'),
+				$button = $row.find('td:first-child > .jtox-details-open');
+
+		if( !!$(cell).data('details') ) {
+			if($(cell).data('details').hasClass('jtox-hidden')){
+				$(cell).data('details').removeClass('jtox-hidden');
+				$idcell.attr('rowspan', '2');
+				$button.removeClass('ui-icon-folder-collapsed').addClass('ui-icon-folder-open');
+			}
+			else {
+				$(cell).data('details').addClass('jtox-hidden');
+				$idcell.removeAttr('rowspan');
+				$button.addClass('ui-icon-folder-collapsed').removeClass('ui-icon-folder-open');
+			}
+		}
+		else {
+			var $cell = $('<td class="paddingless"></td>'),
+				$newRow = $('<tr></tr>').append($cell).insertAfter($row).addClass($row[0].className);
+
+			$idcell.attr('rowspan', '2');
+
+			$cell.attr('colspan', $row.find('td:visible').length - 1).removeClass('jtox-hidden');
+
+			var div = document.createElement('div');
+			$cell.append(div);
+
+			new jToxSubstance(div, {
+				showDiagrams: true,
+				embedComposition: true,
+				substanceUri: uri,
+				selectionHandler: "onSelectSubstance",
+				configuration: jTConfig.matrix,
+				onRow: function (row, data, index) {
+					if (!data.bundles){
+						return;
+					}
+					var bundleInfo = data.bundles[self.settings.bUri];
+					if (!!bundleInfo && bundleInfo.tag == "selected") {
+						$('input.jtox-handler', row).prop('checked', true);
+					}
+				}
+			});
+
+			$(cell).data('details', $newRow);
+
+			$button.removeClass('ui-icon-folder-collapsed').addClass('ui-icon-folder-open');
+		}
+
+		// Just in case, the variable table is hidden anyway.
+		this.equalizeTables();
+
+		return false;
+	};
+
+	function onDetailedRow(row, data, event) {
+		var el = $('.jtox-details-composition', row)[0];
+		if (!el)
+			return;
+		var uri = this.settings.baseUrl + '/substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI);
+		el = $(el).parents('table')[0];
+		el = el.parentNode;
+		$(el).empty();
+		$(el).addClass('paddingless');
+		var div = document.createElement('div');
+		el.appendChild(div);
+		new jToxSubstance(div, $.extend(true, {}, this.settings, {selectionHandler: null, substanceUri: uri, showControls: false, onLoaded: null, onDetails: function (root, data, element) {
+			new jToxStudy(root, $.extend({}, this.settings, {substanceUri: data.URI}));
+		} } ) );
+	};
+
+	function onReportSubstancesLoaded(dataset) {
+		// Use setTimeout so that this is called after the UI is generated.
+		setTimeout(function(){
+			$('#jtox-report-substance-query .jtox-details-open').each(function(){
+				this.click();
+			});
+		}, 16);
+	};
+
+
+	$(document).ready(function(){
+		$('#logger').on('click', function () { $(this).toggleClass('hidden'); });
+	});
+
+	function formatStatus(status) {
+		var statuses = {
+			'draft': 'Draft Version',
+			'published': 'Final Assessment',
+			'archived': 'Archived Version'
+		}
+		return statuses[status];
+	};
+
+	MatrixKit.defaults = {
+		createForm: null,
+		rootElement: null,
+		bundleUri: null,
+		bundleSummary: {
+			compound: 0,
+			substance: 0,
+			property: 0,
+			matrix: 0,
+		},
+
+		edit: {
+			study: [],
+		},
+
+		settings: {
+			studyTypeList: _i5.qaSettings["Study result type"],
+			maxStars: 10,
+			matrixIdentifiers: [
+				"http://www.opentox.org/api/1.1#CASRN",
+				"#SubstanceName",
+				"#SubstanceUUID",
+				"http://www.opentox.org/api/1.1#SubstanceDataSource",
+			],
+			matrixMultiRows: [
+				"#Tag",
+				"http://www.opentox.org/api/1.1#Diagram",
+				"#ConstituentName",
+				"#ConstituentContent",
+				"#ConstituentContainedAs"
+			]
+		}
+	};
+
+	jT.ui.Matrix = MatrixKit;
+
+})(_, jQuery, jToxKit);
 (function (Solr, a$, $, jT) {
   
   function buildValueRange(stats, isUnits) {
@@ -1591,6 +4735,392 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 	};
 	
 })(Solr, asSys, jQuery, jToxKit);
+/* toxquery.js - Universal query widget, that can work with any kit (study or compound) inside
+ *
+ * Copyright 2012-2014, IDEAconsult Ltd. http://www.ideaconsult.net/
+ * Created by Ivan Georgiev
+**/
+
+var jToxQuery = (function () {
+  var defaultSettings = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
+    scanDom: true,          // whether to scan the whole DOM for finding the main query kit
+    initialQuery: false,    // whether to perform an initial query, immediatly when loaded.
+    kitSelector: null,      // selector for the main kit, if outside, for example.
+    dom: null,              // an, all-prepared object with all sub-kits. Structure { kit: <main kit object>, widgets: { <kit type>: <widget kit object> } }
+
+    configuration: {
+      // this is the main thing to be configured
+      handlers: {
+        query: function (e, query) { jT.parentKit(jToxQuery, this).query(); },
+      }
+    }
+  };
+
+  var cls = function (root, settings) {
+    var self = this;
+    self.rootElement = root;
+    jT.$(root).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
+
+    self.settings = jT.$.extend(true, {}, defaultSettings, jT.settings, settings);
+    self.mainKit = null;
+
+    if (self.settings.scanDom && !self.settings.dom) {
+      self.settings.dom = { kit: null, widgets: { } };
+      jT.$('.jtox-toolkit', self.rootElement).each(function () {
+        if (jT.$(this).hasClass('jtox-widget'))
+          self.settings.dom.widgets[jT.$(this).data('kit')] = this;
+        else
+          self.settings.dom.kit = this;
+      });
+    }
+
+    if (!!self.settings.kitSelector)
+      self.settings.dom.kit = jT.$(self.settings.kitSelector)[0];
+
+    // finally, wait a bit for everyone to get initialized and make a call, if asked to
+    if (!!self.settings.initialQuery)
+      self.initialQueryTimer = setTimeout(function () { self.query(); }, 200);
+  };
+
+  cls.prototype.widget = function (name) {
+    return this.settings.dom.widgets[name];
+  };
+
+  cls.prototype.kit = function () {
+    if (!this.mainKit)
+      this.mainKit = jT.kit(this.settings.dom.kit);
+
+    return this.mainKit;
+  };
+
+  cls.prototype.setWidget = function (id, dom) {
+    this.settings.dom.widgets[id] = dom;
+  };
+
+  cls.prototype.cancelInitialQuery = function () {
+    if (!!this.initialQueryTimer)
+      clearTimeout(this.initialQueryTimer);
+  };
+
+  /* Perform the actual query, traversing all the widgets and asking them to
+  alter the given URL, then - makes the call */
+  cls.prototype.query = function () {
+    var uri = this.settings.service || '';
+    for (var w in this.settings.dom.widgets) {
+      var widget = jT.kit(this.settings.dom.widgets[w]);
+      if (!widget)
+        console.log("jToxError: the widget [" + w + "] is not recognized: ignored");
+      else if (!widget['modifyUri'])
+        console.log("jToxError: the widget [" + w + "] doesn't have 'modifyUri' method: ignored");
+      else
+        uri = widget.modifyUri(uri);
+    }
+
+    if (!!uri)
+      this.kit().query(uri);
+  }; 
+  // end of prototype
+
+  return cls;
+})();
+
+/* Now comes the jToxSearch component, which implements the compound searching block
+*/
+var jToxSearch = (function () {
+  var defaultSettings = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
+    defaultNeedle: '50-00-0',     // which is the default search string, if empty one is provided
+    smartsList: 'funcgroups',     // which global JS variable to seek for smartsList
+    hideOptions: '',              // comma separated list of search options to hide
+    slideInput: false,            // whether to slide the input, when focussed
+    contextUri: null,             // a search limitting contextUri - added as dataset_uri parameter
+    configuration: {
+      handlers: { }
+    }
+  };
+
+  var queries = {
+    'auto': "/query/compound/search/all",
+    'uri': "/query/compound/url/all",
+    'similarity': "/query/similarity",
+    'smarts': "/query/smarts"
+  };
+
+  var cls = function (root, settings) {
+    var self = this;
+    self.rootElement = root;
+    jT.$(root).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
+
+    self.settings = jT.$.extend(true, {}, defaultSettings, jT.settings, settings);
+    self.rootElement.appendChild(jT.getTemplate('#jtox-search'));
+    self.queryKit = jT.parentKit(jToxQuery, self.rootElement);
+
+    self.search = { mol: "", type: "", queryType: "auto"};
+
+    var form = jT.$('form', self.rootElement)[0];
+    form.onsubmit = function () { return false; }
+
+    // go for buttonset preparation, starting with hiding / removing passed ones
+    if (!!self.settings.hideOptions) {
+      var hideArr = self.settings.hideOptions.split(',');
+      for (var i = 0; i < hideArr.length; ++i) {
+        jT.$('#search' + hideArr[i], self.rootElement).remove();
+        jT.$('label[for="search' + hideArr[i] + '"]', self.rootElement).remove();
+      }
+    }
+
+    if (!!form.searchcontext) {
+      form.searchcontext.value = self.settings.contextUri;
+      $(form.searchcontext).on('change', function (e) {
+        self.settings.contextUri = this.value;
+      });
+    }
+
+    // when we change the value here - all, possible MOL caches should be cleared.
+    jT.$(form.searchbox).on('change', function () {
+      self.setAuto();
+    });
+
+    if (self.settings.slideInput)
+      jT.$(form.searchbox)
+      .on('focus', function () {
+        var gap = jT.$(form).width() - jT.$(radios).width() - 30 - jT.$('.search-pane').width();
+        var oldSize = $(this).data('oldSize') || $(this).width();
+        $(this).data('oldSize', oldSize);
+        jT.$(this).css('width', '' + (oldSize + gap) + 'px');
+      })
+      .on('blur', function () {
+        jT.$(this).css('width', '');
+      });
+
+    var hasAutocomplete = false;
+    if (jT.$('#searchuri', self.rootElement).length > 0) {
+      hasAutocomplete = true;
+      jT.$(form.searchbox).autocomplete({
+        minLength: 2,
+        open: function() { jT.$( this ).removeClass( "ui-corner-all" ).addClass( "ui-corner-top" ); },
+        close: function() { jT.$( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" ); },
+        source: function (request, response) {
+          jT.call(self, '/dataset?search=^' + request.term, function (result) {
+            response(!result ? [] : $.map( result.dataset, function( item ) {
+              var pos =  item.URI.lastIndexOf("/"),
+                  shortURI = (pos >= 0) ? "D" + item.URI.substring(pos+1) + ": " : "";
+              return {
+                label: shortURI + item.title,
+                value: item.URI
+              };
+            }));
+          });
+        }
+      });
+    }
+
+    var radios = jT.$('.jq-buttonset', root).buttonset();
+    var onTypeClicked = function () {
+      form.searchbox.placeholder = jT.$(this).data('placeholder');
+      jT.$('.search-pane .auto-hide', self.rootElement).addClass('hidden');
+      jT.$('.search-pane .' + this.id, self.rootElement).removeClass('hidden');
+      self.search.queryType = this.value;
+      if (this.value == 'uri') {
+        jT.$(form.drawbutton).addClass('hidden');
+        if (hasAutocomplete)
+          jT.$(form.searchbox).autocomplete('enable');
+      }
+      else {
+        jT.$(form.drawbutton).removeClass('hidden');
+        if (hasAutocomplete)
+          jT.$(form.searchbox).autocomplete('disable');
+      }
+    };
+
+    jT.$('.jq-buttonset input', root).on('change', onTypeClicked);
+
+    var typeEl = jT.$('#search' + self.settings.option, root)[0];
+    if (typeEl != null)
+      jT.$(typeEl).trigger('click');
+    else
+      ccLib.fireCallback(onTypeClicked, jT.$('.jq-buttonset input', root)[0])
+
+    // spend some time to setup the SMARTS groups
+    if (!!window[self.settings.smartsList]) {
+      var list = window[self.settings.smartsList];
+      var familyList = [];
+      var familyIdx = {};
+
+      for (var i = 0, sl = list.length; i < sl; ++i) {
+        var entry = list[i];
+        if (familyIdx[entry.family] === undefined) {
+          familyIdx[entry.family] = familyList.length;
+          familyList.push([]);
+        }
+
+        familyList[familyIdx[entry.family]].push(entry);
+      }
+
+      // now we can iterate over them
+      var df = document.createDocumentFragment();
+      for (fi = 0, fl = familyList.length; fi < fl; ++fi) {
+        var grp = document.createElement('optgroup');
+        grp.label = familyList[fi][0].family;
+
+        for (i = 0, el = familyList[fi].length; i < el; ++i) {
+          var e = familyList[fi][i];
+          var opt = document.createElement('option');
+          opt.innerHTML = e.name;
+          opt.value = e.smarts;
+          if (!!e.hint)
+            jT.$(opt).attr('data-hint', e.hint);
+          grp.appendChild(opt);
+        }
+        df.appendChild(grp);
+      }
+
+      // now it's time to add all this and make the expected behavior
+      form.smarts.appendChild(df);
+      form.smarts.firstElementChild.checked = true;
+
+      jT.$(form.smarts).on('change', function () {
+        var hint = jT.$(this[this.selectedIndex]).data('hint');
+        form.smarts.title = (!!hint ? hint : '');
+        self.setAuto(this.value);
+      });
+    }
+
+    // Now, deal with KETCHER - make it show, attach handlers to/from it, and handlers for showing/hiding it.
+    var ketcherBox = jT.$('.ketcher', root)[0];
+    var ketcherReady = false;
+    var onKetcher = function (service, method, async, parameters, onready) {
+      if (service == "knocknock")
+        onready("You are welcome!", null);
+      else
+        jT.call(self.queryKit.kit(), '/ui/' + service, {dataType: "text", data: parameters}, function (res, jhr) { onready(res, jhr); });
+    };
+
+    var ensureKetcher = function () {
+      if (!ketcherReady) {
+        jT.insertTool('ketcher', ketcherBox);
+        ketcher.init({ root: ketcherBox, ajaxRequest: onKetcher });
+
+        var emptySpace = jT.$('.toolEmptyCell', ketcherBox)[0];
+        jT.$(emptySpace.appendChild(jT.getTemplate('#ketcher-usebutton'))).on('click', function () {
+          var smiles = ketcher.getSmiles();
+          var mol = ketcher.getMolfile();
+          self.setMol(mol);
+          if (!!smiles)
+            form.searchbox.value = smiles;
+        });
+        jT.$(emptySpace.appendChild(jT.getTemplate('#ketcher-drawbutton'))).on('click', function () {
+          ketcher.setMolecule(self.search.mol || form.searchbox.value);
+        });
+        ketcherReady = true;
+      }
+    };
+
+    jT.$(form.drawbutton).on('click', function () {
+      if (jT.$(ketcherBox).hasClass('shrinken')) {
+        ensureKetcher();
+        jT.$(ketcherBox).css('display', '');
+      }
+      else
+        setTimeout(function () { jT.$(ketcherBox).css('display', 'none'); }, 500);
+
+      setTimeout(function () { jT.$(ketcherBox).toggleClass('shrinken') }, 50);
+    });
+
+    // finally - parse the URL-passed parameters and setup the values appropriately.
+    var doQuery = false;
+    if (!!self.settings.b64search) {
+      self.setMol($.base64.decode(self.settings.b64search));
+      doQuery = true;
+    }
+    else if (!!self.settings.search) {
+      self.setAuto(self.settings.search);
+      doQuery = true;
+    }
+
+    jT.ui.installHandlers(self);
+    if (doQuery) {
+      self.queryKit.cancelInitialQuery();
+      setTimeout(function () { self.queryKit.query(); }, 250);
+    }
+    // and very finally - install the handlers...
+  };
+
+  // required from jToxQuery - this is how we add what we've collected
+  cls.prototype.modifyUri = function (uri) {
+    var form = jT.$('form', this.rootElement)[0];
+    var params = { type: this.search.type };
+    var type = this.search.queryType;
+
+    if (type == "auto" && params.type == 'auto' && form.searchbox.value.indexOf('http') == 0)
+      type = "uri";
+
+    var res = queries[type] + (uri.indexOf('?') > -1 ? '' : '?') + uri;
+
+    if (!!this.search.mol) {
+      params.b64search = $.base64.encode(this.search.mol);
+    }
+    else {
+      params.search = form.searchbox.value;
+      if (!params.search)
+        params.search = this.settings.defaultNeedle;
+        this.setAuto(params.search);
+    }
+
+    if (type == "auto" && form.regexp.checked) {
+      params['condition'] = "regexp";
+    }
+    if (type == 'similarity') {
+      params.threshold = form.threshold.value;
+    }
+
+    if (type == 'similarity') {
+      params.filterBySubstance = form.similaritybysubstance.checked;
+    }
+    if (type == 'smarts') {
+      params.filterBySubstance = form.smartsbysubstance.checked;
+    }
+
+    if (!!this.settings.contextUri)
+      params['dataset_uri'] = this.settings.contextUri;
+
+    return ccLib.addParameter(res, $.param(params));
+  };
+
+  // some shortcuts for outer world.
+  cls.prototype.makeQuery = function (needle) {
+    if (!!needle)
+      this.setAuto(needle);
+    this.queryKit.query();
+  },
+
+  cls.prototype.getNeedle = function () {
+    return this.search.type == 'mol' ? this.search.mol : jT.$('form', this.rootElement)[0].searchbox.value;
+  };
+
+  cls.prototype.setAuto = function (needle) {
+    this.search.mol = null;
+    this.search.type = 'auto';
+
+    var box = jT.$('form', this.rootElement)[0].searchbox;
+    if (!!this.search.oldplace)
+      box.placeholder = this.search.oldplace;
+    if (needle != null)
+      box.value = needle;
+  };
+
+  cls.prototype.setMol = function (mol) {
+    var box = jT.$('form', this.rootElement)[0].searchbox;
+    this.search.mol = mol;
+    this.search.type = 'mol';
+    this.search.oldplace = box.placeholder;
+
+    box.placeholder = "MOL formula saved_";
+    box.value = '';
+  }; 
+  // end of prototype
+
+  return cls;
+})();
 (function (Solr, a$, $, jT) {
   
   function SimpleRanger(settings) { 
@@ -2144,10 +5674,6 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		this.settings = $.extend(true, {}, StudyKit.defaults, settings); // i.e. defaults from jToxStudy
 		this.settings.tab = this.settings.tab || jT.ui.fullUrl.hash;
 
-		// HACK: No meaningful way to communicate anything from the instance to render functions!
-		if (this.settings.errorDefault)
-			StudyKit.defaults.errorDefault = this.settings.errorDefault;
-
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
 		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
@@ -2664,8 +6190,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			return jT.tables.renderMulti(data, type, full, function (data, type) {
 				var resText = jT.ui.renderRange(data.result, null, type);
 				if (data.result.errorValue != null)
-					resText += " (" + (data.result.errQualifier || StudyKit.defaults.errorDefault) + " " + data.result.errorValue + ")";
-				return resText;
+					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
+				return resText
 			}, { anno: "result result.errQualifier result.errValue"});
 		}
 	},
@@ -2957,6 +6483,59 @@ jT.ui.templates['all-composition']  =
 "</div>" +
 ""; // end of #jtox-composition 
 
+jT.templates['all-compound']  = 
+"<div id=\"jtox-compound\" class=\"jtox-compound\">" +
+"<div class=\"jtox-ds-features\"></div>" +
+"<div class=\"jtox-controls\">" +
+"Showing from <span class=\"data-field high\" data-field=\"pagestart\">?</span> to <span class=\"data-field high\" data-field=\"pageend\">?</span><span class=\"data-field\" data-field=\"filtered-text\"> </span>in pages of <select class=\"data-field\" data-field=\"pagesize\">" +
+"<option value=\"10\" selected=\"yes\">10</option>" +
+"<option value=\"20\">20</option>" +
+"<option value=\"30\">30</option>" +
+"<option value=\"50\">50</option>" +
+"<option value=\"100\">100</option>" +
+"</select> entries" +
+"<a class=\"paginate_disabled_previous prev-field\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next next-field\" tabindex=\"0\" role=\"button\">Next</a>" +
+"<input type=\"text\" class=\"filterbox\" placeholder=\"Filter...\" />" +
+"</div>" +
+"<div class=\"jtox-ds-tables\">" +
+"<div class=\"jt-processing\">" +
+"<span class=\"message\">Loading compounds...</span>" +
+"</div>" +
+"<div class=\"jt-error\">" +
+"<span class=\"message\"></span>" +
+"</div>" +
+"<div class=\"jtox-ds-fixed\">" +
+"<table></table>" +
+"</div><div class=\"jtox-ds-variable\">" +
+"<table></table>" +
+"</div>" +
+"</div>" +
+"</div>" +
+""; // end of #jtox-compound 
+
+jT.templates['compound-one-tab']  = 
+"<div id=\"jtox-ds-selection\" class=\"jtox-selection\">" +
+"<a href=\"#\" class=\"multi-select select\">select all</a>&nbsp;<a href=\"#\" class=\"multi-select unselect\">unselect all</a>" +
+"</div>" +
+""; // end of #compound-one-tab 
+
+jT.templates['compound-one-feature']  = 
+"<div id=\"jtox-ds-feature\" class=\"jtox-ds-feature\"><input type=\"checkbox\" checked=\"yes\" class=\"jtox-checkbox\" /><span class=\"data-field jtox-title\" data-field=\"title\"> ? </span><sup class=\"helper\"><a target=\"_blank\" class=\"data-field attribute\" data-attribute=\"href\" data-field=\"uri\"><span class=\"ui-icon ui-icon-info\"></span></a></sup></div>" +
+""; // end of #jtox-ds-feature 
+
+jT.templates['compound-download']  = 
+"<div id=\"jtox-ds-download\" class=\"jtox-inline jtox-ds-download\">" +
+"<a target=\"_blank\"><img class=\"borderless\"/></a>" +
+"</div>" +
+""; // end of #jtox-ds-download 
+
+jT.templates['compound-export']  = 
+"<div id=\"jtox-ds-export\">" +
+"<div class=\"jtox-inline\">Download dataset as: </div>" +
+"<div class=\"jtox-inline jtox-exportlist\"></div>" +
+"</div>" +
+""; // end of #jtox-ds-export 
+
 jT.ui.templates['faceted-search-kit']  = 
 "<div class=\"query-container\">" +
 "<!-- left -->" +
@@ -3115,6 +6694,62 @@ jT.ui.templates['logger-line']  =
 "</div>" +
 ""; // end of #jtox-logline 
 
+jT.templates['widget-search']  = 
+"<div id=\"jtox-search\" class=\"jtox-search\">" +
+"<form>" +
+"<div class=\"jq-buttonset jtox-inline\">" +
+"<input type=\"radio\" id=\"searchauto\" value=\"auto\" name=\"searchtype\" checked=\"checked\" data-placeholder=\"Enter CAS, EINECS, Chemical name, SMILES or InChI_\"/>" +
+"<label for=\"searchauto\" title=\"Exact structure or search by an identifier. CAS, Chemical name, SMILES or InChI. The input type is guessed automatically.\">Exact structure</label>" +
+"<input type=\"radio\" id=\"searchsimilarity\" value=\"similarity\" name=\"searchtype\" data-placeholder=\"Enter Chemical name, SMILES or InChI_\"/>" +
+"<label for=\"searchsimilarity\" title=\"Enter SMILES or draw structure\">Similarity</label>" +
+"<input type=\"radio\" id=\"searchsmarts\" value=\"smarts\" name=\"searchtype\" data-placeholder=\"Enter SMARTS_\"/>" +
+"<label for=\"searchsmarts\" title=\"Enter or draw a SMARTS query\">Substructure</label>" +
+"<input type=\"radio\" id=\"searchuri\" value=\"uri\" name=\"searchtype\" data-placeholder=\"Enter URL to be examined...\"/>" +
+"<label for=\"searchuri\" title=\"Enter dataset URL\">URL</label>" +
+"</div>" +
+"<div class=\"float-right search-pane\">" +
+"<div class=\"dynamic auto-hide searchauto hidden jtox-inline\">" +
+"<div>" +
+"<input type=\"checkbox\" name=\"regexp\" id=\"toxquery-regexp\" /><label for=\"toxquery-regexp\">Enable fragment search<sup class=\"helper\"><a target=\"_blank\" href=\"http://en.wikipedia.org/wiki/Regular_expression\"><span class=\"ui-icon ui-icon-info\"></span></a></sup></label>" +
+"</div>" +
+"</div>" +
+"<div class=\"dynamic auto-hide searchsimilarity hidden jtox-inline\">" +
+"<input type=\"checkbox\" name=\"similaritybysubstance\" value=\"true\" id=\"similaritybysubstance\" /><label for=\"similaritybysubstance\">Only hits with substance data</label>" +
+"<select name='threshold' title ='Tanimoto similarity threshold'>" +
+"<option value='0.9' selected=\"selected\">0.9</option>" +
+"<option value='0.8' >0.8</option>" +
+"<option value='0.7' >0.7</option>" +
+"<option value='0.6' >0.6</option>" +
+"<option value='0.5' >0.5</option>" +
+"<option value='0.4' >0.4</option>" +
+"<option value='0.3' >0.3</option>" +
+"<option value='0.2' >0.2</option>" +
+"<option value='0.1' >0.1</option>" +
+"</select>" +
+"</div>" +
+"<div class=\"dynamic auto-hide searchsmarts hidden jtox-inline\">" +
+"<input type=\"checkbox\" name=\"smartsbysubstance\" value=\"true\" id=\"smartsbysubstance\" /><label for=\"smartsbysubstance\">Only hits with substance data</label>" +
+"<select name=\"smarts\" title =\"Predefined functional groups\"></select>" +
+"</div>" +
+"<div class=\"jtox-inline\">" +
+"<input type=\"text\" name=\"searchbox\"/>" +
+"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\"><span class=\"ui-icon ui-icon-search\"/></button>" +
+"<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\"><span class=\"ui-icon ui-icon-pencil\"/></button>" +
+"</div>" +
+"</div>" +
+"<div id=\"searchcontext\" class=\"size-full\">" +
+"<input type=\"text\" name=\"searchcontext\" placeholder=\"Restrict the search within given dataset_\"/>" +
+"</div>" +
+"</form>" +
+"<div class=\"ketcher shrinken\"></div>" +
+"</div>" +
+""; // end of #jtox-ds-search 
+
+jT.templates['ketcher-buttons']  = 
+"<button id=\"ketcher-usebutton\">Use <span class=\"ui-icon ui-icon-arrowthick-1-n\"></span></button>" +
+"<button id=\"ketcher-drawbutton\">Draw <span class=\"ui-icon ui-icon-arrowthick-1-s\"></span></button>" +
+""; // end of ketcher-buttons 
+
 jT.ui.templates['all-studies']  = 
 "<div>" +
 "<ul>" +
@@ -3207,7 +6842,7 @@ jT.ui.templates['one-study']  =
 jT.ui.templates['all-substance']  = 
 "<div class=\"jtox-substance\">" +
 "<div class=\"jtox-controls\">" +
-"Showing from <span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
+"Showing from <span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high jtox-live-data\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"50\">50</option>" +

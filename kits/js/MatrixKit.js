@@ -1,4 +1,4 @@
-/* jToxMatrix - Read-across UI tool. Migrated.
+/* MatrixKit - Read-across UI tool. Migrated.
  *
  * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
  * Created by Ivan Georgiev
