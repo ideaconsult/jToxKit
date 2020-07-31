@@ -145,7 +145,7 @@
 			composition: {
 				'Type': {
 					"title": "Type",
-					"class": "left",
+					"className": "left",
 					"width": "10%",
 					"data": "relation",
 					"render": function (val, type, full) {
@@ -157,7 +157,7 @@
 				},
 				'Name': {
 					"title": "Name",
-					"class": "camelCase left",
+					"className": "camelCase left",
 					"width": "15%",
 					"data": "component.compound.name",
 					"render": function (val, type, full) {
@@ -167,19 +167,19 @@
 				},
 				'EC No.': {
 					"title": "EC No.",
-					"class": "left",
+					"className": "left",
 					"width": "10%",
 					"data": "component.compound.einecs"
 				},
 				'CAS No.': {
 					"title": "CAS No.",
-					"class": "left",
+					"className": "left",
 					"width": "10%",
 					"data": "component.compound.cas"
 				},
 				'Typical concentration': {
 					"title": "Typical concentration",
-					"class": "center",
+					"className": "center",
 					"width": "15%",
 					"data": "proportion.typical",
 					"render": function (val, type, full) {
@@ -188,7 +188,7 @@
 				},
 				'Concentration ranges': {
 					"title": "Concentration ranges",
-					"class": "center colspan-2",
+					"className": "center colspan-2",
 					"width": "20%",
 					"data": "proportion.real",
 					"render": function (val, type, full) {
@@ -197,7 +197,7 @@
 				},
 				'Upper range': {
 					"title": 'Upper range',
-					"class": "center",
+					"className": "center",
 					"width": "20%",
 					"data": "proportion.real",
 					"render": function (val, type, full) {
@@ -206,8 +206,8 @@
 				},
 				'Also': {
 					"title": "Also",
-					"class": "center",
-					"sortable": false,
+					"className": "center",
+					"orderable": false,
 					"data": "component.compound.URI",
 					"defaultContent": "-"
 				}

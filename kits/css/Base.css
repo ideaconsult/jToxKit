@@ -571,15 +571,6 @@ td.jtox-multi table {
   color: red;
 }
 
-.jtox-ds-tables .jtox-details-box {
-  position: absolute;
-  margin: 0px;
-  left: 0px;
-  top: 0px;
-  padding: 0px;
-  z-index: 10;
-  height: auto;
-}
 h6{
   margin-top: 10px;
 }
@@ -622,16 +613,6 @@ h6{
   padding: 0px;
   border: 0px;
   margin: 0px;
-}
-
-div.jtox-details-table {
-  padding: 12px 0px 0px 0px !important;
-}
-
-.jtox-details-table table {
-  width: 100%;
-  height: auto;
-  vertical-align: baseline;
 }
 
 .jtox-controls {
