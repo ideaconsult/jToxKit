@@ -4,7 +4,7 @@
  * Created by Ivan Georgiev
 **/
 
-(function (a$, $, jT) {
+(function (_, $, jT) {
 
 	function MatrixKit(settings) {
 		var self = this;
@@ -28,7 +28,7 @@
 		};
 
 		var loadPanel = function(panel) {
-			if (panel){
+			if (panel) {
 				var subs = $('.jq-buttonset.action input:checked', panel);
 				if (subs.length > 0)
 					subs.each(loadAction);
@@ -57,22 +57,19 @@
 		$('.jq-buttonset', root).buttonset();
 		$('.jq-buttonset.action input', root).on('change', loadAction);
 
-		var updateUsers = function(kit){
+		var updateUsers = function() {
 			var el = $(this.parentNode).find('select');
 			$(el.parentNode).addClass('loading');
 			var property = (el[0].id == 'users-write') ? 'canWrite' : 'canRead';
-			var data = 'bundle_number=' + kit.bundle.number;
+			var data = 'bundle_number=' + self.bundle.number;
 			var users = el.val();
-			if(users) {
-				for(var i = 0, l = users.length; i < l; i++){
+			if (users) {
+				for (var i = 0, l = users.length; i < l; i++){
 					data += '&' + property + '=' + users[i];
 				}
 			}
-			jT.service(kit, kit.settings.baseUrl + '/myaccount/users', { method: 'POST', data: data }, function(result){
+			jT.ambit.call(self, self.settings.baseUrl + '/myaccount/users', { method: 'POST', data: data }, function(result) {
 				$(el.parentNode).removeClass('loading');
-				if (!result) { // i.e. on error - request the old data
-					//self.loadUsers(); // this causes infinite loop because it triggers onRemoveToken callback.
-				}
 			});
 		}
 
@@ -85,29 +82,15 @@
 			//onRemoveToken: updateUsers
 		});
 
-		$('.jtox-users-submit', root).on('click', function(){
-			updateUsers.call(this, self);
-		});
+		$('.jtox-users-submit', root).on('click', updateUsers);
 
 		self.onIdentifiers(null, $('#jtox-identifiers', self.rootElement)[0]);
 		// finally, if provided - load the given bundleUri
-		var bUri = self.settings.bundleUri || self.settings.bundle_uri;
+		var bUri = self.settings.bundleUri;
 		if (!!bUri)
 			self.load(bUri);
 
 		return self;
-	};
-
-
-	MatrixKit.prototype.parseFeatureId = function (featureId) {
-		var parse = featureId.match(/https?\:\/\/(.*)\/property\/([^\/]+)\/([^\/]+)\/.+/);
-		if (parse == null)
-			return null;
-		else
-			return {
-				topcategory: parse[2].replace("+", " "),
-				category: parse[3].replace("+", " ")
-			};
 	};
 
 	MatrixKit.prototype.starHighlight = function (root, stars) {
@@ -119,50 +102,33 @@
 		});
 	};
 
-	MatrixKit.prototype.modifyUri = function (uri) {
-		return ccLib.addParameter(uri, "bundle_uri=" + encodeURIComponent(this.bundleUri));
-	};
-
 	MatrixKit.prototype.onIdentifiers = function (id, panel) {
 		var self = this;
 		if (!panel) return;
 		if (!$(panel).hasClass('initialized')) {
 			$(panel).addClass('initialized');
 
-			var checkForm = function () {
-				if( 'checkValidity' in this ){
-					return this.checkValidity();
-				}
-				else {
-					var valid = (this.value.length > 0);
-					if(!valid){
-						this.placeholder = 'You need to fill this box';
-					}
-					return valid;
-				}
-			};
-
 			self.createForm = $('form', panel)[0];
 
 			self.createForm.onsubmit = function (e) {
-				if (ccLib.validateForm(self.createForm, checkForm)) {
-					jT.service(self, self.settings.baseUrl + '/bundle', { method: 'POST', data: ccLib.serializeForm(self.createForm)}, function (bundleUri, jhr) {
+				e.preventDefault();
+				e.stopPropagation();
+
+				if (jT.validateForm(self.createForm)) {
+					jT.ambit.call(self, self.settings.baseUrl + '/bundle', { method: 'POST', data: $(self.createForm).serializeArray()},
+						function (bundleUri, jhr) {
 						if (!!bundleUri) {
 							self.load(bundleUri);
-							var url = ccLib.parseURL( window.location.href );
-							if (url.query != '' ) {
+							var url = jT.parseURL( window.location.href );
+							if (url.query != '' )
 								url.query += '&bundleUri=' + bundleUri;
-							}
-							else {
+							else
 								url.query = '?bundleUri=' + bundleUri;
-							}
 							var href = url.protocol + '://' + url.host + ( (url.port != '') ? ':' + url.port : '' ) + url.path + url.query + ( (url.hash != '') ? '#' + url.hash : '' );
-							if ( 'pushState' in window.history ) {
+							if ( 'pushState' in window.history )
 								window.history.pushState(null, '', href );
-							}
-							else {
+							else
 								document.location = href;
-							}
 						}
 						else {
 							// TODO: report an error
@@ -170,61 +136,48 @@
 						}
 					});
 				}
-				e.preventDefault();
-				e.stopPropagation();
 			};
 
 			self.createForm.assFinalize.onclick = function (e) {
-
-				if (!self.bundleUri)
-					return;
-
-				var $this = $(this),
-						data = {};
-				data['status'] = 'published';
-				$this.addClass('loading');
-				jT.service(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-					$this.removeClass('loading');
-					if (!result) { // i.e. on error - request the old data
-						self.load(self.bundleUri);
-					}
-					else {
-						$('.data-field[data-field="status"]').html(formatStatus('published'));
-					}
-				});
-
 				e.preventDefault();
 				e.stopPropagation();
+				if (!self.bundleUri) return;
 
+				var $this = $(this),
+					data = { status: 'published' };
+
+				$this.addClass('loading');
+				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+					$this.removeClass('loading');
+					if (!result) // i.e. on error - request the old data
+						self.load(self.bundleUri);
+					else
+						$('.data-field[data-field="status"]').html(formatStatus('published'));
+				});
 			};
 
 			self.createForm.assNewVersion.onclick = function (e) {
-
-				if (!self.bundleUri)
-					return;
+				e.preventDefault();
+				e.stopPropagation();
+				if (!self.bundleUri) return;
 
 				var $this = $(this),
-						data = {};
-				data['status'] = 'archived';
+					data = { status: 'archived' };
+
 				$this.addClass('loading');
-				jT.service(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
 					$this.removeClass('loading');
-					if (!result) { // i.e. on error - request the old data
+					if (!result) // i.e. on error - request the old data
 						self.load(self.bundleUri);
-					}
 				});
 
-				jT.service(self, self.bundleUri + '/version', { method: 'POST' }, function (bundleUri, jhr) {
+				jT.ambit.call(self, self.bundleUri + '/version', { method: 'POST' }, function (bundleUri, jhr) {
 					if (!!bundleUri)
 						self.load(bundleUri);
 					else
 						// TODO: report an error
 						console.log("Error on creating bundle [" + jhr.status + ": " + jhr.statusText);
 				});
-
-				e.preventDefault();
-				e.stopPropagation();
-
 			};
 
 			self.createForm.assFinalize.style.display = 'none';
@@ -233,34 +186,34 @@
 			var starsEl = $('.data-stars-field', self.createForm)[0];
 			starsEl.innerHTML += jT.ui.putStars(self, 0, "Assessment rating");
 			$('span.ui-icon-star', starsEl)
-			.on('mouseover', function (e) {
-				for (var el = this; !!el; el = el.previousElementSibling)
-					$(el).removeClass('transparent');
-				for (var el = this.nextElementSibling; !!el; el = el.nextElementSibling)
-					$(el).addClass('transparent');
-			})
-			.on('click', function (e) {
-				var cnt = 0;
-				for (var el = this; !!el; el = el.previousElementSibling, ++cnt);
-				self.createForm.stars.value = cnt;
-				$(self.createForm.stars).trigger('change');
-			})
-			.parent().on('mouseout', function (e) {
-				self.starHighlight(this, parseInt(self.createForm.stars.value));
-			});
+				.on('mouseover', function (e) {
+					for (var el = this; !!el; el = el.previousElementSibling)
+						$(el).removeClass('transparent');
+					for (var el = this.nextElementSibling; !!el; el = el.nextElementSibling)
+						$(el).addClass('transparent');
+				})
+				.on('click', function (e) {
+					var cnt = 0;
+					for (var el = this; !!el; el = el.previousElementSibling, ++cnt);
+					self.createForm.stars.value = cnt;
+					$(self.createForm.stars).trigger('change');
+				})
+				.parent().on('mouseout', function (e) {
+					self.starHighlight(this, parseInt(self.createForm.stars.value));
+				});
 
 			// install change handlers so that we can update the values
 			$('input, select, textarea', self.createForm).on('change', function (e) {
 				e.preventDefault();
 				e.stopPropagation();
-				if (!self.bundleUri)
-					return;
+				if (!self.bundleUri) return;
+
 				var el = this;
 				if (jT.fireCallback(checkForm, el, e)) {
 					var data = {};
 					data[el.name] = el.value;
 					$(el).addClass('loading');
-					jT.service(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+					jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
 						$(el).removeClass('loading');
 						if (!result) { // i.e. on error - request the old data
 							self.load(self.bundleUri);
@@ -271,12 +224,7 @@
 
 			var link = $('#source-link')[0], $source = $('#source');
 			link.href = $source[0].value;
-			$source.on('change', function(){
-				link.href = this.value;
-			});
-
-			ccLib.prepareForm(self.createForm);
-
+			$source.on('change', function() { link.href = this.value; });
 		}
 	};
 
@@ -306,9 +254,9 @@
 
 					// make two nested calls - for adding and for deleting
 					$(saveButton).addClass('loading');
-					jT.service(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
+					jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
 						if (!!result) {
-							jT.service(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
+							jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
 								$(saveButton).removeClass('loading');
 								if (!!result) {
 									self.edit.study = [];
@@ -376,11 +324,11 @@
 					var val = data.values[featureId];
 					if (!feature.isMultiValue || !$.isArray(val))
 						val = [val];
-					ccLib.fillTree(infoDiv, {
+					
+					jT.ui.updateTree(infoDiv, {
 						endpoint: feature.title,
 						guidance: feature.creator,
 						value: jT.ui.renderObjValue(val[valueIdx], feature.units, 'display'),
-//             source: '<a target="_blank" href="' + feature.source.URI + '">' + feature.source.type + '</a>'
 					});
 
 					if (isDelete) {
@@ -388,25 +336,22 @@
 						boxOptions.onOpen = function () {
 							var box = this;
 							var content = this.content[0];
-							if(val[valueIdx].deleted){
+							if(val[valueIdx].deleted) {
 								// If the value is already deleted, show remarks
 								$('button.jt-alert', content).hide();
 								$('textarea', content).val(val[valueIdx].remarks);
 							}
-							else {
+							else
 								$('button.jt-alert', content).on('click', function (){ deleteFeature(data, featureId, valueIdx, $('textarea', content).val(), jel[0]); box.close(); });
-							}
 						};
 					}
-					else {
+					else
 						$('.delete-box', infoDiv).hide();
-					}
 
 					boxOptions.content = infoDiv.innerHTML;
 					new jBox('Tooltip', boxOptions).open();
-				}
-				else { // edit mode
-					var parse = self.parseFeatureId(featureId);
+				} else { // edit mode
+					var parse = jT.ambit.parseFeatureId(featureId);
 					// map between UI fields and JSON properties
 					var valueMap = {
 						endpoint: 'effects[0].endpoint',
@@ -454,12 +399,10 @@
 					boxOptions.cancelButton = "Cancel";
 					var endSetValue = function (e, field, value) {
 						var f = valueMap[field];
-						if (!f) {
+						if (!f)
 							featureJson.effects[0].conditions[field] = value;
-						}
-						else {
-							ccLib.setJsonValue(featureJson, f, value);
-						}
+						else
+							_.set(featureJson, f, value);
 					};
 
 					boxOptions.onOpen = function () {
@@ -479,7 +422,7 @@
 				// now fix the UI a bit, so we can see the
 				fId += '/' + self.edit.study.length;
 
-				var catId = self.parseFeatureId(fId).category,
+				var catId = jT.ambit.parseFeatureId(fId).category,
 						config = jT.$.extend(true, {}, self.matrixKit.settings.configuration.columns["_"], self.matrixKit.settings.configuration.columns[catId]),
 						f = null;
 
@@ -498,13 +441,13 @@
 
 				data.values[fId] = [value.effects[0].result];
 
-				var preVal = (ccLib.getJsonValue(config, 'effects.endpoint.bVisible') !== false) ? f.title : null;
+				var preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? f.title : null;
 				preVal = [f.creator, preVal].filter(function(value){return value!==null}).join(' ');
 
-				var html =  '<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.edit.study.length - 1) + '"></span>&nbsp;';
-						html += '<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderObjValue(value.effects[0].result, null, 'display', preVal) + '</a>';
+				var html = 	'<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.edit.study.length - 1) + '"></span>&nbsp;' + 
+							'<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderObjValue(value.effects[0].result, null, 'display', preVal) + '</a>',
+					span = document.createElement('div');
 
-				var span = document.createElement('div');
 				span.innerHTML = html;
 				element.parentNode.insertBefore(span, element);
 				self.matrixKit.equalizeTables();
@@ -534,16 +477,16 @@
 				// Now deal with the UI
 				$(element).addClass('unsaved-study');
 				$('span', element.parentNode)
-				.removeClass('ui-icon-circle-minus')
-				.addClass('ui-icon-circle-plus')
-				.data('index', self.edit.study.length - 1)
-				.on('click.undodelete', function () {
-					var idx = $(this).data('index');
-					$(this).addClass('ui-icon-circle-minus').removeClass('ui-icon-circle-plus').off('click.undodelete').data('index', null);
-					$('a', this.parentNode).removeClass('unsaved-study');
-					self.edit.study.splice(idx, 1);
-					dressButton();
-				});
+					.removeClass('ui-icon-circle-minus')
+					.addClass('ui-icon-circle-plus')
+					.data('index', self.edit.study.length - 1)
+					.on('click.undodelete', function () {
+						var idx = $(this).data('index');
+						$(this).addClass('ui-icon-circle-minus').removeClass('ui-icon-circle-plus').off('click.undodelete').data('index', null);
+						$('a', this.parentNode).removeClass('unsaved-study');
+						self.edit.study.splice(idx, 1);
+						dressButton();
+					});
 			};
 
 			var infoDiv = $('#info-box')[0];
@@ -566,7 +509,7 @@
 				// equalize multi-rows, if there are any
 				jT.$('td.jtox-multi .jtox-diagram span.ui-icon', row).on('click', function () {
 					setTimeout(function () {
-						ccLib.equalizeHeights.apply(window, jT.$('td.jtox-multi table tbody', row).toArray());
+						jT.tables.equalizeHeights.apply(window, jT.$('td.jtox-multi table tbody', row).toArray());
 					}, 50);
 				});
 
@@ -588,13 +531,12 @@
 					$(row).insertAfter( $(row.nextElementSibling) );
 					$(varRow).insertAfter( $(varRow.nextElementSibling) );
 				});
-
 			};
 
 			$('.create-button', panel).on('click', function () {
 				var el = this;
 				$(el).addClass('loading');
-				jT.service(self, self.bundleUri + '/matrix/working', { method: 'POST', data: { deletematrix:  false } }, function (result, jhr) {
+				jT.ambit.call(self, self.bundleUri + '/matrix/working', { method: 'POST', data: { deletematrix:  false } }, function (result, jhr) {
 					$(el).removeClass('loading');
 					if (!!result) {
 						$('.jtox-toolkit', panel).show();
@@ -609,7 +551,6 @@
 			});
 
 			$(panel).addClass('initialized');
-
 		}
 
 		// finally decide what query to make, depending on the
@@ -640,10 +581,8 @@
 			}
 		}
 
-		if (!!queryUri) {
+		if (!!queryUri)
 			self.matrixKit.query(queryUri);
-		}
-
 	};
 
 	// called when a sub-action in endpoint selection tab is called
@@ -673,9 +612,8 @@
 			}
 
 			self.substancesQueryKit.kit().queryDataset(self.bundleUri + '/compound');
-
 		}
-		else {// i.e. endpoints
+		else { // i.e. endpoints
 			var checkAll = $('input', sub)[0];
 			if (sub.childElementCount == 1) {
 				var root = document.createElement('div');
@@ -691,7 +629,7 @@
 					}
 				});
 				$(checkAll).on('change', function (e) {
-					var qUri = self.settings.baseUrl + "/query/study?mergeDatasets=true&bundle_uri=" + bUri;
+					var qUri = self.settings.baseUrl + "/query/study?mergeDatasets=true&bundleUri=" + bUri;
 					if (!this.checked)
 						qUri += "&selected=substances&filterbybundle=" + bUri;
 					self.endpointKit.loadEndpoints(qUri);
@@ -720,7 +658,7 @@
 							el = this,
 							bInfo = data.bundles[self.bundleUri] || {};
 					$(el).addClass('loading');
-					jT.service(self, self.bundleUri + '/compound', {
+					jT.ambit.call(self, self.bundleUri + '/compound', {
 						'method': 'PUT',
 						'data': {
 							compound_uri: data.compound.URI,
@@ -737,20 +675,15 @@
 					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
 					noteEl.val(bundleInfo.remarks);
 				}
-				else {
+				else
 					noteEl.prop('disabled', true).val(' ');
-				}
 			};
-
 		}
 
-		if (id == 'structlist') {
+		if (id == 'structlist')
 			self.queryKit.kit().queryDataset(self.bundleUri + '/compound');
-		}
-		else {
+		else
 			self.queryKit.query();
-		}
-
 	};
 
 	MatrixKit.prototype.onReport = function(id, panel){
@@ -758,7 +691,7 @@
 
 		if (!$(panel).hasClass('initialized')) {
 
-			ccLib.fillTree(panel, self.bundle);
+			jT.ui.updateTree(panel, self.bundle);
 
 			$('#generate-doc').on('click', function(){
 				var loadFile = function(url, callback){
@@ -916,7 +849,7 @@
 											else {
 												prefix = '<w:r><w:rPr><w:color w:val="0000FF" /></w:rPr><w:t xml:space="preserve">';
 											}
-											parts.push( prefix + ccLib.escapeHTML($(this).text()) + '</w:t></w:r>' );
+											parts.push( prefix + _.escape($(this).text()) + '</w:t></w:r>' );
 										});
 									}
 									row['value' + c] = '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>';
@@ -1124,10 +1057,10 @@
 				// Generate appendixes 2 and 3
 
 				var substanceSection = $('#jtox-report-substance'),
-						featureSection = $('#jtox-report-feature'),
-						infoDiv = $('#info-box'),
-						addedData = [],
-						deletedData = [];
+					featureSection = $('#jtox-report-feature'),
+					infoDiv = $('#info-box'),
+					addedData = [],
+					deletedData = [];
 
 				for ( var i = 0, sl = self.dataset.dataEntry.length; i < sl; i++ ) {
 					var substance = self.dataset.dataEntry[i];
@@ -1181,12 +1114,12 @@
 					if( !addedData[i] ) continue;
 					var newSection = substanceSection.clone().removeAttr('id');
 					var substance = self.dataset.dataEntry[i];
-					ccLib.fillTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
+					jT.ui.updateTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
 					for(fId in addedData[i]){
 						var set = addedData[i][fId];
 
 						var newFeature = featureSection.clone().removeAttr('id');
-						ccLib.fillTree(newFeature[0], {title: self.dataset.feature[fId].title});
+						jT.ui.updateTree(newFeature[0], {title: self.dataset.feature[fId].title});
 
 						for ( var j = 0, sl = set.length; j < sl; j++ ) {
 
@@ -1222,7 +1155,7 @@
 
 							$('th.conditions', newInfo).attr('colspan', cl);
 
-							ccLib.fillTree(newInfo, {
+							jT.ui.updateTree(newInfo, {
 								endpoint: feature.title,
 								guidance: '',
 								value: jT.ui.renderObjValue(value, feature.units, 'display'),
@@ -1231,27 +1164,24 @@
 							});
 
 							newFeature.append( newInfo );
-
 						}
 
 						newSection.append( newFeature );
-
 					}
 
 					$('#jtox-report-gap-filling').append( newSection );
-
 				}
 
 				for( var i = 0, al = deletedData.length; i < al; i++ ){
 					if( !deletedData[i] ) continue;
 					var newSection = substanceSection.clone().removeAttr('id');
 					var substance = self.dataset.dataEntry[i];
-					ccLib.fillTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
+					jT.ui.updateTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
 					for(fId in deletedData[i]){
 
 						var set = deletedData[i][fId];
 						var newFeature = featureSection.clone().removeAttr('id');
-						ccLib.fillTree(newFeature[0], {title: self.dataset.feature[fId].title});
+						jT.ui.updateTree(newFeature[0], {title: self.dataset.feature[fId].title});
 
 						for ( var j = 0, sl = set.length; j < sl; j++ ) {
 
@@ -1287,7 +1217,7 @@
 
 							$('th.conditions', newInfo).attr('colspan', cl);
 
-							ccLib.fillTree(newInfo, {
+							jT.ui.updateTree(newInfo, {
 								endpoint: feature.title,
 								guidance: feature.creator,
 								value: jT.ui.renderObjValue(value, feature.units, 'display'),
@@ -1297,35 +1227,28 @@
 							newInfo.find('h5').remove();
 
 							newFeature.append( newInfo );
-
 						}
 
 						newSection.append( newFeature );
-
 					}
 
 					$('#jtox-report-deleting-data').append( newSection );
-
 				}
-
 			};
 
 			self.reportMatrixKit.settings.onRow = function (row, data, index) {
 
 				// equalize multi-rows, if there are any
 				setTimeout(function () {
-					ccLib.equalizeHeights.apply(window, jT.$('td.jtox-multi table tbody', row).toArray());
+					jT.tables.equalizeHeights.apply(window, jT.$('td.jtox-multi table tbody', row).toArray());
 				}, 50);
-
 			};
-
 		}
 
 		var queryUri = self.bundleUri + '/matrix/final';
 		if (!!queryUri) {
 			self.reportMatrixKit.query(queryUri);
 		}
-
 	};
 
 	MatrixKit.prototype.prepareSubstanceKit = function(rootEl){
@@ -1372,7 +1295,6 @@
 		kit.kit().settings.configuration.groups.Identifiers.push('#Tag');
 
 		return kit;
-
 	};
 
 	MatrixKit.prototype.prepareMatrixKit = function(rootEl){
@@ -1380,8 +1302,8 @@
 
 		jTConfig.matrix.groups = function(miniset, kit) {
 			var groups = { "Identifiers" : self.settings.matrixIdentifiers.concat(self.settings.matrixMultiRows) },
-					groupids = [],
-					endpoints = {};
+				groupids = [],
+				endpoints = {};
 
 			var fRender = function (feat, theId) {
 				return function (data, type, full) {
@@ -1394,11 +1316,11 @@
 						if (f.sameAs != feat.sameAs || full.values[fId] == null)
 							continue;
 
-						var catId = self.parseFeatureId(fId).category,
+						var catId = jT.ambit.parseFeatureId(fId).category,
 								config = jT.$.extend(true, {}, kit.settings.configuration.columns["_"], kit.settings.configuration.columns[catId]);
 
 						var theData = full.values[fId];
-						var preVal = (ccLib.getJsonValue(config, 'effects.endpoint.bVisible') !== false) ? "<strong>"+f.title+"</strong>" : null;
+						var preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>"+f.title+"</strong>" : null;
 
 						var icon = f.isModelPredictionFeature?"ui-icon-calculator":"ui-icon-tag";
 						var studyType = "<span class='ui-icon "+icon+"' title='" + f.source.type + "'></span>";
@@ -1407,8 +1329,8 @@
 						var postVal = '', postValParts = [], parameters = [], conditions = [];
 						for (var i = 0, l = f.annotation.length; i < l; i++){
 							var a = f.annotation[i];
-							if ( a.type == 'conditions' && ccLib.getJsonValue(config, 'conditions["' + a.p.toLowerCase() + '"].inMatrix') == true ) {
-								var t = ccLib.getJsonValue(config, 'conditions["' + a.p.toLowerCase() + '"].sTitle') || a.p;
+							if ( a.type == 'conditions' && _.get(config, 'conditions["' + a.p.toLowerCase() + '"].inMatrix') == true ) {
+								var t = _.get(config, 'conditions["' + a.p.toLowerCase() + '"].sTitle') || a.p;
 								conditions.push(t + ' = ' + a.o);
 							}
 							else if (a.type == 'parameters') {
@@ -1421,7 +1343,7 @@
 						if(conditions.length > 0){
 							postValParts.push('<span>' + conditions.join(', ') + '</span>');
 						}
-						if(ccLib.getJsonValue(config, 'protocol.guideline.inMatrix') == true){
+						if(_.get(config, 'protocol.guideline.inMatrix') == true){
 							if(f.creator !== undefined && f.creator != null && f.creator != '' && f.creator != 'null' && f.creator != 'no data'){
 								postValParts.push('<span class="shortened" title="'+f.creator+'">'+f.creator + '</span>');
 							}
@@ -1454,9 +1376,9 @@
 						}
 					}
 
-					if (self.edit.matrixEditable) {
+					if (self.edit.matrixEditable)
 						html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
-					}
+
 					return  html;
 				};
 			};
@@ -1466,7 +1388,7 @@
 				if (feat.sameAs == null || feat.sameAs.indexOf("echaEndpoints.owl#") < 0)
 					continue;
 
-				var catId = self.parseFeatureId(fId).topcategory;
+				var catId = jT.ambit.parseFeatureId(fId).topcategory;
 				var grp = groups[catId];
 				if (grp == null)
 					groups[catId] = grp = [];
@@ -1507,17 +1429,15 @@
 				if (a == 'Identifiers') return -1;
 				if (b == 'Identifiers') return 1;
 				a = groups[a][0], b = groups[b][0];
-				if (miniset.feature[a].title == miniset.feature[b].title) {
+				if (miniset.feature[a].title == miniset.feature[b].title)
 					return 0;
-				}
+
 				return (miniset.feature[a].title < miniset.feature[b].title) ? -1 : 1;
 			})
 
 			var newgroups = {};
 
-			groupids.forEach(function(i, v){
-				newgroups[i] = groups[i];
-			});
+			groupids.forEach(function(i, v) { newgroups[i] = groups[i]; });
 
 			groups = newgroups;
 
@@ -1590,7 +1510,7 @@
 				var getRender = function (fId, oldData, oldRender) {
 					return function (data, type, full) {
 						return typeof data != 'object' ? '-' : jT.ui.renderMulti(data, type, full, function (_data, _type, _full){
-							var dt = ccLib.getJsonValue(_data, (fId.indexOf('#Diagram') > 0 ? 'component.' : '') + oldData);
+							var dt = _.get(_data, (fId.indexOf('#Diagram') > 0 ? 'component.' : '') + oldData);
 							return (typeof oldRender == 'function' ? oldRender(dt, _type, fId.indexOf('#Diagram') > 0 ? _data.component : _data) : dt);
 						});
 					};
@@ -1631,7 +1551,6 @@
 		});
 
 		return matrixKit;
-
 	};
 
 	MatrixKit.prototype.load = function(bundleUri) {
@@ -1644,7 +1563,7 @@
 
 				if (!!self.createForm) {
 
-					ccLib.fillTree(self.createForm, bundle);
+					jT.ui.updateTree(self.createForm, bundle);
 
 					$('#status-' + bundle.status).prop('checked', true);
 
@@ -1673,13 +1592,12 @@
 
 				self.loadUsers();
 
-				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundle_uri=' + encodeURIComponent(self.bundleUri));
+				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
 				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 				$('#export-initial-matrix').prop('href', self.bundleUri + '/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
 				jT.fireCallback(self.settings.onLoaded, self);
-
 			}
 		});
 	};
@@ -1688,7 +1606,7 @@
 		var self = this;
 		var bundle = self.bundle;
 		// request and process users with write access
-		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundle_uri=" + encodeURIComponent(bundle.URI), function (users) {
+		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
 			if (!!users) {
 				var select = $('#users-write');
 				if (select.length == 0) return;
@@ -1699,8 +1617,9 @@
 				}
 			}
 		});
+
 		// request and process users with read only access
-		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundle_uri=" + encodeURIComponent(bundle.URI), function (users) {
+		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
 			if (!!users) {
 				var select = $('#users-read');
 				if (select.length == 0) return;
@@ -1720,9 +1639,8 @@
 			$('#xfinal').button('enable');
 			$(this.rootElement).tabs('enable', 4);
 		}
-		else {
+		else
 			$('#xfinal').button('disable');
-		}
 	};
 
 	MatrixKit.prototype.selectStructure = function (uri, what, el) {
@@ -1730,7 +1648,7 @@
 		var activate = !$(el).hasClass('active');
 		$(el).addClass('loading');
 		var noteEl = $('textarea.remark', self.queryKit.kit().getVarRow(el))[0];
-		jT.service(self, self.bundleUri + '/compound', {
+		jT.ambit.call(self, self.bundleUri + '/compound', {
 			method: 'PUT',
 			data: {
 				compound_uri: uri,
@@ -1766,7 +1684,7 @@
 	MatrixKit.prototype.selectSubstance = function (uri, el) {
 		var self = this;
 		$(el).addClass('loading');
-		jT.service(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: el.checked ? 'add' : 'delete' } }, function (result) {
+		jT.ambit.call(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: el.checked ? 'add' : 'delete' } }, function (result) {
 			$(el).removeClass('loading');
 			if (!result)
 				el.checked = !el.checked; // i.e. revert
@@ -1786,7 +1704,7 @@
 		var activate = !$(el).hasClass('active');
 		if (activate) {
 			$(el).addClass('loading');
-			jT.service(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: 'add', tag : $(el).data('tag')} }, function (result) {
+			jT.ambit.call(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: 'add', tag : $(el).data('tag')} }, function (result) {
 				$(el.parentNode).find('button.jt-toggle').removeClass('active');
 				$(el).removeClass('loading').addClass('active');
 				if (!result)
@@ -1801,7 +1719,7 @@
 	MatrixKit.prototype.selectEndpoint = function (topcategory, endpoint, el) {
 		var self = this;
 		$(el).addClass('loading');
-		jT.service(self, self.bundleUri + '/property', {
+		jT.ambit.call(self, self.bundleUri + '/property', {
 			method: 'PUT',
 			data: {
 				'topcategory': topcategory,
@@ -1846,10 +1764,9 @@
 	};
 
 	function preDetailedRow(index, cell) {
-
 		var self = this;
 		var data = this.dataset.dataEntry[index];
-		var uri = this.settings.baseUrl + '/substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + '&filterbybundle=' + encodeURIComponent(this.settings.bUri) + '&bundle_uri=' + encodeURIComponent(this.settings.bUri);
+		var uri = this.settings.baseUrl + '/substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + '&filterbybundle=' + encodeURIComponent(this.settings.bUri) + '&bundleUri=' + encodeURIComponent(this.settings.bUri);
 
 		var $row = $(cell.parentNode),
 				$idcell = $row.find('td:first-child'),
@@ -1868,7 +1785,6 @@
 			}
 		}
 		else {
-
 			var $cell = $('<td class="paddingless"></td>'),
 				$newRow = $('<tr></tr>').append($cell).insertAfter($row).addClass($row[0].className);
 
@@ -1982,4 +1898,4 @@
 
 	jT.ui.Matrix = MatrixKit;
 
-})(asSys, jQuery, jToxKit);
+})(_, jQuery, jToxKit);
