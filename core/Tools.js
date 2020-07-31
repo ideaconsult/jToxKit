@@ -176,6 +176,26 @@ jT = a$.extend(jT, {
     return ret;
   },
 
+  validateForm: function (form, cb) {
+    cb = cb || function () {
+      if ('checkValidity' in this)
+        return this.checkValidity();
+      else {
+        var valid = (this.value.length > 0);
+        if (!valid)
+          this.placeholder = 'You need to fill this box';
+        return valid;
+      }
+    };
+
+	  var ok = true;
+	  $('input,textarea,select', form).each(function () {
+      ok = ok && (!!cb.call(this));
+	  });
+
+	  return ok;
+  },
+
   activateDownload: function (aEl, blob, destName, autoRemove) {
     var url = URL.createObjectURL(blob),
       selfClick = false;

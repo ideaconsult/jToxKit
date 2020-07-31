@@ -48,6 +48,17 @@ jT.ambit = {
 		return data;
 	},
 
+	parseFeatureId: function (featureId) {
+		var parse = featureId.match(/https?\:\/\/(.*)\/property\/([^\/]+)\/([^\/]+)\/.+/);
+		if (parse == null)
+			return null;
+		else
+			return {
+				topcategory: parse[2].replace("+", " "),
+				category: parse[3].replace("+", " ")
+			};
+	},
+
 	enumSameAs: function (fid, features, callback) {
 		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
 		// This, final feature should be considered "main" and title and others taken from it.
