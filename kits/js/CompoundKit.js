@@ -8,6 +8,19 @@
 
 	var instanceCount = 0;
 
+	function positionTo(el, parent) {
+		var ps = {
+			left: -parent.offsetLeft,
+			top: -parent.offsetTop
+		};
+		parent = parent.offsetParent;
+		for (; !!el && el != parent; el = el.offsetParent) {
+			ps.left += el.offsetLeft;
+			ps.top += el.offsetTop;
+		}
+		return ps;
+	}
+
 	// constructor
 	function CompoundKit(root, settings) {
 		var self = this;
@@ -15,7 +28,7 @@
 		$(root).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
 		self.settings = $.extend(true, 
-			{ configuration: { baseFeatures: jT.Ambit.baseFeatures } }, 
+			{ configuration: { baseFeatures: jT.ambit.baseFeatures } }, 
 			CompoundKit.defaults, 
 			settings);
 
@@ -48,7 +61,7 @@
 		self.pageSize = self.settings.pageSize;
 
 		if (!self.settings.noInterface) {
-			self.rootElement.appendChild(jT.getTemplate('#jtox-compound'));
+			jT.ui.putTemplate('all-compound', ' ? ', self.rootElement);
 
 			jT.ui.bindControls(self, {
 				nextPage: function () { self.nextPage(); },
@@ -110,8 +123,8 @@
 			all.appendChild(divEl);
 			// add the group check multi-change
 			if (self.settings.groupSelection && isMain) {
-				var sel = jT.getTemplate("#jtox-ds-selection");
-				divEl.appendChild(sel);
+				var sel = jT.ui.putTemplate("compound-one-tab", divEl);
+
 				$('.multi-select', sel).on('click', function (e) {
 					var par = $(this).closest('.ui-tabs-panel')[0];
 					var doSel = $(this).haclassName('select');
@@ -139,15 +152,12 @@
 			var tabId = "jtox-ds-export-" + self.instanceNo;
 			var liEl = createATab(tabId, "Export");
 			$(liEl).addClass('jtox-ds-export');
-			var divEl = jT.getTemplate('#jtox-ds-export')
-			divEl.id = tabId;
-			all.appendChild(divEl);
+			var divEl = jT.ui.putTemplate('compound-export', { id: tabId }, all);
 			divEl = $('.jtox-exportlist', divEl)[0];
 
 			for (var i = 0, elen = self.settings.configuration.exports.length; i < elen; ++i) {
 				var expo = self.settings.configuration.exports[i];
-				var el = jT.getTemplate('#jtox-ds-download');
-				divEl.appendChild(el);
+				var el = jT.ui.putTemplate('compound-download', {}, divEl);
 
 				$('a', el)[0].href = jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type));
 				var img = el.getElementsByTagName('img')[0];
@@ -182,7 +192,7 @@
 				var cell = $(this).data('rootCell');
 				if (!!cell) {
 					this.style.display = 'none';
-					var ps = ccLib.positionTo(cell, tabRoot);
+					var ps = positionTo(cell, tabRoot);
 					this.style.top = ps.top + 'px';
 					this.style.left = ps.left + 'px';
 					var cellW = $(cell).parents('.dataTables_wrapper').width() - cell.offsetLeft;
@@ -756,12 +766,10 @@
 					if (self.settings.showTabs) {
 						// tabs feature building
 						var nodeFn = function (id, name, parent) {
-							var fEl = jT.getTemplate('#jtox-ds-feature');
-							parent.appendChild(fEl);
-							jT.ui.updateTree(fEl, {
+							var fEl = jT.ui.putTemplate('compound-one-feature', {
 								title: name.replace(/_/g, ' '),
 								uri: self.featureUri(id)
-							});
+							}, parent);
 
 							var checkEl = $('input[type="checkbox"]', fEl)[0];
 							if (!checkEl)
@@ -844,9 +852,6 @@
 	CompoundKit.prototype.prevPage = jT.tables.prevPage;
 	CompoundKit.prototype.updateControls = jT.tables.updateControls;
 
-	// merge them for future use..
-	CompoundKit.baseFeatures = $.extend({}, baseFeatures, CompoundKit.defaults.configuration.baseFeatures);
-
 	// some public, static methods
 	CompoundKit.processEntry = function (entry, features, fnValue) {
 		if (!fnValue)
@@ -918,7 +923,7 @@
 
 	CompoundKit.processFeatures = function (features, bases) {
 		if (bases == null)
-			bases = baseFeatures;
+			bases = jT.Ambit.baseFeatures;
 		features = $.extend(features, bases);
 
 		for (var fid in features) {

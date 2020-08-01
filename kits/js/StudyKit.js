@@ -17,7 +17,7 @@
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
+		var tree$ = jT.ui.putTemplate('all-studies', ' ? ', this.rootElement),
 			self = this;
 
 		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
@@ -72,7 +72,7 @@
 	StudyKit.prototype.createCategory = function (tab, category) {
 		var theCat$ = $('.' + category + '.jtox-study', tab);
 		if (!theCat$.length) {
-			var aStudy = jT.ui.bakeTemplate(jT.ui.templates['one-study'], {})
+			var aStudy = jT.ui.putTemplate('one-study', {})
 				.addClass(category);
 			theCat$ = $(tab).append(aStudy);
 		}

@@ -39,8 +39,8 @@
 <body>
 	<div class="jtox-toolkit" data-kit="compound" data-manual-init="yes" data-show-features="yes" data-show-export="yes"></div>
   <div class="jtox-template">
-<!--[[ jT.templates['all-compound'] -->
-	  <div id="jtox-compound" class="jtox-compound">
+<!--[[ jT.ui.templates['all-compound'] -->
+	  <div class="jtox-compound">
 	    <div class="jtox-ds-features"></div>
 	    <div class="jtox-controls">
 	      Showing from <span class="jtox-live-data high">{{ pagestart }}</span> to <span class="jtox-live-data high">{{ pageend }}</span><span class="jtox-live-data">{{ filtered-text }}</span>in pages of <select class="jtox-live-data" value="{{ pagesize }}">
@@ -67,26 +67,26 @@
 	      </div>
 	    </div>
 	  </div>
-<!-- // end of #jtox-compound ]]-->
-<!--[[ jT.templates['compound-one-tab'] -->
-    <div id="jtox-ds-selection" class="jtox-selection">
+<!-- // end of all-compound ]]-->
+<!--[[ jT.ui.templates['compound-one-tab'] -->
+    <div class="jtox-selection">
       <a href="#" class="multi-select select">select all</a>&nbsp;<a href="#" class="multi-select unselect">unselect all</a>
     </div>
 <!-- // end of #compound-one-tab ]]-->
-<!--[[ jT.templates['compound-one-feature'] -->
-    <div id="jtox-ds-feature" class="jtox-ds-feature"><input type="checkbox" checked="yes" class="jtox-checkbox" /><span class="jtox-live-data jtox-title">{{ title }}</span><sup class="helper"><a target="_blank" class="jtox-live-data attribute" href="{{ uri }}"><span class="ui-icon ui-icon-info"></span></a></sup></div>
+<!--[[ jT.ui.templates['compound-one-feature'] -->
+    <div class="jtox-ds-feature"><input type="checkbox" checked="yes" class="jtox-checkbox" /><span class="jtox-live-data jtox-title">{{ title }}</span><sup class="helper"><a target="_blank" class="jtox-live-data attribute" href="{{ uri }}"><span class="ui-icon ui-icon-info"></span></a></sup></div>
 <!-- // end of #jtox-ds-feature ]]-->
-<!--[[ jT.templates['compound-download'] -->
-    <div id="jtox-ds-download" class="jtox-inline jtox-ds-download">
+<!--[[ jT.ui.templates['compound-download'] -->
+    <div class="jtox-inline jtox-ds-download">
       <a target="_blank"><img class="borderless"/></a>
     </div>
-<!-- // end of #jtox-ds-download ]]-->
-<!--[[ jT.templates['compound-export'] -->
-    <div id="jtox-ds-export">
+<!-- // end of #compound-download ]]-->
+<!--[[ jT.ui.templates['compound-export'] -->
+    <div id="{{ id }}">
       <div class="jtox-inline">Download dataset as: </div>
       <div class="jtox-inline jtox-exportlist"></div>
     </div>
-<!-- // end of #jtox-ds-export ]]-->
+<!-- // end of #compound-export ]]-->
   </div>
 </body>
 </html>

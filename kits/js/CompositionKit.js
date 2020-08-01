@@ -112,7 +112,7 @@
 				// now make the actual filling
 				if (!self.settings.noInterface) {
 					for (var i in substances) {
-						var panel = jT.ui.bakeTemplate(jT.ui.templates['all-composition'], substances[i])[0];
+						var panel = jT.ui.putTemplate('all-composition', substances[i])[0];
 						$(self.rootElement).append(panel);
 
 						if (!self.settings.showBanner) // we need to remove it
