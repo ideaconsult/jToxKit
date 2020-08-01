@@ -46,6 +46,11 @@
             return all$;
         },
 
+        putTemplate: function (id, info, root) {
+            var html = jT.ui.bakeTemplate(jT.ui.templates[id], info);
+            return !root ? html : $(root).append(html);
+        },
+
         updateTree: function (root, info, def) {
             $('.jtox-live-data', root).each(function (i, el) {
                 $.each($(el).data('jtox-live-data'), function (k, v) {

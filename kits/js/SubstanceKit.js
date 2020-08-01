@@ -29,7 +29,7 @@
 				};
 			}
 
-			$(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-substance'], ' ? '));
+			jT.ui.putTemplate('all-substance', ' ? ', this.rootElement);
 			this.init(settings);
 		}
 
