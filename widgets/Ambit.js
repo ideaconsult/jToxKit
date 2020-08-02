@@ -59,6 +59,10 @@ jT.ambit = {
 			};
 	},
 
+	diagramUri: function (uri) {
+		return !!uri && (typeof uri == 'string') ? uri.replace(/(.+)(\/conformer.*)/, "$1") + "?media=image/png" : '';
+	},
+
 	enumSameAs: function (fid, features, callback) {
 		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
 		// This, final feature should be considered "main" and title and others taken from it.

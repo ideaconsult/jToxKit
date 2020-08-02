@@ -22,56 +22,53 @@
 	}
 
 	// constructor
-	function CompoundKit(root, settings) {
-		var self = this;
-		self.rootElement = root;
-		$(root).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
+	function CompoundKit(settings) {
+		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
-		self.settings = $.extend(true, 
+		this.settings = $.extend(true, 
 			{ configuration: { baseFeatures: jT.ambit.baseFeatures } }, 
 			CompoundKit.defaults, 
 			settings);
 
 		// make a dull copy here, because, otherwise groups are merged... which we DON'T want
 		if (settings != null && settings.configuration != null && settings.configuration.groups != null)
-			self.settings.configuration.groups = settings.configuration.groups;
+			this.settings.configuration.groups = settings.configuration.groups;
 
-		self.instanceNo = instanceCount++;
-		if (self.settings.rememberChecks && self.settings.showTabs)
-			self.featureStates = {};
+		this.instanceNo = instanceCount++;
+		if (this.settings.rememberChecks && this.settings.showTabs)
+		this.featureStates = {};
 
-		// finally make the query, if Uri is provided
-		if (self.settings['datasetUri'] != null)
-			self.queryDataset(self.settings['datasetUri']);
+		// finally make the query, if Uri is provided. This _invokes_ init() internally.
+		if (this.settings['datasetUri'] != null)
+			this.queryDataset(this.settings['datasetUri']);
 	};
 
 	// now follow the prototypes of the instance functions.
 	CompoundKit.prototype.init = function () {
-		var self = this;
+		this.feature = null; // features, as downloaded from server, after being processed.
+		this.dataset = null; // the last-downloaded dataset.
+		this.groups = null; // computed groups, i.e. 'groupName' -> array of feature list, prepared.
+		this.fixTable = this.varTable = null; // the two tables - to be initialized in prepareTables.
+		this.entriesCount = null;
+		this.suspendEqualization = false;
+		this.orderList = [];
+		this.usedFeatures = [];
+		this.pageStart = this.settings.pageStart;
+		this.pageSize = this.settings.pageSize;
 
-		self.feature = null; // features, as downloaded from server, after being processed.
-		self.dataset = null; // the last-downloaded dataset.
-		self.groups = null; // computed groups, i.e. 'groupName' -> array of feature list, prepared.
-		self.fixTable = self.varTable = null; // the two tables - to be initialized in prepareTables.
-		self.entriesCount = null;
-		self.suspendEqualization = false;
-		self.orderList = [];
-		self.usedFeatures = [];
-		self.pageStart = self.settings.pageStart;
-		self.pageSize = self.settings.pageSize;
+		if (!this.settings.noInterface) {
+			var self = this;
+			jT.ui.putTemplate('all-compound', ' ? ', this.rootElement);
 
-		if (!self.settings.noInterface) {
-			jT.ui.putTemplate('all-compound', ' ? ', self.rootElement);
-
-			jT.ui.bindControls(self, {
+			jT.tables.bindControls(this, {
 				nextPage: function () { self.nextPage(); },
 				prevPage: function () { self.prevPage(); },
 				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
 				filter: function () { self.updateTables(); }
 			});
 
-			self.$procDiv = $('.jt-processing', self.rootElement);
-			self.$errDiv = $('.jt-error', self.rootElement);
+			this.$procDiv = $('.jt-processing', this.rootElement);
+			this.$errDiv = $('.jt-error', this.rootElement);
 		}
 	};
 
@@ -157,12 +154,11 @@
 
 			for (var i = 0, elen = self.settings.configuration.exports.length; i < elen; ++i) {
 				var expo = self.settings.configuration.exports[i];
-				var el = jT.ui.putTemplate('compound-download', {}, divEl);
-
-				$('a', el)[0].href = jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type));
-				var img = el.getElementsByTagName('img')[0];
-				img.alt = img.title = expo.type;
-				img.src = self.settings.baseUrl + '/' + expo.icon;
+				var el = jT.ui.putTemplate('compound-download', {
+					link: jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type)),
+					type: expo.type,
+					icon: expo.icon
+				}, divEl);
 			}
 
 			jT.fireCallback(self.settings.onTab, self, divEl, liEl, "Export", isMain);
@@ -223,7 +219,7 @@
 		var val = (feature.data !== undefined) ? (_.get(entry, $.isArray(feature.data) ? feature.data[0] : feature.data)) : entry.values[fId];
 		return (typeof feature.render == 'function') ?
 			feature.render(val, !!type ? type : 'filter', entry) :
-			jT.ui.renderObjValue(val, feature.units, type);
+			jT.ui.renderRange(val, feature.units, type);
 	};
 
 	CompoundKit.prototype.featureUri = function (fId) {
@@ -259,7 +255,7 @@
 
 		// now we now we should show this one.
 		var col = {
-			"title": !feature.title ? '' : jT.ui.valueWithUnits(feature.title.replace(/_/g, ' '), (!self.settings.showUnits ? null : feature.units)),
+			"title": !feature.title ? '' : jT.valueAndUnits(feature.title.replace(/_/g, ' '), (!self.settings.showUnits ? null : feature.units)),
 			"defaultContent": "-",
 		};
 
@@ -276,7 +272,9 @@
 			};
 		else if (!!feature.shorten)
 			col["render"] = function (data, type, full) {
-				if (!feature.data) data = data[fId];
+				if (!feature.data)
+					data = data[fId];
+				data = data || "";
 				return (type != "display") ? '' + data : jT.ui.shortenedData(data, "Press to copy the value in the clipboard");
 			};
 		else if (feature.data == null) // in other cases we want the default presenting of the plain value
@@ -290,7 +288,7 @@
 					var html = '';
 					for (var i = 0; i < val.length; ++i) {
 						html += (type == 'display') ? '<div>' : '';
-						html += jT.ui.renderObjValue(val[i], units, type);
+						html += jT.ui.renderRange(val[i], units, type);
 						html += (type == 'display') ? '</div>' : ',';
 					}
 					return html;
@@ -501,7 +499,7 @@
 				$(nRow).data('jtox-index', iDataIndex);
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.ui.installHandlers(self, nRow);
+				jT.tables.installHandlers(self, nRow);
 				$('.jtox-diagram span.ui-icon', nRow).on('click', function () {
 					setTimeout(function () {
 						$(self.fixTable).dataTable().fnAdjustColumnSizing();
@@ -523,7 +521,7 @@
 			}
 		});
 
-		jT.ui.sortColDefs(varCols);
+		jT.tables.sortColDefs(varCols);
 		self.varTable = ($(".jtox-ds-variable table", self.rootElement).dataTable({
 			"paging": false,
 			"processing": true,
@@ -543,7 +541,7 @@
 				$(nRow).addClass('jtox-row');
 				$(nRow).data('jtox-index', iDataIndex);
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.ui.installHandlers(self, nRow);
+				jT.tables.installHandlers(self, nRow);
 			},
 			"drawCallback": function (oSettings) {
 				// this is for synchro-sorting the two tables
@@ -823,9 +821,9 @@
 		this.clearDataset();
 		this.init();
 
-		datasetUri = jT.grabPaging(self, datasetUri);
+		datasetUri = jT.ambit.grabPaging(self, datasetUri);
 
-		self.settings.baseUrl = self.settings.baseUrl || jT.grabBaseUrl(datasetUri);
+		self.settings.baseUrl = self.settings.baseUrl || jT.formBaseUrl(datasetUri);
 
 		// remember the _original_ datasetUri and make a call with one size length to retrieve all features...
 		self.datasetUri = (datasetUri.indexOf('http') != 0 ? self.settings.baseUrl : '') + datasetUri;
@@ -1044,55 +1042,55 @@
 			},
 			"exports": [{
 					type: "chemical/x-mdl-sdfile",
-					icon: "images/sdf64.png"
+					icon: "/assets/img/types/sdf64.png"
 				},
 				{
 					type: "chemical/x-cml",
-					icon: "images/cml64.png"
+					icon: "/assets/img/types/cml64.png"
 				},
 				{
 					type: "chemical/x-daylight-smiles",
-					icon: "images/smi64.png"
+					icon: "/assets/img/types/smi64.png"
 				},
 				{
 					type: "chemical/x-inchi",
-					icon: "images/inchi64.png"
+					icon: "/assets/img/types/inchi64.png"
 				},
 				{
 					type: "text/uri-list",
-					icon: "images/lnk64.png"
+					icon: "/assets/img/types/lnk64.png"
 				},
 				{
 					type: "application/pdf",
-					icon: "images/pdf64.png"
+					icon: "/assets/img/types/pdf64.png"
 				},
 				{
 					type: "text/csv",
-					icon: "images/csv64.png"
+					icon: "/assets/img/types/csv64.png"
 				},
 				{
 					type: "text/plain",
-					icon: "images/txt64.png"
+					icon: "/assets/img/types/txt64.png"
 				},
 				{
 					type: "text/x-arff",
-					icon: "images/arff.png"
+					icon: "/assets/img/types/arff.png"
 				},
 				{
 					type: "text/x-arff-3col",
-					icon: "images/arff-3.png"
+					icon: "/assets/img/types/arff-3.png"
 				},
 				{
 					type: "application/rdf+xml",
-					icon: "images/rdf64.png"
+					icon: "/assets/img/types/rdf64.png"
 				},
 				{
 					type: "application/json",
-					icon: "images/json64.png"
+					icon: "/assets/img/types/json64.png"
 				},
 				{
 					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-					icon: "images/xlsx.png"
+					icon: "/assets/img/types/xlsx.png"
 				}
 			],
 
@@ -1110,7 +1108,7 @@
 						width: "125px"
 					},
 					render: function (data, type, full) {
-						dUri = jT.ui.diagramUri(data);
+						dUri = jT.ambit.diagramUri(data);
 						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><span class="ui-icon ui-icon-zoomin"></span><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
 					}
 				},
