@@ -330,7 +330,7 @@
 					jT.ui.updateTree(infoDiv, {
 						endpoint: feature.title,
 						guidance: feature.creator,
-						value: jT.ui.renderObjValue(val[valueIdx], feature.units, 'display'),
+						value: jT.ui.renderRange(val[valueIdx], feature.units, 'display'),
 					});
 
 					if (isDelete) {
@@ -437,7 +437,7 @@
 				for (var cId in value.effects[0].conditions) {
 					f.annotation.push({
 						'p': cId,
-						'o': jT.ui.renderObjValue(value.effects[0].conditions[cId])
+						'o': jT.ui.renderRange(value.effects[0].conditions[cId])
 					});
 				}
 
@@ -447,7 +447,7 @@
 				preVal = [f.creator, preVal].filter(function(value){return value!==null}).join(' ');
 
 				var html = 	'<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.edit.study.length - 1) + '"></span>&nbsp;' + 
-							'<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderObjValue(value.effects[0].result, null, 'display', preVal) + '</a>',
+							'<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(value.effects[0].result, null, 'display', preVal) + '</a>',
 					span = document.createElement('div');
 
 				span.innerHTML = html;
@@ -1160,7 +1160,7 @@
 							jT.ui.updateTree(newInfo, {
 								endpoint: feature.title,
 								guidance: '',
-								value: jT.ui.renderObjValue(value, feature.units, 'display'),
+								value: jT.ui.renderRange(value, feature.units, 'display'),
 								remarks: feature.creator,
 								studyType: feature.source.type
 							});
@@ -1222,7 +1222,7 @@
 							jT.ui.updateTree(newInfo, {
 								endpoint: feature.title,
 								guidance: feature.creator,
-								value: jT.ui.renderObjValue(value, feature.units, 'display'),
+								value: jT.ui.renderRange(value, feature.units, 'display'),
 								remarks: value.remarks
 							});
 
@@ -1370,7 +1370,7 @@
 									html += '<span class="ui-icon ui-icon-circle-minus delete-popup"></span>&nbsp;';
 								}
 							}
-							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderObjValue(d, f.units, 'display', preVal) + '</a>'
+							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
 									+ studyType
 									+ ' ' + postVal;
 							html += jT.ui.putInfo(full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId));

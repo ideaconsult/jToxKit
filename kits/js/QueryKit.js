@@ -300,7 +300,7 @@ var jToxSearch = (function () {
       doQuery = true;
     }
 
-    jT.ui.installHandlers(self);
+    jT.tables.installHandlers(self);
     if (doQuery) {
       self.queryKit.cancelInitialQuery();
       setTimeout(function () { self.queryKit.query(); }, 250);
