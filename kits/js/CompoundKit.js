@@ -120,15 +120,17 @@
 			all.appendChild(divEl);
 			// add the group check multi-change
 			if (self.settings.groupSelection && isMain) {
-				var sel = jT.ui.putTemplate("compound-one-tab", divEl);
+				var sel = jT.ui.fillTemplate('compound-one-tab');
+				$(divEl).append(sel);
 
 				$('.multi-select', sel).on('click', function (e) {
-					var par = $(this).closest('.ui-tabs-panel')[0];
-					var doSel = $(this).haclassName('select');
+					var par = $(this).closest('.ui-tabs-panel'),
+						doSel = $(this).hasClass('select');
 					$('input', par).each(function () {
 						this.checked = doSel;
 						$(this).trigger('change');
 					});
+					e.stopPropagation();
 				});
 			}
 
@@ -146,19 +148,23 @@
 		}
 
 		if (isMain && self.settings.showExport) {
-			var tabId = "jtox-ds-export-" + self.instanceNo;
-			var liEl = createATab(tabId, "Export");
+			var tabId = "jtox-ds-export-" + self.instanceNo,
+				liEl = createATab(tabId, "Export");
 			$(liEl).addClass('jtox-ds-export');
-			var divEl = jT.ui.putTemplate('compound-export', { id: tabId }, all);
+			
+			var divEl = jT.ui.fillTemplate('compound-export', { id: tabId });
+			$(all).append(divEl);
+			
 			divEl = $('.jtox-exportlist', divEl)[0];
 
 			for (var i = 0, elen = self.settings.configuration.exports.length; i < elen; ++i) {
 				var expo = self.settings.configuration.exports[i];
-				var el = jT.ui.putTemplate('compound-download', {
+				var el = jT.ui.fillTemplate('compound-download', {
 					link: jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type)),
 					type: expo.type,
 					icon: expo.icon
-				}, divEl);
+				});
+				$(divEl).append(el);
 			}
 
 			jT.fireCallback(self.settings.onTab, self, divEl, liEl, "Export", isMain);
@@ -231,11 +237,11 @@
 			scope = 'details';
 		var self = this;
 		var data = [];
-		_.each(set, function (fId) {  // TODO: The original enumObject was deep!
+		_.each(set, function (fId) {
 			var feat = $.extend({}, self.feature[fId]);
 			var vis = feat.visibility;
-			if (!!vis && vis != scope)
-				return;
+			if (!!vis && vis != scope) return;
+
 			var title = feat.title;
 			feat.value = self.featureValue(fId, entry, scope);
 			if (!!title && (!self.settings.hideEmptyDetails || !!feat.value)) {
@@ -452,14 +458,10 @@
 
 		// now proceed to enter all other columns
 		for (var gr in self.groups) {
-			_.each(self.groups[gr], function (fId, idx) {  // TODO: The original enumObject was deep!
-				if (idx == "name")
-					return;
-
+			_.each(self.groups[gr], function (fId) {
 				var feature = self.feature[fId];
 				var col = self.prepareColumn(fId, feature);
-				if (!col)
-					return;
+				if (!col) return;
 
 				// finally - assign column switching to the checkbox of main tab.
 				var colList = !!feature.primary ? fixCols : varCols;
@@ -587,7 +589,7 @@
 
 			var grpArr = (typeof grp == "function" || typeof grp == "string") ? jT.fireCallback(grp, self, i, miniset) : grp;
 			self.groups[i] = [];
-			_.each(grpArr, function (fid, idx) {  // TODO: The original enumObject was deep!
+			_.each(grpArr, function (fid, idx) {
 				var isUsed = false;
 				CompoundKit.enumSameAs(fid, self.feature, function (feature) {
 					isUsed |= feature.used;
@@ -764,10 +766,11 @@
 					if (self.settings.showTabs) {
 						// tabs feature building
 						var nodeFn = function (id, name, parent) {
-							var fEl = jT.ui.putTemplate('compound-one-feature', {
+							var fEl = jT.ui.fillTemplate('compound-one-feature', {
 								title: name.replace(/_/g, ' '),
 								uri: self.featureUri(id)
-							}, parent);
+							});
+							$(parent).append(fEl);
 
 							var checkEl = $('input[type="checkbox"]', fEl)[0];
 							if (!checkEl)
@@ -781,18 +784,13 @@
 
 						self.prepareTabs($('.jtox-ds-features', self.rootElement)[0], true, function (divEl, gr) {
 							var empty = true;
-							_.each(self.groups[gr], function (fId, idx, level) {  // TODO: The original enumObject was deep!
+							_.each(self.groups[gr], function (fId) {
 								var vis = (self.feature[fId] || {})['visibility'];
-								if (!!vis && vis != 'main')
-									return;
+								if (!!vis && vis != 'main') return;
+
 								empty = false;
-								if (idx == "name")
-									var fEl = nodeFn(null, fId, divEl);
-								else if (level == 1) {
-									var title = self.feature[fId].title;
-									if (title != null)
-										nodeFn(fId, title, divEl);
-								}
+								var title = self.feature[fId].title;
+								title && nodeFn(fId, title, divEl);
 							});
 
 							return empty;
