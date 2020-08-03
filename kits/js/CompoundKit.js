@@ -392,7 +392,7 @@
 			if (self.settings.preDetails != null && !jT.fireCallback(self.settings.preDetails, self, idx, cell) || !cell)
 				return; // the !cell  means you've forgotten to add #DetailedInfoRow feature somewhere.
 			$(row).toggleClass('jtox-detailed-row');
-			var toShow = $(row).haclassName('jtox-detailed-row');
+			var toShow = $(row).hasClass('jtox-detailed-row');
 
 			// now go and expand both fixed and variable table details' cells.
 			fnExpandCell(cell, toShow);
@@ -487,7 +487,7 @@
 		self.fixTable = ($(".jtox-ds-fixed table", self.rootElement).dataTable({
 			"paging": false,
 			"lengthChange": false,
-			"autoWidth": true,
+			"autoWidth": false,
 			"dom": "rt",
 			"columns": fixCols,
 			"ordering": false,
