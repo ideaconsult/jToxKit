@@ -36,7 +36,9 @@
 			}
 		}
 
-		if (!!form.searchcontext) {
+		if (this.settings.hideContext)
+			$(form.searchcontext).hide();
+		else if (!!form.searchcontext) {
 			form.searchcontext.value = this.settings.contextUri;
 			$(form.searchcontext).on('change', function (e) {
 				this.settings.contextUri = this.value;
@@ -181,7 +183,7 @@
 				var emptySpace = $('.toolEmptyCell', ketcherBox)[0];
 				// TODO: Change the button template - provide the text and classes!!
 				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
-					title: "Use ",
+					title: "Use",
 					icon: "arrowthick-1-n"
 				}))).on('click', function () {
 					var smiles = ketcher.getSmiles();
@@ -191,7 +193,7 @@
 						form.searchbox.value = smiles;
 				});
 				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
-					title: "Draw ",
+					title: "Draw",
 					icon: "arrowthick-1-s"
 				}))).on('click', function () {
 					ketcher.setMolecule(self.search.mol || form.searchbox.value);
@@ -310,6 +312,7 @@
 		defaultNeedle: '50-00-0', // which is the default search string, if empty one is provided
 		smartsList: 'funcgroups', // which global JS variable to seek for smartsList
 		hideOptions: '', // comma separated list of search options to hide
+		hideContext: false, // whether to hide the context box
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.

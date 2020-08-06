@@ -102,9 +102,10 @@
             if (data.toString().length <= 5) {
                 res += content;
             } else {
-                res += '<div class="shortened">' + content + '</div>';
+                res += '<div class="shortened"><span>' + content + '</div><i class="icon fa fa-copy"';
                 if (message != null)
-                    res += '<span class="ui-icon ui-icon-copy" title="' + message + '" data-uuid="' + data + '"></span>';
+                    res +=  ' title="' + message + '"';
+                res += ' data-uuid="' + data + '"></i>';
             }
             return res;
         },
