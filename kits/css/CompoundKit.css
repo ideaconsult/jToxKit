@@ -31,6 +31,10 @@
   margin-left: 5px;
 }
 
+.jtox-ds-feature>sup>a>i {
+  margin-top: 6px;
+}
+
 .jtox-selection {
   font-size: 80%;
   float: right;

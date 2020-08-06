@@ -42,8 +42,9 @@
 }
 
 .jtox-query .search-pane button {
-  vertical-align: top;
   margin-bottom: 0px;
+  margin-left: .4rem;
+  padding: 2px;
 }
 
 .jtox-query .searchsimilarity select {

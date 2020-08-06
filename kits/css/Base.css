@@ -75,7 +75,7 @@
   opacity: 0.7;
 }
 
-.jtox-toolkit sup.helper span.ui-icon {
+.jtox-toolkit sup.helper .icon {
   vertical-align: top !important;
   display: inline-block;
 }
@@ -96,6 +96,7 @@
 
 .jtox-toolkit label {
   margin-left: .4rem;
+  margin-right: .4rem;
   display: inline-block;
   font-weight: normal;
 }
@@ -201,6 +202,10 @@
 .jtox-toolkit .shortened {
   max-height: 25px;
   overflow: hidden;
+}
+
+.jtox-toolkit .shortened span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -293,14 +298,15 @@ select {
   background-color: #fefefe;
 }
 
-.jtox-diagram span.ui-icon {
+.jtox-diagram .icon {
   position: absolute;
   bottom: 0px;
   right: 0px;
   display: none;
+  opacity: .8;
 }
 
-.jtox-diagram:hover span.ui-icon {
+.jtox-diagram:hover .icon {
   display: block;
 }
 
@@ -421,6 +427,10 @@ td.jtox-multi table {
 .jtox-controls {
   padding: 10px;
   vertical-align: baseline;
+}
+
+.jtox-controls>* {
+  margin-left: .4rem;
 }
 
 .jtox-controls .paginate_disabled_previous,

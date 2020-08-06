@@ -703,7 +703,7 @@
 					return (type != "display") ?
 						'' + data :
 						"&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>" +
-						'<span class="jtox-details-open ui-icon ui-icon-folder-collapsed" title="Press to open/close detailed info for this compound"></span>';
+						'<i class="jtox-details-open fa fa-folder" title="Press to open/close detailed info for this compound"></i>';
 				} : // no details case
 				function (data, type, full) {
 					return (type != "display") ?
@@ -774,7 +774,7 @@
 			var varCell = self.getVarRow(idx).firstElementChild;
 			fnExpandCell(varCell, toShow);
 
-			$('.jtox-details-open', row).toggleClass('ui-icon-folder-open ui-icon-folder-collapsed');
+			$('.jtox-details-open', row).toggleClass('fa-folder fa-folder-open');
 
 			if (toShow) {
 				// i.e. we need to show it - put the full sized diagram in the fixed part and the tabs in the variable one...
@@ -877,7 +877,7 @@
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
 				jT.tables.installHandlers(self, nRow);
-				$('.jtox-diagram span.ui-icon', nRow).on('click', function () {
+				$('.jtox-diagram icon', nRow).on('click', function () {
 					setTimeout(function () {
 						$(self.fixTable).dataTable().fnAdjustColumnSizing();
 						self.equalizeTables();
@@ -1482,7 +1482,7 @@
 					},
 					render: function (data, type, full) {
 						dUri = jT.ambit.diagramUri(data);
-						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><span class="ui-icon ui-icon-zoomin"></span><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
+						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><i class="icon fa fa-search-plus"></i><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
 					}
 				},
 				'#IdRow': {
@@ -4635,7 +4635,9 @@
 			}
 		}
 
-		if (!!form.searchcontext) {
+		if (this.settings.hideContext)
+			$(form.searchcontext).hide();
+		else if (!!form.searchcontext) {
 			form.searchcontext.value = this.settings.contextUri;
 			$(form.searchcontext).on('change', function (e) {
 				this.settings.contextUri = this.value;
@@ -4780,7 +4782,7 @@
 				var emptySpace = $('.toolEmptyCell', ketcherBox)[0];
 				// TODO: Change the button template - provide the text and classes!!
 				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
-					title: "Use ",
+					title: "Use",
 					icon: "arrowthick-1-n"
 				}))).on('click', function () {
 					var smiles = ketcher.getSmiles();
@@ -4790,7 +4792,7 @@
 						form.searchbox.value = smiles;
 				});
 				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
-					title: "Draw ",
+					title: "Draw",
 					icon: "arrowthick-1-s"
 				}))).on('click', function () {
 					ketcher.setMolecule(self.search.mol || form.searchbox.value);
@@ -4909,6 +4911,7 @@
 		defaultNeedle: '50-00-0', // which is the default search string, if empty one is provided
 		smartsList: 'funcgroups', // which global JS variable to seek for smartsList
 		hideOptions: '', // comma separated list of search options to hide
+		hideContext: false, // whether to hide the context box
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
@@ -6270,7 +6273,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 })(asSys, jQuery, jToxKit);
 jT.ui.templates['button-icon']  = 
-"<button>{{ title }}<span class=\"ui-icon ui-icon-{{ icon }} {{ className }}\"></span></button>" +
+"<button title=\"{{ title }}\"><i class=\"fa fa-{{ icon }} {{ className }}\"></i></button>" +
 ""; // end of #button-icon 
 
 jT.ui.templates['select-one-option']  = 
@@ -6294,7 +6297,7 @@ jT.ui.templates['all-compound']  =
 "<div class=\"jtox-compound\">" +
 "<div class=\"jtox-ds-features\"></div>" +
 "<div class=\"jtox-controls\">" +
-"Showing from <span class=\"jtox-live-data high\">{{ pagestart }}</span> to <span class=\"jtox-live-data high\">{{ pageend }}</span><span class=\"jtox-live-data\">{{ filtered-text }}</span>in pages of <select class=\"jtox-live-data\" value=\"{{ pagesize }}\">" +
+"Showing from<span class=\"jtox-live-data high\">{{ pagestart }}</span> to <span class=\"jtox-live-data high\">{{ pageend }}</span><span class=\"jtox-live-data\">{{ filtered-text }}</span>in pages of <select class=\"jtox-live-data\" value=\"{{ pagesize }}\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"30\">30</option>" +
@@ -6327,7 +6330,9 @@ jT.ui.templates['compound-one-tab']  =
 ""; // end of #compound-one-tab 
 
 jT.ui.templates['compound-one-feature']  = 
-"<div class=\"jtox-ds-feature\"><input type=\"checkbox\" checked=\"yes\" class=\"jtox-checkbox\" /><span class=\"jtox-title\">{{ title }}</span><sup class=\"helper\"><a target=\"_blank\" href=\"{{ uri }}\"><span class=\"ui-icon ui-icon-info\"></span></a></sup></div>" +
+"<div class=\"jtox-ds-feature\"><input type=\"checkbox\" checked=\"yes\"" +
+"class=\"jtox-checkbox\" /><span class=\"jtox-title\">{{ title }}</span><sup class=\"helper\"><a target=\"_blank\"" +
+"href=\"{{ uri }}\"><i class=\"fa fa-info-circle\"></i></a></sup></div>" +
 ""; // end of #jtox-ds-feature 
 
 jT.ui.templates['compound-download']  = 
@@ -6514,9 +6519,8 @@ jT.ui.templates['kit-query-all']  =
 "<div class=\"dynamic auto-hide searchauto hidden jtox-inline\">" +
 "<input type=\"checkbox\" name=\"regexp\" id=\"toxquery-regexp\" />" +
 "<label for=\"toxquery-regexp\">Enable fragment search<sup class=\"helper\">" +
-"<a target=\"_blank\" href=\"http://en.wikipedia.org/wiki/Regular_expression\">" +
-"<span class=\"ui-icon ui-icon-info\"></span>" +
-"</a></sup>" +
+"<a target=\"_blank\" href=\"http://en.wikipedia.org/wiki/Regular_expression\"><i class=\"fa fa-info-circle\"></i></a>" +
+"</sup>" +
 "</label>" +
 "</div>" +
 "<div class=\"dynamic auto-hide searchsimilarity hidden jtox-inline\">" +
@@ -6541,10 +6545,8 @@ jT.ui.templates['kit-query-all']  =
 "</div>" +
 "<div class=\"jtox-inline\">" +
 "<input type=\"text\" name=\"searchbox\" />" +
-"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\"><span class=\"ui-icon ui-icon-search\" /></button>" +
-"<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\">" +
-"<span class=\"ui-icon ui-icon-pencil\" />" +
-"</button>" +
+"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\"><i class=\"fa fa-search\"></i></button>" +
+"<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\"><i class=\"fa fa-edit\"></i></button>" +
 "</div>" +
 "</div>" +
 "<div id=\"searchcontext\" class=\"size-full\">" +
@@ -6647,7 +6649,7 @@ jT.ui.templates['one-study']  =
 jT.ui.templates['all-substance']  = 
 "<div class=\"jtox-substance\">" +
 "<div class=\"jtox-controls\">" +
-"Showing from <span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high jtox-live-data\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
+"Showing from<span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high jtox-live-data\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"50\">50</option>" +

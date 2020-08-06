@@ -103,12 +103,12 @@ jT.ui = a$.extend(jT.ui, {
 
   	if (!root) {
       // make this handler for UUID copying. Once here - it's live, so it works for all tables in the future
-      $(document).on('click', '.jtox-kit span.ui-icon-copy', function () { jT.copyToClipboard($(this).data('uuid')); return false;});
+      $(document).on('click', '.jtox-kit div.shortened + .icon', function () { jT.copyToClipboard($(this).data('uuid')); return false;});
       // install the click handler for fold / unfold
       $(document).on('click', '.jtox-foldable>.title', function(e) { $(this).parent().toggleClass('folded'); });
       // install diagram zooming handlers
-      $(document).on('click', '.jtox-diagram span.ui-icon', function () {
-        $(this).toggleClass('ui-icon-zoomin').toggleClass('ui-icon-zoomout');
+      $(document).on('click', '.jtox-diagram .icon', function () {
+        $(this).toggleClass('fa-search-plus fa-search-minus');
         $('img', this.parentNode).toggleClass('jtox-smalldiagram');
       });
 

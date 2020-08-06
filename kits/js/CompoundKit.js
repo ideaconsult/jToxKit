@@ -328,7 +328,7 @@
 					return (type != "display") ?
 						'' + data :
 						"&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>" +
-						'<span class="jtox-details-open ui-icon ui-icon-folder-collapsed" title="Press to open/close detailed info for this compound"></span>';
+						'<i class="jtox-details-open fa fa-folder" title="Press to open/close detailed info for this compound"></i>';
 				} : // no details case
 				function (data, type, full) {
 					return (type != "display") ?
@@ -399,7 +399,7 @@
 			var varCell = self.getVarRow(idx).firstElementChild;
 			fnExpandCell(varCell, toShow);
 
-			$('.jtox-details-open', row).toggleClass('ui-icon-folder-open ui-icon-folder-collapsed');
+			$('.jtox-details-open', row).toggleClass('fa-folder fa-folder-open');
 
 			if (toShow) {
 				// i.e. we need to show it - put the full sized diagram in the fixed part and the tabs in the variable one...
@@ -502,7 +502,7 @@
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
 				jT.tables.installHandlers(self, nRow);
-				$('.jtox-diagram span.ui-icon', nRow).on('click', function () {
+				$('.jtox-diagram icon', nRow).on('click', function () {
 					setTimeout(function () {
 						$(self.fixTable).dataTable().fnAdjustColumnSizing();
 						self.equalizeTables();
@@ -1107,7 +1107,7 @@
 					},
 					render: function (data, type, full) {
 						dUri = jT.ambit.diagramUri(data);
-						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><span class="ui-icon ui-icon-zoomin"></span><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
+						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><i class="icon fa fa-search-plus"></i><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
 					}
 				},
 				'#IdRow': {

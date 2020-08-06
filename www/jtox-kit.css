@@ -99,7 +99,7 @@ div.tippy-box div.annotip-severity {
   opacity: 0.7;
 }
 
-.jtox-toolkit sup.helper span.ui-icon {
+.jtox-toolkit sup.helper .icon {
   vertical-align: top !important;
   display: inline-block;
 }
@@ -120,6 +120,7 @@ div.tippy-box div.annotip-severity {
 
 .jtox-toolkit label {
   margin-left: .4rem;
+  margin-right: .4rem;
   display: inline-block;
   font-weight: normal;
 }
@@ -225,6 +226,10 @@ div.tippy-box div.annotip-severity {
 .jtox-toolkit .shortened {
   max-height: 25px;
   overflow: hidden;
+}
+
+.jtox-toolkit .shortened span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -317,14 +322,15 @@ select {
   background-color: #fefefe;
 }
 
-.jtox-diagram span.ui-icon {
+.jtox-diagram .icon {
   position: absolute;
   bottom: 0px;
   right: 0px;
   display: none;
+  opacity: .8;
 }
 
-.jtox-diagram:hover span.ui-icon {
+.jtox-diagram:hover .icon {
   display: block;
 }
 
@@ -447,6 +453,10 @@ td.jtox-multi table {
   vertical-align: baseline;
 }
 
+.jtox-controls>* {
+  margin-left: .4rem;
+}
+
 .jtox-controls .paginate_disabled_previous,
 .jtox-controls .paginate_enabled_previous,
 .jtox-controls .paginate_disabled_next,
@@ -538,6 +548,10 @@ td.jtox-multi table {
 
 .jtox-ds-feature span.jtox-title {
   margin-left: 5px;
+}
+
+.jtox-ds-feature>sup>a>i {
+  margin-top: 6px;
 }
 
 .jtox-selection {
@@ -1723,8 +1737,9 @@ dd {
 }
 
 .jtox-query .search-pane button {
-  vertical-align: top;
   margin-bottom: 0px;
+  margin-left: .4rem;
+  padding: 2px;
 }
 
 .jtox-query .searchsimilarity select {
