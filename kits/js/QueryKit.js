@@ -1,386 +1,325 @@
-/* toxquery.js - Universal query widget, that can work with any kit (study or compound) inside
+/* QueryKit - Universal query widget, that can work with any kit (study or compound) inside. Migrated.
  *
- * Copyright 2012-2014, IDEAconsult Ltd. http://www.ideaconsult.net/
+ * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
  * Created by Ivan Georgiev
-**/
+ **/
 
-var jToxQuery = (function () {
-  var defaultSettings = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-    scanDom: true,          // whether to scan the whole DOM for finding the main query kit
-    initialQuery: false,    // whether to perform an initial query, immediatly when loaded.
-    kitSelector: null,      // selector for the main kit, if outside, for example.
-    dom: null,              // an, all-prepared object with all sub-kits. Structure { kit: <main kit object>, widgets: { <kit type>: <widget kit object> } }
+(function (_, $, jT) {
+	var queries = {
+		'auto': "/query/compound/search/all",
+		'uri': "/query/compound/url/all",
+		'similarity': "/query/similarity",
+		'smarts': "/query/smarts"
+	};
 
-    configuration: {
-      // this is the main thing to be configured
-      handlers: {
-        query: function (e, query) { jT.parentKit(jToxQuery, this).query(); },
-      }
-    }
-  };
+	function QueryKit(settings) {
+		this.settings = $.extend(true,  QueryKit.defaults, settings);
+		$(this.rootElement = settings.target)
+			.addClass('jtox-toolkit') // to make sure it is there even in manual initialization.
+			.append(jT.ui.fillTemplate('kit-query-all', this.settings));
 
-  var cls = function (root, settings) {
-    var self = this;
-    self.rootElement = root;
-    jT.$(root).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
+		this.search = {
+			mol: "",
+			type: "",
+			queryType: "auto"
+		};
 
-    self.settings = jT.$.extend(true, {}, defaultSettings, jT.settings, settings);
-    self.mainKit = null;
+		var form = $('form', this.rootElement)[0];
+		form.onsubmit = function () { return false; };
 
-    if (self.settings.scanDom && !self.settings.dom) {
-      self.settings.dom = { kit: null, widgets: { } };
-      jT.$('.jtox-toolkit', self.rootElement).each(function () {
-        if (jT.$(this).hasClass('jtox-widget'))
-          self.settings.dom.widgets[jT.$(this).data('kit')] = this;
-        else
-          self.settings.dom.kit = this;
-      });
-    }
+		// go for buttonset preparation, starting with hiding / removing passed ones
+		if (!!this.settings.hideOptions) {
+			var hideArr = this.settings.hideOptions.split(',');
+			for (var i = 0; i < hideArr.length; ++i) {
+				$('#search' + hideArr[i], this.rootElement).remove();
+				$('label[for="search' + hideArr[i] + '"]', this.rootElement).remove();
+			}
+		}
 
-    if (!!self.settings.kitSelector)
-      self.settings.dom.kit = jT.$(self.settings.kitSelector)[0];
+		if (!!form.searchcontext) {
+			form.searchcontext.value = this.settings.contextUri;
+			$(form.searchcontext).on('change', function (e) {
+				this.settings.contextUri = this.value;
+			});
+		}
 
-    // finally, wait a bit for everyone to get initialized and make a call, if asked to
-    if (!!self.settings.initialQuery)
-      self.initialQueryTimer = setTimeout(function () { self.query(); }, 200);
-  };
+		// when we change the value here - all, possible MOL caches should be cleared.
+		var self = this;
+		$(form.searchbox).on('change', function () { self.setAuto(); });
 
-  cls.prototype.widget = function (name) {
-    return this.settings.dom.widgets[name];
-  };
+		if (this.settings.slideInput)
+			$(form.searchbox)
+				.on('focus', function () {
+					var gap = $(form).width() - $(radios).width() - 30 - $('.search-pane').width();
+					var oldSize = $(this).data('oldSize') || $(this).width();
+					$(this).data('oldSize', oldSize);
+					$(this).css('width', '' + (oldSize + gap) + 'px');
+				})
+				.on('blur', function () {
+					$(this).css('width', '');
+				});
 
-  cls.prototype.kit = function () {
-    if (!this.mainKit)
-      this.mainKit = jT.kit(this.settings.dom.kit);
+		var hasAutocomplete = false;
+		if ($('#searchuri', this.rootElement).length > 0) {
+			hasAutocomplete = true;
+			$(form.searchbox).autocomplete({
+				minLength: 2,
+				open: function () {
+					$(this).removeClass("ui-corner-all").addClass("ui-corner-top");
+				},
+				close: function () {
+					$(this).removeClass("ui-corner-top").addClass("ui-corner-all");
+				},
+				source: function (request, response) {
+					jT.ambit.call(this, '/dataset?search=^' + request.term, function (result) {
+						response(!result ? [] : $.map(result.dataset, function (item) {
+							var pos = item.URI.lastIndexOf("/"),
+								shortURI = (pos >= 0) ? "D" + item.URI.substring(pos + 1) + ": " : "";
+							return {
+								label: shortURI + item.title,
+								value: item.URI
+							};
+						}));
+					});
+				}
+			});
+		}
 
-    return this.mainKit;
-  };
+		var radios = $('.jq-buttonset', this.rootElement).buttonset();
+		var onTypeClicked = function () {
+			form.searchbox.placeholder = $(this).data('placeholder');
+			$('.search-pane .auto-hide', self.rootElement).addClass('hidden');
+			$('.search-pane .' + this.id, self.rootElement).removeClass('hidden');
+			self.search.queryType = this.value;
+			if (this.value == 'uri') {
+				$(form.drawbutton).addClass('hidden');
+				if (hasAutocomplete)
+					$(form.searchbox).autocomplete('enable');
+			} else {
+				$(form.drawbutton).removeClass('hidden');
+				if (hasAutocomplete)
+					$(form.searchbox).autocomplete('disable');
+			}
+		};
 
-  cls.prototype.setWidget = function (id, dom) {
-    this.settings.dom.widgets[id] = dom;
-  };
+		$('.jq-buttonset input', this.rootElement).on('change', onTypeClicked);
 
-  cls.prototype.cancelInitialQuery = function () {
-    if (!!this.initialQueryTimer)
-      clearTimeout(this.initialQueryTimer);
-  };
+		var typeEl = $('#search' + this.settings.option, this.rootElement)[0];
+		if (typeEl != null)
+			$(typeEl).trigger('click');
+		else
+			jT.fireCallback(onTypeClicked, $('.jq-buttonset input', this.rootElement)[0])
 
-  /* Perform the actual query, traversing all the widgets and asking them to
-  alter the given URL, then - makes the call */
-  cls.prototype.query = function () {
-    var uri = this.settings.service || '';
-    for (var w in this.settings.dom.widgets) {
-      var widget = jT.kit(this.settings.dom.widgets[w]);
-      if (!widget)
-        console.log("jToxError: the widget [" + w + "] is not recognized: ignored");
-      else if (!widget['modifyUri'])
-        console.log("jToxError: the widget [" + w + "] doesn't have 'modifyUri' method: ignored");
-      else
-        uri = widget.modifyUri(uri);
-    }
+		// spend some time to setup the SMARTS groups
+		if (!!window[this.settings.smartsList]) {
+			var list = window[this.settings.smartsList];
+			var familyList = [];
+			var familyIdx = {};
 
-    if (!!uri)
-      this.kit().query(uri);
-  }; 
-  // end of prototype
+			for (var i = 0, sl = list.length; i < sl; ++i) {
+				var entry = list[i];
+				if (familyIdx[entry.family] === undefined) {
+					familyIdx[entry.family] = familyList.length;
+					familyList.push([]);
+				}
 
-  return cls;
-})();
+				familyList[familyIdx[entry.family]].push(entry);
+			}
 
-/* Now comes the jToxSearch component, which implements the compound searching block
-*/
-var jToxSearch = (function () {
-  var defaultSettings = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-    defaultNeedle: '50-00-0',     // which is the default search string, if empty one is provided
-    smartsList: 'funcgroups',     // which global JS variable to seek for smartsList
-    hideOptions: '',              // comma separated list of search options to hide
-    slideInput: false,            // whether to slide the input, when focussed
-    contextUri: null,             // a search limitting contextUri - added as dataset_uri parameter
-    configuration: {
-      handlers: { }
-    }
-  };
+			// now we can iterate over them
+			var df = document.createDocumentFragment();
+			for (fi = 0, fl = familyList.length; fi < fl; ++fi) {
+				var grp = document.createElement('optgroup');
+				grp.label = familyList[fi][0].family;
 
-  var queries = {
-    'auto': "/query/compound/search/all",
-    'uri': "/query/compound/url/all",
-    'similarity': "/query/similarity",
-    'smarts': "/query/smarts"
-  };
+				for (i = 0, el = familyList[fi].length; i < el; ++i) {
+					var e = familyList[fi][i];
+					var opt = document.createElement('option');
+					opt.innerHTML = e.name;
+					opt.value = e.smarts;
+					if (!!e.hint)
+						$(opt).attr('data-hint', e.hint);
+					grp.appendChild(opt);
+				}
+				df.appendChild(grp);
+			}
 
-  var cls = function (root, settings) {
-    var self = this;
-    self.rootElement = root;
-    jT.$(root).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
+			// now it's time to add all this and make the expected behavior
+			form.smarts.appendChild(df);
+			form.smarts.firstElementChild.checked = true;
 
-    self.settings = jT.$.extend(true, {}, defaultSettings, jT.settings, settings);
-    self.rootElement.appendChild(jT.getTemplate('#jtox-search'));
-    self.queryKit = jT.parentKit(jToxQuery, self.rootElement);
+			$(form.smarts).on('change', function () {
+				var hint = $(this[this.selectedIndex]).data('hint');
+				form.smarts.title = (!!hint ? hint : '');
+				self.setAuto(this.value);
+			});
+		}
 
-    self.search = { mol: "", type: "", queryType: "auto"};
+		// Now, deal with KETCHER - make it show, attach handlers to/from it, and handlers for showing/hiding it.
+		var ketcherBox = $('.ketcher', this.rootElement)[0];
+		var ketcherReady = false;
+		var onKetcher = function (service, method, async, parameters, onready) {
+			if (service == "knocknock")
+				onready("You are welcome!", null);
+			else
+				jT.ambit.call(self.queryKit.kit(), '/ui/' + service, {
+					dataType: "text",
+					data: parameters
+				}, function (res, jhr) {
+					onready(res, jhr);
+				});
+		};
 
-    var form = jT.$('form', self.rootElement)[0];
-    form.onsubmit = function () { return false; }
+		var ensureKetcher = function () {
+			if (!ketcherReady) {
+				jT.insertTool('ketcher', ketcherBox);
+				ketcher.init({
+					root: ketcherBox,
+					ajaxRequest: onKetcher
+				});
 
-    // go for buttonset preparation, starting with hiding / removing passed ones
-    if (!!self.settings.hideOptions) {
-      var hideArr = self.settings.hideOptions.split(',');
-      for (var i = 0; i < hideArr.length; ++i) {
-        jT.$('#search' + hideArr[i], self.rootElement).remove();
-        jT.$('label[for="search' + hideArr[i] + '"]', self.rootElement).remove();
-      }
-    }
+				var emptySpace = $('.toolEmptyCell', ketcherBox)[0];
+				// TODO: Change the button template - provide the text and classes!!
+				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
+					title: "Use ",
+					icon: "arrowthick-1-n"
+				}))).on('click', function () {
+					var smiles = ketcher.getSmiles();
+					var mol = ketcher.getMolfile();
+					self.setMol(mol);
+					if (!!smiles)
+						form.searchbox.value = smiles;
+				});
+				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
+					title: "Draw ",
+					icon: "arrowthick-1-s"
+				}))).on('click', function () {
+					ketcher.setMolecule(self.search.mol || form.searchbox.value);
+				});
+				ketcherReady = true;
+			}
+		};
 
-    if (!!form.searchcontext) {
-      form.searchcontext.value = self.settings.contextUri;
-      $(form.searchcontext).on('change', function (e) {
-        self.settings.contextUri = this.value;
-      });
-    }
+		$(form.drawbutton).on('click', function () {
+			if ($(ketcherBox).hasClass('shrinken')) {
+				ensureKetcher();
+				$(ketcherBox).css('display', '');
+			} else
+				setTimeout(function () {
+					$(ketcherBox).css('display', 'none');
+				}, 500);
 
-    // when we change the value here - all, possible MOL caches should be cleared.
-    jT.$(form.searchbox).on('change', function () {
-      self.setAuto();
-    });
+			setTimeout(function () {
+				$(ketcherBox).toggleClass('shrinken')
+			}, 50);
+		});
 
-    if (self.settings.slideInput)
-      jT.$(form.searchbox)
-      .on('focus', function () {
-        var gap = jT.$(form).width() - jT.$(radios).width() - 30 - jT.$('.search-pane').width();
-        var oldSize = $(this).data('oldSize') || $(this).width();
-        $(this).data('oldSize', oldSize);
-        jT.$(this).css('width', '' + (oldSize + gap) + 'px');
-      })
-      .on('blur', function () {
-        jT.$(this).css('width', '');
-      });
+		// finally - parse the URL-passed parameters and setup the values appropriately.
+		var doQuery = false;
+		if (!!this.settings.b64search) {
+			this.setMol($.base64.decode(this.settings.b64search));
+			doQuery = true;
+		} else if (!!this.settings.search) {
+			this.setAuto(this.settings.search);
+			doQuery = true;
+		}
 
-    var hasAutocomplete = false;
-    if (jT.$('#searchuri', self.rootElement).length > 0) {
-      hasAutocomplete = true;
-      jT.$(form.searchbox).autocomplete({
-        minLength: 2,
-        open: function() { jT.$( this ).removeClass( "ui-corner-all" ).addClass( "ui-corner-top" ); },
-        close: function() { jT.$( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" ); },
-        source: function (request, response) {
-          jT.call(self, '/dataset?search=^' + request.term, function (result) {
-            response(!result ? [] : $.map( result.dataset, function( item ) {
-              var pos =  item.URI.lastIndexOf("/"),
-                  shortURI = (pos >= 0) ? "D" + item.URI.substring(pos+1) + ": " : "";
-              return {
-                label: shortURI + item.title,
-                value: item.URI
-              };
-            }));
-          });
-        }
-      });
-    }
+		// and very finally - install the handlers...
+		jT.tables.installHandlers(this);
+		doQuery && this.settings.initialQuery && this.query();
+	};
 
-    var radios = jT.$('.jq-buttonset', root).buttonset();
-    var onTypeClicked = function () {
-      form.searchbox.placeholder = jT.$(this).data('placeholder');
-      jT.$('.search-pane .auto-hide', self.rootElement).addClass('hidden');
-      jT.$('.search-pane .' + this.id, self.rootElement).removeClass('hidden');
-      self.search.queryType = this.value;
-      if (this.value == 'uri') {
-        jT.$(form.drawbutton).addClass('hidden');
-        if (hasAutocomplete)
-          jT.$(form.searchbox).autocomplete('enable');
-      }
-      else {
-        jT.$(form.drawbutton).removeClass('hidden');
-        if (hasAutocomplete)
-          jT.$(form.searchbox).autocomplete('disable');
-      }
-    };
+	QueryKit.prototype.getMainKit = function () {
+		if (!!this.mainKit)
+			;
+		else if (typeof this.settings.mainKit === 'string')
+			this.mainKit = jT.ui.kit($(this.settings.mainKit));
+		else
+			this.mainKit = jT.ui.kit(this.settings.mainKit);
+		
+		return this.mainKit;
+	};
 
-    jT.$('.jq-buttonset input', root).on('change', onTypeClicked);
+	// required from jToxQuery - this is how we add what we've collected
+	QueryKit.prototype.query = function (needle) {
+		if (!!needle)
+			this.setAuto(needle);
+		
+		var uri = _.trimEnd(jT.formBaseUrl(this.settings.datasetUri || this.getMainKit().datasetUri), '/'),
+			form = $('form', this.rootElement)[0],
+			params = { type: this.search.type },
+			type = this.search.queryType;
 
-    var typeEl = jT.$('#search' + self.settings.option, root)[0];
-    if (typeEl != null)
-      jT.$(typeEl).trigger('click');
-    else
-      ccLib.fireCallback(onTypeClicked, jT.$('.jq-buttonset input', root)[0])
+		if (type === "auto" && params.type === 'auto' && form.searchbox.value.indexOf('http') == 0)
+			type = "uri";
 
-    // spend some time to setup the SMARTS groups
-    if (!!window[self.settings.smartsList]) {
-      var list = window[self.settings.smartsList];
-      var familyList = [];
-      var familyIdx = {};
+		uri += queries[type] + '?';
 
-      for (var i = 0, sl = list.length; i < sl; ++i) {
-        var entry = list[i];
-        if (familyIdx[entry.family] === undefined) {
-          familyIdx[entry.family] = familyList.length;
-          familyList.push([]);
-        }
+		if (!!this.search.mol) {
+			params.b64search = $.base64.encode(this.search.mol);
+		} else {
+			params.search = form.searchbox.value;
+			if (!params.search)
+				params.search = this.settings.defaultNeedle;
+			this.setAuto(params.search);
+		}
 
-        familyList[familyIdx[entry.family]].push(entry);
-      }
+		if (type === 'auto' && form.regexp.checked)
+			params.condition = "regexp";
+		else if (type === 'smarts')
+			params.filterBySubstance = form.smartsbysubstance.checked;
+		else if (type === 'similarity') {
+			params.threshold = form.threshold.value;
+			params.filterBySubstance = form.similaritybysubstance.checked;
+		}
 
-      // now we can iterate over them
-      var df = document.createDocumentFragment();
-      for (fi = 0, fl = familyList.length; fi < fl; ++fi) {
-        var grp = document.createElement('optgroup');
-        grp.label = familyList[fi][0].family;
+		if (!!this.settings.contextUri)
+			params['datasetUri'] = this.settings.contextUri;
 
-        for (i = 0, el = familyList[fi].length; i < el; ++i) {
-          var e = familyList[fi][i];
-          var opt = document.createElement('option');
-          opt.innerHTML = e.name;
-          opt.value = e.smarts;
-          if (!!e.hint)
-            jT.$(opt).attr('data-hint', e.hint);
-          grp.appendChild(opt);
-        }
-        df.appendChild(grp);
-      }
+		uri = jT.addParameter(uri, $.param(params));
+		this.getMainKit().query(uri);
+	};
 
-      // now it's time to add all this and make the expected behavior
-      form.smarts.appendChild(df);
-      form.smarts.firstElementChild.checked = true;
+	QueryKit.prototype.getNeedle = function () {
+		return this.search.type == 'mol' ? this.search.mol : $('form', this.rootElement)[0].searchbox.value;
+	};
 
-      jT.$(form.smarts).on('change', function () {
-        var hint = jT.$(this[this.selectedIndex]).data('hint');
-        form.smarts.title = (!!hint ? hint : '');
-        self.setAuto(this.value);
-      });
-    }
+	QueryKit.prototype.setAuto = function (needle) {
+		this.search.mol = null;
+		this.search.type = 'auto';
 
-    // Now, deal with KETCHER - make it show, attach handlers to/from it, and handlers for showing/hiding it.
-    var ketcherBox = jT.$('.ketcher', root)[0];
-    var ketcherReady = false;
-    var onKetcher = function (service, method, async, parameters, onready) {
-      if (service == "knocknock")
-        onready("You are welcome!", null);
-      else
-        jT.call(self.queryKit.kit(), '/ui/' + service, {dataType: "text", data: parameters}, function (res, jhr) { onready(res, jhr); });
-    };
+		var box = $('form', this.rootElement)[0].searchbox;
+		if (!!this.search.oldplace)
+			box.placeholder = this.search.oldplace;
+		if (needle != null)
+			box.value = needle;
+	};
 
-    var ensureKetcher = function () {
-      if (!ketcherReady) {
-        jT.insertTool('ketcher', ketcherBox);
-        ketcher.init({ root: ketcherBox, ajaxRequest: onKetcher });
+	QueryKit.prototype.setMol = function (mol) {
+		var box = $('form', this.rootElement)[0].searchbox;
+		this.search.mol = mol;
+		this.search.type = 'mol';
+		this.search.oldplace = box.placeholder;
 
-        var emptySpace = jT.$('.toolEmptyCell', ketcherBox)[0];
-        jT.$(emptySpace.appendChild(jT.getTemplate('#ketcher-usebutton'))).on('click', function () {
-          var smiles = ketcher.getSmiles();
-          var mol = ketcher.getMolfile();
-          self.setMol(mol);
-          if (!!smiles)
-            form.searchbox.value = smiles;
-        });
-        jT.$(emptySpace.appendChild(jT.getTemplate('#ketcher-drawbutton'))).on('click', function () {
-          ketcher.setMolecule(self.search.mol || form.searchbox.value);
-        });
-        ketcherReady = true;
-      }
-    };
+		box.placeholder = "MOL formula saved_";
+		box.value = '';
+	};
+	// end of prototype
 
-    jT.$(form.drawbutton).on('click', function () {
-      if (jT.$(ketcherBox).hasClass('shrinken')) {
-        ensureKetcher();
-        jT.$(ketcherBox).css('display', '');
-      }
-      else
-        setTimeout(function () { jT.$(ketcherBox).css('display', 'none'); }, 500);
+	QueryKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
+		defaultNeedle: '50-00-0', // which is the default search string, if empty one is provided
+		smartsList: 'funcgroups', // which global JS variable to seek for smartsList
+		hideOptions: '', // comma separated list of search options to hide
+		slideInput: false, // whether to slide the input, when focussed
+		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
+		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
+		configuration: {
+			handlers: {
+				query: function (e) { this.query(); },
+			}
+		}
+	};
 
-      setTimeout(function () { jT.$(ketcherBox).toggleClass('shrinken') }, 50);
-    });
 
-    // finally - parse the URL-passed parameters and setup the values appropriately.
-    var doQuery = false;
-    if (!!self.settings.b64search) {
-      self.setMol($.base64.decode(self.settings.b64search));
-      doQuery = true;
-    }
-    else if (!!self.settings.search) {
-      self.setAuto(self.settings.search);
-      doQuery = true;
-    }
-
-    jT.tables.installHandlers(self);
-    if (doQuery) {
-      self.queryKit.cancelInitialQuery();
-      setTimeout(function () { self.queryKit.query(); }, 250);
-    }
-    // and very finally - install the handlers...
-  };
-
-  // required from jToxQuery - this is how we add what we've collected
-  cls.prototype.modifyUri = function (uri) {
-    var form = jT.$('form', this.rootElement)[0];
-    var params = { type: this.search.type };
-    var type = this.search.queryType;
-
-    if (type == "auto" && params.type == 'auto' && form.searchbox.value.indexOf('http') == 0)
-      type = "uri";
-
-    var res = queries[type] + (uri.indexOf('?') > -1 ? '' : '?') + uri;
-
-    if (!!this.search.mol) {
-      params.b64search = $.base64.encode(this.search.mol);
-    }
-    else {
-      params.search = form.searchbox.value;
-      if (!params.search)
-        params.search = this.settings.defaultNeedle;
-        this.setAuto(params.search);
-    }
-
-    if (type == "auto" && form.regexp.checked) {
-      params['condition'] = "regexp";
-    }
-    if (type == 'similarity') {
-      params.threshold = form.threshold.value;
-    }
-
-    if (type == 'similarity') {
-      params.filterBySubstance = form.similaritybysubstance.checked;
-    }
-    if (type == 'smarts') {
-      params.filterBySubstance = form.smartsbysubstance.checked;
-    }
-
-    if (!!this.settings.contextUri)
-      params['dataset_uri'] = this.settings.contextUri;
-
-    return ccLib.addParameter(res, $.param(params));
-  };
-
-  // some shortcuts for outer world.
-  cls.prototype.makeQuery = function (needle) {
-    if (!!needle)
-      this.setAuto(needle);
-    this.queryKit.query();
-  },
-
-  cls.prototype.getNeedle = function () {
-    return this.search.type == 'mol' ? this.search.mol : jT.$('form', this.rootElement)[0].searchbox.value;
-  };
-
-  cls.prototype.setAuto = function (needle) {
-    this.search.mol = null;
-    this.search.type = 'auto';
-
-    var box = jT.$('form', this.rootElement)[0].searchbox;
-    if (!!this.search.oldplace)
-      box.placeholder = this.search.oldplace;
-    if (needle != null)
-      box.value = needle;
-  };
-
-  cls.prototype.setMol = function (mol) {
-    var box = jT.$('form', this.rootElement)[0].searchbox;
-    this.search.mol = mol;
-    this.search.type = 'mol';
-    this.search.oldplace = box.placeholder;
-
-    box.placeholder = "MOL formula saved_";
-    box.value = '';
-  }; 
-  // end of prototype
-
-  return cls;
-})();
+	jT.ui.Query = QueryKit;
+})(_, jQuery, jToxKit);

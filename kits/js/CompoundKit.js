@@ -510,7 +510,7 @@
 				});
 			},
 			"language": {
-				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.sProcess || 'Feeding data...') + '</span>'
+				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.process || 'Feeding data...') + '</span>'
 			}
 		}))[0];
 
@@ -656,7 +656,7 @@
 		$(self.varTable).dataTable().fnClearTable();
 		$(self.fixTable).dataTable().fnAddData(dataFeed);
 		$(self.varTable).dataTable().fnAddData(dataFeed);
-		$('.jt-feeding', self.rootElement).html(self.settings.language.sZeroRecords || 'No records matching the filter.');
+		$('.jt-feeding', self.rootElement).html(self.settings.language.zeroRecords || 'No records matching the filter.');
 
 		jT.ui.updateTree($('.jtox-controls', self.rootElement)[0], {
 			"filtered-text": !needle ? " " : ' (filtered to <span class="high">' + dataFeed.length + '</span>) '
@@ -828,8 +828,8 @@
 
 		self.$procDiv.show();
 		self.$errDiv.hide();
-		if (!!self.settings.language.sLoadingRecords)
-			$('.message', procDiv).html(self.settings.language.sLoadingRecords);
+		if (!!self.settings.language.loadingRecords)
+			$('.message', procDiv).html(self.settings.language.loadingRecords);
 
 		self.queryFeatures(featureUri, function (dataset) {
 			self.$procDiv.hide();

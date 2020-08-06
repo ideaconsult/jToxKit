@@ -752,9 +752,9 @@
                 };
 
             for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
-                exportEl.append(jT.ui.fillTemplate("export-type", $.extend({ 
-                    index: i,
-                    selected: (i == 0) ? 'checked="checked"' : ''
+                exportEl.append(jT.ui.fillTemplate("select-one-option", $.extend({ 
+                    value: i,
+                    selected: (i == 0) ? 'selected' : ''
                 }, this.exportTypes[i])));
             
             exportEl.on("change", function (e) { 

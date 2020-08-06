@@ -1146,18 +1146,15 @@ jT.tables = {
 			root = kit.rootElement;
 
 		$('.jtox-handler', root).each(function () {
-			var name = $(this).data('handler');
-			var handler = null;
-			if (kit.settings.configuration != null && kit.settings.configuration != null)
-				handler = kit.settings.handlers[name];
-			handler = handler || window[name];
+			var name = $(this).data('handler'),
+				handler = _.get(kit.settings, [ 'configuration', 'handlers', name ], null) || window[name];
 
 			if (!handler)
 				console.log("jToxQuery: referring unknown handler: " + name);
 			else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
-				$(this).on('change', handler).on('keydown', jT.ui.enterBlur);
+				$(this).on('change', _.bind(handler, kit)).on('keydown', jT.ui.enterBlur);
 			else // all the rest respond on click
-				$(this).on('click', handler);
+				$(this).on('click', _.bind(handler, kit));
 		});
 	},
 

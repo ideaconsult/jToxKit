@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+	<title>Base jToxKit UI elements</title>
+	<link rel="stylesheet" href="tests/base.css">
+	<link rel="stylesheet" href="tests/skeleton.css">
+	<link rel="stylesheet" href="tests/layout.css">
+	<link rel="stylesheet" href="tests/jquery-ui.css">
+	<link rel="stylesheet" href="tests/jquery.dataTables.css">
+
+	<link rel="stylesheet" href="www/jtoxkit.css">
+	<link rel="stylesheet" href="www/ketcher.css" />
+
+	<script src="tests/jquery.js"></script>
+	<script src="tests/jquery.base64.min.js"></script>
+	<script src="tests/jquery-migrate-1.2.1.min.js"></script>
+	<script src="tests/jquery-ui.js"></script>
+
+	<script src="www/jtoxkit.js"></script>
+</head>
+
+<body>
+<!--[[ jT.ui.templates['button-icon'] -->
+		<button>{{ title }}<span class="ui-icon ui-icon-{{ icon }} {{ className }}"></span></button>
+<!-- // end of #button-icon ]]-->
+<!--[[ jT.ui.templates['select-one-option'] -->
+        <option value="{{ value }}" {{ selected }}>{{ name }}</button>
+<!-- // end of #select-one-option ]]-->
+
+	</div>
+</body>
+
+</html>
