@@ -1,20 +1,5 @@
-/* toxtstudy.css - Styling for toxstudy engine
+/* QueryKit - Styling for toxstudy engine
 */
-
-.jtox-search input[type="text"] {
-  min-width: 380px;
-  height: 20px;
-  -moz-transition: width 0.3s ease-out;
-  -webkit-transition: width 0.3s ease-out;
-  transition: width 0.3s ease-out;
-  margin-bottom: 0px;
-}
-
-.jtox-search label {
-  display: inline-block;
-  font-weight: normal;
-  font-size: 1rem;
-}
 
 #searchcontext input {
   height: auto;
@@ -22,56 +7,64 @@
   box-sizing: border-box;
 }
 
-.jtox-search .search-pane .jtox-inline input,
-.jtox-search .search-pane .jtox-inline select {
+.jtox-query input[type="text"] {
+  min-width: 380px;
+  -moz-transition: width 0.3s ease-out;
+  -webkit-transition: width 0.3s ease-out;
+  transition: width 0.3s ease-out;
+  margin-bottom: 0px;
+}
+
+.jtox-query .search-pane .jtox-inline input,
+.jtox-query .search-pane .jtox-inline select {
   font-size: 1.1em;
   margin-top: 2px;
   display: inline-block;
   vertical-align: baseline;
 }
 
-.jtox-search .search-pane .jtox-inline select {
+.jtox-query .search-pane .jtox-inline select {
   margin: 6px;
   height: 26px;
 }
 
-.jtox-search form {
+.jtox-query form {
   margin: 0px;
 }
 
-.jtox-search form>div {
+.jtox-query form>div {
   margin: 2px 4px 4px 4px;
   box-sizing: border-box;
 }
 
-.jtox-search form div.jq-buttonset {
+.jtox-query form div.jq-buttonset {
   margin-top: 6px;
 }
 
-.jtox-search .search-pane button {
+.jtox-query .search-pane button {
   vertical-align: top;
   margin-bottom: 0px;
 }
 
-.jtox-search .searchsimilarity select {
+.jtox-query .searchsimilarity select {
   width: 5em;
 }
 
-.jtox-search .searchauto.dynamic>div {
+.jtox-query .searchauto.dynamic>div {
   white-space: nowrap;
   padding-top: 10px;
 }
 
-.jtox-search .search-pane div.dynamic {
+.jtox-query .search-pane div.dynamic {
   min-height: 40px;
   float: left;
 }
 
-.jtox-search .search-pane .dynamic.hidden {
+.jtox-query .search-pane .dynamic.hidden {
   display: none;
 }
 
-.jtox-search .ketcher {
+.jtox-query .ketcher {
   display: block;
   height: auto;
   position: relative;
@@ -81,20 +74,20 @@
   transition: all 0.5s ease, opacity 0.2s;
 }
 
-.jtox-search .ketcher.shrinken {
+.jtox-query .ketcher.shrinken {
   left: 100%;
 /*   opacity: 0.0; */
 }
 
-.jtox-search .ketcher .toolEmptyCell {
+.jtox-query .ketcher .toolEmptyCell {
   vertical-align: middle;
 }
 
-.jtox-search .ketcher .toolEmptyCell button {
+.jtox-query .ketcher .toolEmptyCell button {
   margin: 0px;
   padding: 4px 8px;
 }
 
-.jtox-search .ketcher .toolEmptyCell button span {
+.jtox-query .ketcher .toolEmptyCell button span {
   display: inline-block;
 }
