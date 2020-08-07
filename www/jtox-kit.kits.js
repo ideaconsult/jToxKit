@@ -401,13 +401,13 @@
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
 		this.settings = $.extend(true, 
-			{ configuration: { baseFeatures: jT.ambit.baseFeatures } }, 
+			{ baseFeatures: jT.ambit.baseFeatures }, 
 			CompoundKit.defaults, 
 			settings);
 
 		// make a dull copy here, because, otherwise groups are merged... which we DON'T want
-		if (settings != null && settings.configuration != null && settings.configuration.groups != null)
-			this.settings.configuration.groups = settings.configuration.groups;
+		if (settings != null && settings.groups != null)
+			this.settings.groups = settings.groups;
 
 		this.instanceNo = instanceCount++;
 		if (this.settings.rememberChecks && this.settings.showTabs)
@@ -495,7 +495,7 @@
 			all.appendChild(divEl);
 			// add the group check multi-change
 			if (self.settings.groupSelection && isMain) {
-				var sel = jT.ui.fillTemplate('compound-one-tab');
+				var sel = jT.ui.getTemplate('compound-one-tab');
 				$(divEl).append(sel);
 
 				$('.multi-select', sel).on('click', function (e) {
@@ -527,14 +527,14 @@
 				liEl = createATab(tabId, "Export");
 			$(liEl).addClass('jtox-ds-export');
 			
-			var divEl = jT.ui.fillTemplate('compound-export', { id: tabId });
+			var divEl = jT.ui.getTemplate('compound-export', { id: tabId });
 			$(all).append(divEl);
 			
 			divEl = $('.jtox-exportlist', divEl)[0];
 
-			for (var i = 0, elen = self.settings.configuration.exports.length; i < elen; ++i) {
-				var expo = self.settings.configuration.exports[i];
-				var el = jT.ui.fillTemplate('compound-download', {
+			for (var i = 0, elen = self.settings.exports.length; i < elen; ++i) {
+				var expo = self.settings.exports[i];
+				var el = jT.ui.getTemplate('compound-download', {
 					link: jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type)),
 					type: expo.type,
 					icon: expo.icon
@@ -696,7 +696,7 @@
 		var fixCols = [];
 
 		// first, some preparation of the first, IdRow column
-		var idFeature = self.settings.configuration.baseFeatures['#IdRow'];
+		var idFeature = self.settings.baseFeatures['#IdRow'];
 		if (!idFeature.render) {
 			idFeature.render = self.settings.hasDetails ?
 				function (data, type, full) {
@@ -805,9 +805,9 @@
 							"paging": false,
 							"processing": true,
 							"lengthChange": false,
-							"autoWidth": true,
+							"autoWidth": false,
 							"dom": "rt<f>",
-							"columns": jT.ui.processColumns(self, 'compound'),
+							"columns": jT.tables.processColumns(self, 'compound'),
 							"ordering": true,
 						});
 						$(tabTable).dataTable().fnAddData(data);
@@ -952,7 +952,7 @@
 	CompoundKit.prototype.prepareGroups = function (miniset) {
 		var self = this;
 
-		var grps = self.settings.configuration.groups;
+		var grps = self.settings.groups;
 		if (typeof grps == 'function')
 			grps = grps(miniset, self);
 
@@ -1131,7 +1131,7 @@
 			if (!!result) {
 				self.feature = result.feature;
 
-				CompoundKit.processFeatures(self.feature, self.settings.configuration.baseFeatures);
+				CompoundKit.processFeatures(self.feature, self.settings.baseFeatures);
 				var miniset = {
 					dataEntry: [],
 					feature: self.feature
@@ -1141,7 +1141,7 @@
 					if (self.settings.showTabs) {
 						// tabs feature building
 						var nodeFn = function (id, name, parent) {
-							var fEl = jT.ui.fillTemplate('compound-one-feature', {
+							var fEl = jT.ui.getTemplate('compound-one-feature', {
 								title: name.replace(/_/g, ' '),
 								uri: self.featureUri(id)
 							});
@@ -1368,179 +1368,177 @@
 				return oldVal;
 			return oldVal + ", " + newVal;
 		},
-		"configuration": {
-			"groups": {
-				"Identifiers": [
-					"http://www.opentox.org/api/1.1#Diagram",
-					"#DetailedInfoRow",
-					"http://www.opentox.org/api/1.1#CASRN",
-					"http://www.opentox.org/api/1.1#EINECS",
-					"http://www.opentox.org/api/1.1#IUCLID5_UUID"
-				],
-
-				"Names": [
-					"http://www.opentox.org/api/1.1#ChemicalName",
-					"http://www.opentox.org/api/1.1#TradeName",
-					"http://www.opentox.org/api/1.1#IUPACName",
-					"http://www.opentox.org/api/1.1#SMILES",
-					"http://www.opentox.org/api/1.1#InChIKey",
-					"http://www.opentox.org/api/1.1#InChI",
-					"http://www.opentox.org/api/1.1#REACHRegistrationDate"
-				],
-
-				"Calculated": function (name, miniset) {
-					var arr = [];
-					if (miniset.dataEntry.length > 0 && miniset.dataEntry[0].compound.metric != null)
-						arr.push(this.settings.metricFeature);
-
-					for (var f in miniset.feature) {
-						var feat = miniset.feature[f];
-						if (feat.source == null || feat.source.type == null || !!feat.basic)
-							continue;
-						else if (feat.source.type.toLowerCase() == "algorithm" || feat.source.type.toLowerCase() == "model") {
-							arr.push(f);
-						}
-					}
-					return arr;
-				},
-
-				"Other": function (name, miniset) {
-					var arr = [];
-					for (var f in miniset.feature) {
-						if (!miniset.feature[f].used && !miniset.feature[f].basic)
-							arr.push(f);
-					}
-					return arr;
-				}
-			},
-			"exports": [{
-					type: "chemical/x-mdl-sdfile",
-					icon: "/assets/img/types/sdf64.png"
-				},
-				{
-					type: "chemical/x-cml",
-					icon: "/assets/img/types/cml64.png"
-				},
-				{
-					type: "chemical/x-daylight-smiles",
-					icon: "/assets/img/types/smi64.png"
-				},
-				{
-					type: "chemical/x-inchi",
-					icon: "/assets/img/types/inchi64.png"
-				},
-				{
-					type: "text/uri-list",
-					icon: "/assets/img/types/lnk64.png"
-				},
-				{
-					type: "application/pdf",
-					icon: "/assets/img/types/pdf64.png"
-				},
-				{
-					type: "text/csv",
-					icon: "/assets/img/types/csv64.png"
-				},
-				{
-					type: "text/plain",
-					icon: "/assets/img/types/txt64.png"
-				},
-				{
-					type: "text/x-arff",
-					icon: "/assets/img/types/arff.png"
-				},
-				{
-					type: "text/x-arff-3col",
-					icon: "/assets/img/types/arff-3.png"
-				},
-				{
-					type: "application/rdf+xml",
-					icon: "/assets/img/types/rdf64.png"
-				},
-				{
-					type: "application/json",
-					icon: "/assets/img/types/json64.png"
-				},
-				{
-					type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-					icon: "/assets/img/types/xlsx.png"
-				}
+		"groups": {
+			"Identifiers": [
+				"http://www.opentox.org/api/1.1#Diagram",
+				"#DetailedInfoRow",
+				"http://www.opentox.org/api/1.1#CASRN",
+				"http://www.opentox.org/api/1.1#EINECS",
+				"http://www.opentox.org/api/1.1#IUCLID5_UUID"
 			],
 
-			// These are instance-wide pre-definitions of default baseFeatures as described below.
-			"baseFeatures": {
-				// and one for unified way of processing diagram. This can be used as template too
-				"http://www.opentox.org/api/1.1#Diagram": {
-					title: "Diagram",
-					search: false,
-					visibility: "main",
-					primary: true,
-					data: "compound.URI",
-					column: {
-						className: "paddingless",
-						width: "125px"
-					},
-					render: function (data, type, full) {
-						dUri = jT.ambit.diagramUri(data);
-						return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><i class="icon fa fa-search-plus"></i><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
-					}
-				},
-				'#IdRow': {
-					used: true,
-					basic: true,
-					data: "number",
-					column: {
-						className: "middle"
-					}
-				},
-				"#DetailedInfoRow": {
-					title: "Diagram",
-					search: false,
-					data: "compound.URI",
-					basic: true,
-					primary: true,
-					column: {
-						className: "jtox-hidden jtox-ds-details paddingless",
-						width: "0px"
-					},
-					visibility: "none",
-					render: function (data, type, full) {
-						return '';
-					}
-				},
+			"Names": [
+				"http://www.opentox.org/api/1.1#ChemicalName",
+				"http://www.opentox.org/api/1.1#TradeName",
+				"http://www.opentox.org/api/1.1#IUPACName",
+				"http://www.opentox.org/api/1.1#SMILES",
+				"http://www.opentox.org/api/1.1#InChIKey",
+				"http://www.opentox.org/api/1.1#InChI",
+				"http://www.opentox.org/api/1.1#REACHRegistrationDate"
+			],
 
-				"http://www.opentox.org/api/1.1#Similarity": {
-					title: "Similarity",
-					data: "compound.metric",
-					search: true
-				},
+			"Calculated": function (name, miniset) {
+				var arr = [];
+				if (miniset.dataEntry.length > 0 && miniset.dataEntry[0].compound.metric != null)
+					arr.push(this.settings.metricFeature);
+
+				for (var f in miniset.feature) {
+					var feat = miniset.feature[f];
+					if (feat.source == null || feat.source.type == null || !!feat.basic)
+						continue;
+					else if (feat.source.type.toLowerCase() == "algorithm" || feat.source.type.toLowerCase() == "model") {
+						arr.push(f);
+					}
+				}
+				return arr;
 			},
-			"columns": {
-				"compound": {
-					"Name": {
-						title: "Name",
-						data: 'title',
-						render: function (data, type, full) {
-							return '<span>' + data + '</span>' + jT.ui.putInfo(full.URI);
-						}
-					},
-					"Value": {
-						title: "Value",
-						data: 'value',
-						defaultContent: "-"
-					},
-					"SameAs": {
-						title: "SameAs",
-						data: 'sameAs',
-						defaultContent: "-"
-					},
-					"Source": {
-						title: "Source",
-						data: 'source',
-						defaultContent: "-",
-						render: function (data, type, full) {
-							return !data || !data.type ? '-' : '<a target="_blank" href="' + data.URI + '">' + data.type + '</a>';
-						}
+
+			"Other": function (name, miniset) {
+				var arr = [];
+				for (var f in miniset.feature) {
+					if (!miniset.feature[f].used && !miniset.feature[f].basic)
+						arr.push(f);
+				}
+				return arr;
+			}
+		},
+		"exports": [{
+				type: "chemical/x-mdl-sdfile",
+				icon: "/assets/img/types/sdf64.png"
+			},
+			{
+				type: "chemical/x-cml",
+				icon: "/assets/img/types/cml64.png"
+			},
+			{
+				type: "chemical/x-daylight-smiles",
+				icon: "/assets/img/types/smi64.png"
+			},
+			{
+				type: "chemical/x-inchi",
+				icon: "/assets/img/types/inchi64.png"
+			},
+			{
+				type: "text/uri-list",
+				icon: "/assets/img/types/lnk64.png"
+			},
+			{
+				type: "application/pdf",
+				icon: "/assets/img/types/pdf64.png"
+			},
+			{
+				type: "text/csv",
+				icon: "/assets/img/types/csv64.png"
+			},
+			{
+				type: "text/plain",
+				icon: "/assets/img/types/txt64.png"
+			},
+			{
+				type: "text/x-arff",
+				icon: "/assets/img/types/arff.png"
+			},
+			{
+				type: "text/x-arff-3col",
+				icon: "/assets/img/types/arff-3.png"
+			},
+			{
+				type: "application/rdf+xml",
+				icon: "/assets/img/types/rdf64.png"
+			},
+			{
+				type: "application/json",
+				icon: "/assets/img/types/json64.png"
+			},
+			{
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				icon: "/assets/img/types/xlsx.png"
+			}
+		],
+
+		// These are instance-wide pre-definitions of default baseFeatures as described below.
+		"baseFeatures": {
+			// and one for unified way of processing diagram. This can be used as template too
+			"http://www.opentox.org/api/1.1#Diagram": {
+				title: "Diagram",
+				search: false,
+				visibility: "main",
+				primary: true,
+				data: "compound.URI",
+				column: {
+					className: "paddingless",
+					width: "125px"
+				},
+				render: function (data, type, full) {
+					dUri = jT.ambit.diagramUri(data);
+					return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><i class="icon fa fa-search-plus"></i><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
+				}
+			},
+			'#IdRow': {
+				used: true,
+				basic: true,
+				data: "number",
+				column: {
+					className: "middle"
+				}
+			},
+			"#DetailedInfoRow": {
+				title: "Diagram",
+				search: false,
+				data: "compound.URI",
+				basic: true,
+				primary: true,
+				column: {
+					className: "jtox-hidden jtox-ds-details paddingless",
+					width: "0px"
+				},
+				visibility: "none",
+				render: function (data, type, full) {
+					return '';
+				}
+			},
+
+			"http://www.opentox.org/api/1.1#Similarity": {
+				title: "Similarity",
+				data: "compound.metric",
+				search: true
+			},
+		},
+		"columns": {
+			"compound": {
+				"Name": {
+					title: "Name",
+					data: 'title',
+					render: function (data, type, full) {
+						return '<span>' + data + '</span>' + jT.ui.fillHtml('info-ball', { href: full.URI || '#', title: "Compound's detailed info" });
+					}
+				},
+				"Value": {
+					title: "Value",
+					data: 'value',
+					defaultContent: "-"
+				},
+				"SameAs": {
+					title: "SameAs",
+					data: 'sameAs',
+					defaultContent: "-"
+				},
+				"Source": {
+					title: "Source",
+					data: 'source',
+					defaultContent: "-",
+					render: function (data, type, full) {
+						return !data || !data.type ? '-' : '<a target="_blank" href="' + data.URI + '">' + data.type + '</a>';
 					}
 				}
 			}
@@ -2046,7 +2044,7 @@
             });
             
             this.queries.renderItem = function (query) {
-                el$ = jT.ui.fillTemplate("query-item", query);
+                el$ = jT.ui.getTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     var queryDef = $(this).data('query');
@@ -2263,7 +2261,7 @@
                 self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.fillTemplate("export-format", this.exportFormats[i]);
+                var el = jT.ui.getTemplate("export-format", this.exportFormats[i]);
                 el.data("index", i);
                 exportEl.append(el);
 
@@ -2304,7 +2302,7 @@
                 };
 
             for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
-                exportEl.append(jT.ui.fillTemplate("select-one-option", $.extend({ 
+                exportEl.append(jT.ui.getTemplate("select-one-option", $.extend({ 
                     value: i,
                     selected: (i == 0) ? 'selected' : ''
                 }, this.exportTypes[i])));
@@ -2440,7 +2438,7 @@
     
     addLine: function (data) {
       var self = this,
-          el$ = jT.ui.fillTemplate('logger-line', data);
+          el$ = jT.ui.getTemplate('logger-line', data);
 
       el$.height('0px');
       this.listRoot.insertBefore(el$[0], this.listRoot.firstElementChild);
@@ -2906,7 +2904,7 @@
 					};
 
 					// we're taking the original jToxEndpoint editor here and glue our part after it.
-					boxOptions.content = jT.getTemplate('#jtox-endeditor').innerHTML + editDiv.innerHTML;
+					boxOptions.content = jT.ui.getTemplate('jtox-endeditor').innerHTML + editDiv.innerHTML;
 					boxOptions.title = feature.title || parse.category;
 					boxOptions.closeButton = "box";
 					boxOptions.confirmButton = "Add";
@@ -3885,7 +3883,7 @@
 							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
 									+ studyType
 									+ ' ' + postVal;
-							html += jT.ui.putInfo(full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId));
+							html += jT.ui.getTemplate('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
 							html += '</div>';
 						}
 					}
@@ -3998,7 +3996,7 @@
 				html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
 			}
 			if (!!bInfo.remarks && bInfo.remarks != '') {
-				html += jT.ui.putInfo(null, bInfo.remarks);
+				html += jT.ui.getTemplate('info-ball', { href: '$', title: bInfo.remarks});
 			}
 
 			return html;
@@ -4578,7 +4576,7 @@
           if (target.children().length > 1) // the input field.
             cont$ = $("#" + fid, target[0]).show();
           else {
-				    cont$ = jT.ui.fillTemplate("tag-facet", faceter).attr("id", fid);
+				    cont$ = jT.ui.getTemplate("tag-facet", faceter).attr("id", fid);
             
     				f.title = f.val;
     				f.onMain = this.clickHandler(faceter.id + ":" + f.val);
@@ -4615,7 +4613,7 @@
 		this.settings = $.extend(true,  QueryKit.defaults, settings);
 		$(this.rootElement = settings.target)
 			.addClass('jtox-toolkit') // to make sure it is there even in manual initialization.
-			.append(jT.ui.fillTemplate('kit-query-all', this.settings));
+			.append(jT.ui.getTemplate('kit-query-all', this.settings));
 
 		this.search = {
 			mol: "",
@@ -4781,7 +4779,7 @@
 
 				var emptySpace = $('.toolEmptyCell', ketcherBox)[0];
 				// TODO: Change the button template - provide the text and classes!!
-				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
+				$(emptySpace.appendChild(jT.ui.getTemplate('button-icon', {
 					title: "Use",
 					icon: "arrowthick-1-n"
 				}))).on('click', function () {
@@ -4791,7 +4789,7 @@
 					if (!!smiles)
 						form.searchbox.value = smiles;
 				});
-				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
+				$(emptySpace.appendChild(jT.ui.getTemplate('button-icon', {
 					title: "Draw",
 					icon: "arrowthick-1-s"
 				}))).on('click', function () {
@@ -5132,7 +5130,7 @@
       for (var i = 0, rangeCnt = current.length; i < rangeCnt; ++i) {
         var ref = current[i],
             full = allVals.find(function (e) { return e.pattern === ref.pattern }) || ref,
-            el$ = jT.ui.fillTemplate("slider-one"),
+            el$ = jT.ui.getTemplate("slider-one"),
             setup = {
               id: ref.id,
               targetValue: value,
@@ -5336,7 +5334,7 @@ jT.ItemListWidget.prototype = {
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
 
-    return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
+    return jT.ui.getTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc) {
@@ -5715,7 +5713,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			var tabInfo = jT.ui.addTab(self.tabs, 
 				(knownNames[top] || sum.topcategory.title), 
 				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
-				jT.ui.fillTemplate('one-category', self.substance));
+				jT.ui.getTemplate('one-category', self.substance));
 
 			tabInfo.tab.data('type', top);
 			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);
@@ -5951,8 +5949,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		onComposition: null,	// invoked when the
 		onStudy: null,			// invoked for each loaded study
 		onLoaded: null,			// invoked when the substance general info is loaded
-		configuration: {
-			columns: {
+		columns: {
+			study: {
 				"_": {
 					"main": {},
 					"parameters": {},
@@ -6130,9 +6128,6 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		} else
 			$('.jtox-controls', self.rootElement).remove();
 
-		// again , so that changed defaults can be taken into account.
-		self.settings.configuration = $.extend(true, self.settings.configuration, settings.configuration);
-
 		// READYY! Go and prepare THE table.
 		self.table = jT.tables.putTable(self, $('table', self.rootElement)[0], 'substance', opts);
 	};
@@ -6279,6 +6274,10 @@ jT.ui.templates['button-icon']  =
 jT.ui.templates['select-one-option']  = 
 "<option value=\"{{ value }}\" {{ selected }}>{{ name }}</button>" +
 ""; // end of #select-one-option 
+
+jT.ui.templates['info-ball']  = 
+"<sup class=\"helper\"><a target=\"_blank\" href=\"{{ href }}\" title=\"{{ title }}\"><span class=\"fa fa-info-circle\"></span></a></sup>" +
+""; // end of #info-ball 
 
 jT.ui.templates['all-composition']  = 
 "<div class=\"jtox-composition unloaded\">" +

@@ -394,7 +394,7 @@
 					};
 
 					// we're taking the original jToxEndpoint editor here and glue our part after it.
-					boxOptions.content = jT.getTemplate('#jtox-endeditor').innerHTML + editDiv.innerHTML;
+					boxOptions.content = jT.ui.getTemplate('jtox-endeditor').innerHTML + editDiv.innerHTML;
 					boxOptions.title = feature.title || parse.category;
 					boxOptions.closeButton = "box";
 					boxOptions.confirmButton = "Add";
@@ -1373,7 +1373,7 @@
 							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
 									+ studyType
 									+ ' ' + postVal;
-							html += jT.ui.putInfo(full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId));
+							html += jT.ui.getTemplate('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
 							html += '</div>';
 						}
 					}
@@ -1486,7 +1486,7 @@
 				html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
 			}
 			if (!!bInfo.remarks && bInfo.remarks != '') {
-				html += jT.ui.putInfo(null, bInfo.remarks);
+				html += jT.ui.getTemplate('info-ball', { href: '$', title: bInfo.remarks});
 			}
 
 			return html;

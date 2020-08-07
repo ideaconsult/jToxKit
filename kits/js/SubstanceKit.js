@@ -70,9 +70,6 @@
 		} else
 			$('.jtox-controls', self.rootElement).remove();
 
-		// again , so that changed defaults can be taken into account.
-		self.settings.configuration = $.extend(true, self.settings.configuration, settings.configuration);
-
 		// READYY! Go and prepare THE table.
 		self.table = jT.tables.putTable(self, $('table', self.rootElement)[0], 'substance', opts);
 	};
