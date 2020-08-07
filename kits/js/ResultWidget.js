@@ -148,7 +148,7 @@ jT.ItemListWidget.prototype = {
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
 
-    return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
+    return jT.ui.getTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc) {

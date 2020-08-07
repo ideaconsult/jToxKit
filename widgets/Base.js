@@ -9,12 +9,6 @@
     // Define more tools here
     jT.ui = $.extend(jT.ui, {
         templates: {},
-        /** Gets a template with given selector and replaces the designated
-         * {{placeholders}} from the provided `info`.
-         */
-        fillHtml: function (html, info, def) {
-            return $(jT.formatString(html, info, def));
-        },
 
         bakeTemplate: function (html, info, def) {
             var all$ = $(html);
@@ -63,8 +57,12 @@
             });
         },
 
-        fillTemplate: function (id, info, def) {
-            return jT.ui.fillHtml(jT.ui.templates[id], info, def);
+        fillHtml: function (id, info, def) {
+            return jT.formatString(jT.ui.templates[id], info, def);
+        },
+
+        getTemplate: function (id, info, def) {
+            return $(jT.ui.fillHtml(id, info, def));
         },
 
         updateCounter: function (str, count, total) {

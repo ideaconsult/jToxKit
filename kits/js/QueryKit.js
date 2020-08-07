@@ -16,7 +16,7 @@
 		this.settings = $.extend(true,  QueryKit.defaults, settings);
 		$(this.rootElement = settings.target)
 			.addClass('jtox-toolkit') // to make sure it is there even in manual initialization.
-			.append(jT.ui.fillTemplate('kit-query-all', this.settings));
+			.append(jT.ui.getTemplate('kit-query-all', this.settings));
 
 		this.search = {
 			mol: "",
@@ -182,7 +182,7 @@
 
 				var emptySpace = $('.toolEmptyCell', ketcherBox)[0];
 				// TODO: Change the button template - provide the text and classes!!
-				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
+				$(emptySpace.appendChild(jT.ui.getTemplate('button-icon', {
 					title: "Use",
 					icon: "arrowthick-1-n"
 				}))).on('click', function () {
@@ -192,7 +192,7 @@
 					if (!!smiles)
 						form.searchbox.value = smiles;
 				});
-				$(emptySpace.appendChild(jT.getTemplate('button-icon', {
+				$(emptySpace.appendChild(jT.ui.getTemplate('button-icon', {
 					title: "Draw",
 					icon: "arrowthick-1-s"
 				}))).on('click', function () {
