@@ -91,6 +91,8 @@
 
 .jtox-ds-download {
   padding:0px 5px 0px 5px;
+  max-width: 64px;
+  max-height: 64px;
 }
 
 .jtox-ds-details * {
