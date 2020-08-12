@@ -203,11 +203,6 @@ div.tippy-box div.annotip-severity {
   border-bottom: 0px !important;
 }
 
-.cc-flex, cc-fixed {
-  box-sizing: border-box;
-  position: relative;
-}
-
 /* Make table helper elements, like paging, filter, etc. in one line...
 */
 .jtox-toolkit .dataTables_filter label input,
@@ -611,6 +606,8 @@ td.jtox-multi table {
 
 .jtox-ds-download {
   padding:0px 5px 0px 5px;
+  max-width: 64px;
+  max-height: 64px;
 }
 
 .jtox-ds-details * {

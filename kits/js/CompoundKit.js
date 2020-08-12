@@ -36,7 +36,7 @@
 
 		this.instanceNo = instanceCount++;
 		if (this.settings.rememberChecks && this.settings.showTabs)
-		this.featureStates = {};
+			this.featureStates = {};
 
 		// finally make the query, if Uri is provided. This _invokes_ init() internally.
 		if (this.settings['datasetUri'] != null)
@@ -1038,58 +1038,45 @@
 			}
 		},
 		"exports": [{
-				type: "chemical/x-mdl-sdfile",
-				icon: "/assets/img/types/sdf64.png"
-			},
-			{
-				type: "chemical/x-cml",
-				icon: "/assets/img/types/cml64.png"
-			},
-			{
-				type: "chemical/x-daylight-smiles",
-				icon: "/assets/img/types/smi64.png"
-			},
-			{
-				type: "chemical/x-inchi",
-				icon: "/assets/img/types/inchi64.png"
-			},
-			{
-				type: "text/uri-list",
-				icon: "/assets/img/types/lnk64.png"
-			},
-			{
-				type: "application/pdf",
-				icon: "/assets/img/types/pdf64.png"
-			},
-			{
-				type: "text/csv",
-				icon: "/assets/img/types/csv64.png"
-			},
-			{
-				type: "text/plain",
-				icon: "/assets/img/types/txt64.png"
-			},
-			{
-				type: "text/x-arff",
-				icon: "/assets/img/types/arff.png"
-			},
-			{
-				type: "text/x-arff-3col",
-				icon: "/assets/img/types/arff-3.png"
-			},
-			{
-				type: "application/rdf+xml",
-				icon: "/assets/img/types/rdf64.png"
-			},
-			{
-				type: "application/json",
-				icon: "/assets/img/types/json64.png"
-			},
-			{
-				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-				icon: "/assets/img/types/xlsx.png"
-			}
-		],
+			type: "chemical/x-mdl-sdfile",
+			icon: "/assets/img/types/sdf64.png"
+		}, {
+			type: "chemical/x-cml",
+			icon: "/assets/img/types/cml64.png"
+		}, {
+			type: "chemical/x-daylight-smiles",
+			icon: "/assets/img/types/smi64.png"
+		}, {
+			type: "chemical/x-inchi",
+			icon: "/assets/img/types/inchi64.png"
+		}, {
+			type: "text/uri-list",
+			icon: "/assets/img/types/lnk64.png"
+		}, {
+			type: "application/pdf",
+			icon: "/assets/img/types/pdf64.png"
+		}, {
+			type: "text/csv",
+			icon: "/assets/img/types/csv64.png"
+		}, {
+			type: "text/plain",
+			icon: "/assets/img/types/txt64.png"
+		}, {
+			type: "text/x-arff",
+			icon: "/assets/img/types/arff.png"
+		}, {
+			type: "text/x-arff-3col",
+			icon: "/assets/img/types/arff-3.png"
+		}, {
+			type: "application/rdf+xml",
+			icon: "/assets/img/types/rdf64.png"
+		}, {
+			type: "application/json",
+			icon: "/assets/img/types/json64.png"
+		}, {
+			type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			icon: "/assets/img/types/xlsx.png"
+		}],
 
 		// These are instance-wide pre-definitions of default baseFeatures as described below.
 		"baseFeatures": {
