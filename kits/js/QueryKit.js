@@ -157,69 +157,13 @@
 			});
 		}
 
-		// Now, deal with KETCHER - make it show, attach handlers to/from it, and handlers for showing/hiding it.
-		var ketcherBox = $('.ketcher', this.rootElement)[0];
-		var ketcherReady = false;
-		var onKetcher = function (service, method, async, parameters, onready) {
-			if (service == "knocknock")
-				onready("You are welcome!", null);
-			else
-				jT.ambit.call(self.queryKit.kit(), '/ui/' + service, {
-					dataType: "text",
-					data: parameters
-				}, function (res, jhr) {
-					onready(res, jhr);
-				});
-		};
-
-		var ensureKetcher = function () {
-			if (!ketcherReady) {
-				jT.insertTool('ketcher', ketcherBox);
-				ketcher.init({
-					root: ketcherBox,
-					ajaxRequest: onKetcher
-				});
-
-				var emptySpace = $('.toolEmptyCell', ketcherBox)[0];
-				// TODO: Change the button template - provide the text and classes!!
-				$(emptySpace.appendChild(jT.ui.getTemplate('button-icon', {
-					title: "Use",
-					icon: "arrowthick-1-n"
-				}))).on('click', function () {
-					var smiles = ketcher.getSmiles();
-					var mol = ketcher.getMolfile();
-					self.setMol(mol);
-					if (!!smiles)
-						form.searchbox.value = smiles;
-				});
-				$(emptySpace.appendChild(jT.ui.getTemplate('button-icon', {
-					title: "Draw",
-					icon: "arrowthick-1-s"
-				}))).on('click', function () {
-					ketcher.setMolecule(self.search.mol || form.searchbox.value);
-				});
-				ketcherReady = true;
-			}
-		};
-
-		$(form.drawbutton).on('click', function () {
-			if ($(ketcherBox).hasClass('shrinken')) {
-				ensureKetcher();
-				$(ketcherBox).css('display', '');
-			} else
-				setTimeout(function () {
-					$(ketcherBox).css('display', 'none');
-				}, 500);
-
-			setTimeout(function () {
-				$(ketcherBox).toggleClass('shrinken')
-			}, 50);
-		});
+		// Initialize the MicroModal dialog with the molecule composer, if it was not initialized already
+		this.initComposer(form);
 
 		// finally - parse the URL-passed parameters and setup the values appropriately.
 		var doQuery = false;
 		if (!!this.settings.b64search) {
-			this.setMol($.base64.decode(this.settings.b64search));
+			this.setMol(window.atob(this.settings.b64search));
 			doQuery = true;
 		} else if (!!this.settings.search) {
 			this.setAuto(this.settings.search);
@@ -229,6 +173,31 @@
 		// and very finally - install the handlers...
 		jT.tables.installHandlers(this);
 		doQuery && this.settings.initialQuery && this.query();
+	};
+
+	QueryKit.prototype.initComposer = function (form) {
+		if (!document.getElementById('mol-composer'))
+			$(document.body).append(jT.ui.getTemplate('kit-query-composer', this.settings));
+
+		var self = this;
+		$('#mol-composer').on('shown.bs.modal', function (e) {
+			var molObj = null;
+			if (self.search.mol)
+				molObj = Kekule.IO.loadFormatData(self.search.mol, 'mol');
+			else if(form.searchbox.value)
+				molObj = Kekule.IO.loadFormatData(form.searchbox.value, 'smi');
+
+			if (molObj)
+				Kekule.Widget.getWidgetById('kekule-mol-composer').setChemObj(molObj);
+		});
+
+		$('#mol-composer button.mol-apply').on('click', function (e) {
+			var molObj = Kekule.Widget.getWidgetById('kekule-mol-composer').getChemObj();
+
+			self.setMol(Kekule.IO.saveFormatData(molObj, 'mol'));
+			form.searchbox.value = Kekule.IO.saveFormatData(molObj, 'smi');
+		});
+
 	};
 
 	QueryKit.prototype.getMainKit = function () {
@@ -258,7 +227,7 @@
 		uri += queries[type] + '?';
 
 		if (!!this.search.mol) {
-			params.b64search = $.base64.encode(this.search.mol);
+			params.b64search = window.btoa(this.search.mol);
 		} else {
 			params.search = form.searchbox.value;
 			if (!params.search)

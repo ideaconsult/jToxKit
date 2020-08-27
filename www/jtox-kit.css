@@ -1757,34 +1757,6 @@ dd {
 .jtox-query .search-pane .dynamic.hidden {
   display: none;
 }
-
-.jtox-query .ketcher {
-  display: block;
-  height: auto;
-  position: relative;
-  left: 0px;
-  -moz-transition: all 0.5s ease, opacity 0.2s;
-  -webkit-transition: all 0.5s ease, opacity 0.2s;
-  transition: all 0.5s ease, opacity 0.2s;
-}
-
-.jtox-query .ketcher.shrinken {
-  left: 100%;
-/*   opacity: 0.0; */
-}
-
-.jtox-query .ketcher .toolEmptyCell {
-  vertical-align: middle;
-}
-
-.jtox-query .ketcher .toolEmptyCell button {
-  margin: 0px;
-  padding: 4px 8px;
-}
-
-.jtox-query .ketcher .toolEmptyCell button span {
-  display: inline-block;
-}
 /* toxtstudy.css - Styling for toxstudy engine
 */
 
