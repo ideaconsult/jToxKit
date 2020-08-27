@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.3.3" };
+var jToxKit = { version: "2.4.0" };
 
 (function (jT, a$, Solr) {
   // Now import all the actual skills ...
@@ -712,10 +712,10 @@ Exporting.prototype = {
     useJson: false,     // whether we're in JSON mode or URL string one.
     expectJson: false,  // what is the provided manager's mode.
     servlet: null,      // the servlet to be used. Defaults to manager's one.
-    manualFilter: false, // Handles the `fq` parameter manually.
     exportDefinition: { // Definition of additional parameters
         extraParams: [],
         defaultFilter: null,
+        manualFilter: false, // Handles the `fq` parameter manually.
         inheritDomain: true, // Whether to inherit the domain from original query.
         domain: "",
         fieldsRegExp: null,
@@ -747,42 +747,47 @@ Exporting.prototype = {
         return np;
     },
 
-    prepareFilters: function () {
+    prepareFilters: function (selectedIds) {
         var innerParams = [],
             fqPar = this.manager.getParameter(this.expectJson ? "json.filter" : "fq");
 
         for (var i = 0, vl = fqPar.length; i < vl; i++) {
             var par = fqPar[i];
 
-            if (!this.manualFilter)
+            if (!this.exportDefinition.manualFilter)
                 this.addParameter(this.transformParameter(par, this.fqName));
             innerParams.push(Solr.stringifyValue(par));
         }
 
-        return innerParams;
-    },
-    
-    prepareExport: function(auxParams, selectedIds, keepFilters) {
-        var innerParams = !selectedIds || keepFilters ? this.prepareFilters() : [],
-            inFilter = innerParams.length > 0
-                ? innerParams.join(' AND ')
-                : this.exportDefinition.defaultFilter || "",
-            escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
+        // No other job here, if we're in manual filter mode
+        if (this.exportDefinition.manualFilter) return innerParams;
+
+        this.addParameter(this.transformParameter(this.manager.getParameter('q')));
 
         if (!!selectedIds)
             this.addParameter(this.fqName, this.exportDefinition.idField + ":(" + selectedIds.join(" ") + ")");
 
-        this.addParameter(this.transformParameter(this.manager.getParameter('q')));
-
+        return innerParams;
+    },
+    
+    prepareExport: function(auxParams, selectedIds) {
+        var innerParams = this.prepareFilters(selectedIds),
+            inFilter = innerParams.length > 1 
+                ? '(' + innerParams.join(' AND ') + ')' 
+                : innerParams.length > 0 
+                    ? innerParams[0] 
+                    : this.exportDefinition.defaultFilter,
+            escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
+            
         auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
         for (var i = 0, pl = auxParams.length; i < pl; ++i) {
             var np = this.transformParameter(auxParams[i]);
+            
             
             if (typeof np.value === 'string')
                 np.value = np.value
                     .replace("{{filter}}", inFilter)
                     .replace("{{filter-escaped}}", escapedInFilter)
-                    .replace(/\(\s*\)\s+OR\s+/, '')
 
             this.addParameter(np);
         }

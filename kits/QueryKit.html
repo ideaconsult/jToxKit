@@ -25,7 +25,6 @@
 	<script src="uses/oecdcategories.js"></script>
 
 	<script src="tests/jquery.js"></script>
-	<script src="tests/jquery.base64.min.js"></script>
 	<script src="tests/jquery-migrate-1.2.1.min.js"></script>
 	<script src="tests/jquery-ui.js"></script>
 	<script src="tests/jquery.dataTables.js"></script>
@@ -83,16 +82,34 @@
 					<div class="jtox-inline">
 						<input type="text" name="searchbox" />
 						<button name="searchbutton" class="jtox-handler" title="Search/refresh" data-handler="query"><i class="fa fa-search"></i></button>
-						<button name="drawbutton" class="dynamic" title="Draw the (sub)structure"><i class="fa fa-edit"></i></button>
+						<button name="drawbutton" class="dynamic" title="Draw the (sub)structure" data-toggle="modal" data-target="#mol-composer"><i class="fa fa-edit"></i></button>
 					</div>
 				</div>
 				<div id="searchcontext" class="size-full">
 					<input type="text" name="searchcontext" placeholder="Restrict the search within given dataset_" />
 				</div>
 			</form>
-			<div class="ketcher shrinken"></div>
 		</div>
 <!-- // end of #kit-query-all ]]-->
+<!--[[ jT.ui.templates['kit-query-composer'] -->
+		<div class="modal fade" id="mol-composer" tabindex="-1" role="dialog" aria-labelledby="mol-composer" aria-hidden="true">
+			<div class="modal-dialog modal-lg" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="mol-composer">Molecule Composer</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Discard">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div id="kekule-mol-composer" class="modal-body" data-widget="Kekule.Editor.Composer"></div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Discard</button>
+						<button type="button" class="btn btn-primary mol-apply" data-dismiss="modal">Apply & Use</button>
+					</div>
+				</div>
+			</div>
+		</div>
+<!-- // end of #kit-query-composer ]]-->
 	</div>
 </body>
 
