@@ -549,7 +549,7 @@
                         console.error(error);
 
                         if (typeof error === 'object')
-                            error = error.message || error.status || "Wrong request!";
+                            error = error.message || "Wrong request!";
                     }
 
                     // Ensure at least 900ms of showtime for the "Downloading..." label

@@ -763,11 +763,11 @@ Exporting.prototype = {
         for (var i = 0, pl = auxParams.length; i < pl; ++i) {
             var np = this.transformParameter(auxParams[i]);
             
-            
             if (typeof np.value === 'string')
                 np.value = np.value
                     .replace("{{filter}}", inFilter)
                     .replace("{{filter-escaped}}", escapedInFilter)
+                    .replace(/\(\s*\)\s+OR\s+/, '')
 
             this.addParameter(np);
         }
