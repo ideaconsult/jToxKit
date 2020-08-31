@@ -179,23 +179,24 @@
 		if (!document.getElementById('mol-composer'))
 			$(document.body).append(jT.ui.getTemplate('kit-query-composer', this.settings));
 
-		var self = this;
+		var self = this,
+			getKetcher = function () {
+				var ketcherFrame = document.getElementById('ketcher-mol-frame');
+				return ('contentDocument' in ketcherFrame
+					? ketcherFrame.contentWindow.ketcher
+					: document.frames['ifKetcher'].window.ketcher); // IE7
+			};
+		
 		$('#mol-composer').on('shown.bs.modal', function (e) {
-			var molObj = null;
-			if (self.search.mol)
-				molObj = Kekule.IO.loadFormatData(self.search.mol, 'mol');
-			else if(form.searchbox.value)
-				molObj = Kekule.IO.loadFormatData(form.searchbox.value, 'smi');
+			var molStr = self.search.mol || form.searchbox.value;
 
-			if (molObj)
-				Kekule.Widget.getWidgetById('kekule-mol-composer').setChemObj(molObj);
+			molStr && getKetcher().setMolecule(molStr);
 		});
 
 		$('#mol-composer button.mol-apply').on('click', function (e) {
-			var molObj = Kekule.Widget.getWidgetById('kekule-mol-composer').getChemObj();
-
-			self.setMol(Kekule.IO.saveFormatData(molObj, 'mol'));
-			form.searchbox.value = Kekule.IO.saveFormatData(molObj, 'smi');
+			var ketcher = getKetcher();
+			self.setMol(ketcher.getMolfile());
+			form.searchbox.value = ketcher.getSmiles();
 		});
 
 	};
