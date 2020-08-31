@@ -1,6 +1,6 @@
 {
   "name": "@ideaconsult/jtox-kit",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "A JavaScript client library of chem-informatics related widgets, components, etc.",
   "keywords": [
     "chem-informatics",
@@ -44,14 +44,15 @@
   "dependencies": {
     "@ideaconsult/solr-jsx": "^0.15.11",
     "@thejonan/as-sys": "0.13.3",
-    "xlsx-datafill": "^1.0.1",
-    "xlsx-populate": "^1.21.0"
+    "xlsx-datafill": "^1.0.2",
+    "xlsx-populate": "^1.21.0",
+    "lodash": "^4.17.20"
   },
   "devDependencies": {
     "jasmine-core": "latest",
     "jasmine-node": "latest",
     "smash": "latest",
-    "uglify-js": "^3.9.4"
+    "uglify-js": "^3.10.3"
   },
   "scripts": {
     "pretest": "rm -f www/jtox-kit* && export VERSION=`node -e 'console.log(require(\"./package.json\").version)'` && sed -E -e \"s/\\{\\{VERSION\\}\\}/$VERSION/\" core/Core.js > core/start.js && smash core/start.js > www/jtox-kit.js && rm -rf core/start.js && rsync node_modules/jasmine-core/lib/jasmine-core/*.js tests/libs && rsync node_modules/jasmine-core/lib/jasmine-core/*.css tests/libs && rsync node_modules/underscore/*.js tests/libs && rsync node_modules/@thejonan/as-sys/as-sys*.js libs && rsync node_modules/@ideaconsult/solr-jsx/solr-jsx*.js libs",
