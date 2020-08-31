@@ -756,7 +756,7 @@ Exporting.prototype = {
                 ? '(' + innerParams.join(' AND ') + ')' 
                 : innerParams.length > 0 
                     ? innerParams[0] 
-                    : this.exportDefinition.defaultFilter,
+                    : this.exportDefinition.defaultFilter || "",
             escapedInFilter = inFilter.replace(/"|\\/g, "\\$&");
             
         auxParams = (auxParams || []).concat(this.exportDefinition.extraParams || []);
