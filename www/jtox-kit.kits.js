@@ -775,7 +775,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
 
-            Manager.addListeners(new jT.ResultWidget($.extend(true, {
+            Manager.addListeners(new jT.ResultWidget($.extend(true, {}, this, {
                 id: 'result',
                 target: $('#docs'),
                 itemId: "s_uuid",
@@ -802,7 +802,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 onCreated: function (doc) {
                     $("footer", this).addClass("add");
                 }
-            }, this)));
+            })));
 
             Manager.addListeners(new(a$(Solr.Widgets.Pager))({
                 id: 'pager',
@@ -891,7 +891,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             }));
 
             // Now add the basket.
-            this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {
+            this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {}, this, {
                 id: 'basket',
                 target: $('#basket-docs'),
                 summaryRenderers: this.summaryRenderers,
@@ -922,7 +922,7 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
                 onCreated: function (doc) {
                     $("footer", this).addClass("remove");
                 }
-            }, this));
+            }));
 
             a$.act(this, this.onPreInit, Manager);
             Manager.init();
