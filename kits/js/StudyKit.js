@@ -15,6 +15,10 @@
 		this.settings = $.extend(true, {}, StudyKit.defaults, settings); // i.e. defaults from jToxStudy
 		this.settings.tab = this.settings.tab || jT.ui.fullUrl.hash;
 
+		// HACK: No meaningful way to communicate anything from the instance to render functions!
+		if (this.settings.errorDefault)
+			StudyKit.defaults.errorDefault = this.settings.errorDefault;
+
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
 		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
@@ -531,8 +535,8 @@
 			return jT.tables.renderMulti(data, type, full, function (data, type) {
 				var resText = jT.ui.renderRange(data.result, null, type);
 				if (data.result.errorValue != null)
-					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
-				return resText
+					resText += " (" + (data.result.errQualifier || StudyKit.defaults.errorDefault) + " " + data.result.errorValue + ")";
+				return resText;
 			}, { anno: "result result.errQualifier result.errValue"});
 		}
 	},
