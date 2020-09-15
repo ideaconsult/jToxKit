@@ -599,8 +599,8 @@
                 exDef = _.defaultsDeep($.extend(true, {}, exType.definition), this.exportDefaultDef),
                 server = exType.server || exFormat.server,
                 selectedIds = this.getSelectedIds(form),
-                formAmbitUrl = function () { 
-                    form.search.value = selectedIds.join(" ");
+                formAmbitUrl = function (ids) { 
+                    form.search.value = ids.join(" ");
                     form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                 };
 
@@ -619,7 +619,7 @@
             if (server == 'ambitUrl') {
                 // If we already have the selected Ids - we don't even need to bother calling Solr.
                 if (!!selectedIds)
-                    formAmbitUrl();
+                    formAmbitUrl(selectedIds);
                 else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
                     async: false,
                     dataType: "json",
@@ -629,7 +629,7 @@
                             ids.push(value.s_uuid_hs);
                         });
 
-                        formAmbitUrl();
+                        formAmbitUrl(ids);
                         doneFn();
                     },
                     error: function (jhr, status, errText) { doneFn(errText); }
@@ -639,7 +639,8 @@
                         exFormat == "tsv"
                             ? [{ name: "wt", value: "json" }, { name: "json2tsv", value: true }]
                             : [{ name: 'wt', value: exFormat === 'xlsx' ? 'json' : exFormat }],
-                        selectedIds
+                        selectedIds,
+                        false
                         ).getAjax(this.solrUrl),
                     downloadFn = function (blob) {
                         if (!(blob instanceof Blob))
