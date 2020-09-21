@@ -414,10 +414,10 @@
 			this.featureStates = {};
 
 		// finally make the query, if Uri is provided. This _invokes_ init() internally.
-		if (this.settings.datasetUri != null)
-			this.queryDataset(this.settings.datasetUri);
-		else
+		if (!this.settings.datasetUri)
 			this.datasetUri = this.settings.baseUrl + this.settings.defaultService;
+		else if (this.settings.initialQuery)
+			this.queryDataset(this.settings.datasetUri);
 	};
 
 	// now follow the prototypes of the instance functions.
@@ -1031,8 +1031,10 @@
 
 		$(self.fixTable).dataTable().fnClearTable();
 		$(self.varTable).dataTable().fnClearTable();
-		$(self.fixTable).dataTable().fnAddData(dataFeed);
-		$(self.varTable).dataTable().fnAddData(dataFeed);
+		if (dataFeed && dataFeed.length) {
+			$(self.fixTable).dataTable().fnAddData(dataFeed);
+			$(self.varTable).dataTable().fnAddData(dataFeed);
+		}
 		$('.jt-feeding', self.rootElement).html(self.settings.language.zeroRecords || 'No records matching the filter.');
 
 		jT.ui.updateTree($('.jtox-controls', self.rootElement)[0], {
@@ -1352,6 +1354,7 @@
 		"rememberChecks": false, // whether to remember feature-checkbox settings between queries
 		"featureUri": null, // an URI for retrieving all feature for the dataset, rather than 1-sized initial query, which is by default
 		"defaultService": "query/compound/search/all", // The default service (path) to be added to baseUrl to form datasetUri, when it is not provided
+		"initialQuery": true, // Whether to directly make a query, upon initialization, if provided with datasetUri
 		"metricFeature": "http://www.opentox.org/api/1.1#Similarity", // This is the default metric feature, if no other is specified
 		"onTab": null, // invoked after each group's tab is created - function (element, tab, name, isMain);
 		"onLoaded": null, // invoked when a set of compounds is loaded.
