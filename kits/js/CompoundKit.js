@@ -39,8 +39,10 @@
 			this.featureStates = {};
 
 		// finally make the query, if Uri is provided. This _invokes_ init() internally.
-		if (this.settings['datasetUri'] != null)
-			this.queryDataset(this.settings['datasetUri']);
+		if (this.settings.datasetUri != null)
+			this.queryDataset(this.settings.datasetUri);
+		else
+			this.datasetUri = this.settings.baseUrl + this.settings.defaultService;
 	};
 
 	// now follow the prototypes of the instance functions.
@@ -673,20 +675,19 @@
 	};
 
 	CompoundKit.prototype.queryUri = function (scope) {
-		var self = this;
-		if (self.datasetUri == null)
+		if (!this.datasetUri)
 			return null;
 		if (scope == null)
 			scope = {
-				from: self.pageStart,
-				size: self.pageSize
+				from: this.pageStart,
+				size: this.pageSize
 			};
 		if (scope.from < 0)
 			scope.from = 0;
 		if (scope.size == null)
-			scope.size = self.pageSize;
+			scope.size = this.pageSize;
 
-		return jT.addParameter(self.datasetUri, "page=" + Math.floor(scope.from / scope.size) + "&pagesize=" + scope.size);
+		return jT.addParameter(this.datasetUri, "page=" + Math.floor(scope.from / scope.size) + "&pagesize=" + scope.size);
 	};
 
 	// make the actual query for the (next) portion of data.
@@ -975,6 +976,7 @@
 		"pageStart": 0, // what is the default startint point for entries retrieval
 		"rememberChecks": false, // whether to remember feature-checkbox settings between queries
 		"featureUri": null, // an URI for retrieving all feature for the dataset, rather than 1-sized initial query, which is by default
+		"defaultService": "query/compound/search/all", // The default service (path) to be added to baseUrl to form datasetUri, when it is not provided
 		"metricFeature": "http://www.opentox.org/api/1.1#Similarity", // This is the default metric feature, if no other is specified
 		"onTab": null, // invoked after each group's tab is created - function (element, tab, name, isMain);
 		"onLoaded": null, // invoked when a set of compounds is loaded.

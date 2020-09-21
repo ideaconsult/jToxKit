@@ -172,7 +172,7 @@
 
 		// and very finally - install the handlers...
 		jT.tables.installHandlers(this);
-		doQuery && this.settings.initialQuery && this.query();
+		doQuery && this.settings.initialQuery && _.defer(function (self) { self.query(); }, this);
 	};
 
 	QueryKit.prototype.initComposer = function (form) {
