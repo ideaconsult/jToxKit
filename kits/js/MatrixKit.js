@@ -6,17 +6,17 @@
 
 (function (_, $, jT) {
 
-	return;
-
 	function MatrixKit(settings) {
 		var self = this;
 
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
-		this.settings = $.extend(true, {}. MatrixKit.defaults, settings);
+		jT.ui.putTemplate('all-matrix', ' ? ', this.rootElement);
+
+		this.settings = $.extend(true, {}, MatrixKit.defaults, settings);
 
 		// deal with some configuration
 		if (typeof this.settings.studyTypeList === 'string')
-			this.settings.studyTypeList = window[this.settings.studyTypeList];
+			this.settings.studyTypeList = _.get(window, this.settings.studyTypeList, {});
 
 		// the (sub)action in the panel
 		var loadAction = function () {
@@ -40,24 +40,16 @@
 		};
 
 		// initialize the tab structure for several versions of dataTables.
-		$(root).tabs({
-			"disabled": [1, 2, 3, 4],
-			"heightStyle": "fill",
-			"select" : function(event, ui) {
-				loadPanel(ui.panel);
-			},
-			"activate" : function(event, ui) {
-				if (ui.newPanel)
-					loadPanel(ui.newPanel[0]);
-			},
-			"create" : function(event, ui) {
-				if (ui.panel)
-					loadPanel(ui.panel[0]);
-			}
+		$(this.rootElement).tabs({
+			disabled: [1, 2, 3, 4],
+			heightStyle: "content",
+			select: function(event, ui) { loadPanel(ui.panel); },
+			activate: function(event, ui) { ui.newPanel && loadPanel(ui.newPanel[0]); },
+			create: function(event, ui) { ui.panel && loadPanel(ui.panel[0]); }
 		});
 
-		$('.jq-buttonset', root).buttonset();
-		$('.jq-buttonset.action input', root).on('change', loadAction);
+		$('.jq-buttonset', this.rootElement).buttonset();
+		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
 		var updateUsers = function() {
 			var el = $(this.parentNode).find('select');
@@ -75,16 +67,17 @@
 			});
 		}
 
-		$('.jtox-users-select', root).tokenize({
-			datas: self.settings.baseUrl + '/myaccount/users',
-			searchParam: 'q',
-			valueField: 'id',
-			textField: 'name'
-			//onAddToken: updateUsers,
-			//onRemoveToken: updateUsers
-		});
+		// TODO: replace with bootstrap-tokenfield
+		// $('.jtox-users-select', this.rootElement).tokenize({
+		// 	datas: self.settings.baseUrl + '/myaccount/users',
+		// 	searchParam: 'q',
+		// 	valueField: 'id',
+		// 	textField: 'name'
+		// 	//onAddToken: updateUsers,
+		// 	//onRemoveToken: updateUsers
+		// });
 
-		$('.jtox-users-submit', root).on('click', updateUsers);
+		$('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
 		self.onIdentifiers(null, $('#jtox-identifiers', self.rootElement)[0]);
 		// finally, if provided - load the given bundleUri
@@ -1677,7 +1670,7 @@
 	};
 
 	MatrixKit.prototype.structuresLoaded = function (kit, dataset) {
-		if (document.body.className == 'structlist') {
+		if ($(this.rootElement).hasClass('structlist')) {
 			this.bundleSummary.compound = dataset.dataEntry.length;
 			this.progressTabs();
 		}
@@ -1880,7 +1873,7 @@
 		},
 
 		settings: {
-			studyTypeList: _i5.qaSettings["Study result type"],
+			studyTypeList: {},
 			maxStars: 10,
 			matrixIdentifiers: [
 				"http://www.opentox.org/api/1.1#CASRN",

@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@ideaconsult/solr-jsx": "^0.16.2",
+    "@open-xchange/bootstrap-tokenfield": "^0.13.2",
     "@thejonan/as-sys": "0.13.3",
     "xlsx-datafill": "^1.0.1",
     "xlsx-populate": "^1.21.0"

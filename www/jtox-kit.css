@@ -1206,30 +1206,26 @@ input.widget-filter {
 }
 /* toxtmatrix.css - jToxMatrix tool styles
 */
-html, body, #jtox-bundle {
+.jtox-matrix-kit {
   width: 100%;
   height: 100%;
 }
 
-strong {
-  font-weight: bold;
-}
-
-#jtox-bundle {
+.jtox-matrix-kit {
   overflow: hidden;
   position: relative;
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
 }
 
-#jtox-bundle textarea,
+.jtox-matrix-kit textarea,
 .popup-box textarea {
   width: 100%;
   box-sizing: border-box;
   resize: none;
 }
 
-#jtox-bundle button.jt-toggle {
+.jtox-matrix-kit button.jt-toggle {
   width: auto;
   min-width: 24px;
 }
@@ -1286,11 +1282,11 @@ strong {
   border: 0px;
 }
 
-body.structlist #jtox-query .jtox-foldable {
+div.jtox-matrix-kit.structlist #jtox-query .jtox-foldable {
   display: none;
 }
 
-body.structlist #browser {
+div.jtox-matrix-kit.structlist #browser {
   margin-top: 5px;
 }
 
@@ -1312,7 +1308,7 @@ body.structlist #browser {
 	overflow-x: scroll;
 }
 
-#jtox-bundle > div.ui-tabs-panel {
+.jtox-matrix-kit > div.ui-tabs-panel {
   position: relative;
   overflow-x: hidden !important;
   overflow-y: scroll !important;
@@ -1517,7 +1513,7 @@ tr:last-child .jtox-down {
 }
 
 
-.jtox-report #jtox-bundle {
+.jtox-report .jtox-matrix-kit {
   overflow: auto;
 }
 
@@ -1641,19 +1637,19 @@ dd {
   }
 
 
-  #jtox-bundle {
+  .jtox-matrix-kit {
     overflow: visible;
     border: none;
     background: none;
   }
 
-  html, body, #jtox-bundle {
+  html, body, .jtox-matrix-kit {
     width: 100%;
     height: auto !important;
     background: none;
   }
 
-  #jtox-bundle > div#jtox-report {
+  .jtox-matrix-kit > div#jtox-report {
     height: auto !important;
     overflow: visible !important;
   }
