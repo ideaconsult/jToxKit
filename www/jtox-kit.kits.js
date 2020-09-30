@@ -1844,7 +1844,7 @@
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
 
-            Manager.addListeners(new jT.ResultWidget($.extend(true, {
+            Manager.addListeners(new jT.ResultWidget($.extend(true, {}, this, {
                 id: 'result',
                 target: $('#docs'),
                 itemId: "s_uuid",
@@ -1871,7 +1871,7 @@
                 onCreated: function (doc) {
                     $("footer", this).addClass("add");
                 }
-            }, this)));
+            })));
 
             Manager.addListeners(new(a$(Solr.Widgets.Pager))({
                 id: 'pager',
@@ -1960,7 +1960,7 @@
             }));
 
             // Now add the basket.
-            this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {
+            this.basket = Basket = new(a$(jT.ListWidget, jT.ItemListWidget))($.extend(true, {}, this, {
                 id: 'basket',
                 target: $('#basket-docs'),
                 summaryRenderers: this.summaryRenderers,
@@ -1991,7 +1991,7 @@
                 onCreated: function (doc) {
                     $("footer", this).addClass("remove");
                 }
-            }, this));
+            }));
 
             a$.act(this, this.onPreInit, Manager);
             Manager.init();
@@ -2091,7 +2091,7 @@
                         console.error(error);
 
                         if (typeof error === 'object')
-                            error = error.message || error.status || "Wrong request!";
+                            error = error.message || "Wrong request!";
                     }
 
                     // Ensure at least 900ms of showtime for the "Downloading..." label
@@ -2141,8 +2141,8 @@
                 exDef = _.defaultsDeep($.extend(true, {}, exType.definition), this.exportDefaultDef),
                 server = exType.server || exFormat.server,
                 selectedIds = this.getSelectedIds(form),
-                formAmbitUrl = function () { 
-                    form.search.value = selectedIds.join(" ");
+                formAmbitUrl = function (ids) { 
+                    form.search.value = ids.join(" ");
                     form.action = self['ambitUrl'] + 'query/substance/study/uuid?media=' + encodeURIComponent(form.export_format.value);
                 };
 
@@ -2161,7 +2161,7 @@
             if (server == 'ambitUrl') {
                 // If we already have the selected Ids - we don't even need to bother calling Solr.
                 if (!!selectedIds)
-                    formAmbitUrl();
+                    formAmbitUrl(selectedIds);
                 else $.ajax(Exporter.prepareExport([{ name: "wt", value: "json" }, { name: "fl", value: "s_uuid_hs" }], selectedIds).getAjax(self.serverUrl, {
                     async: false,
                     dataType: "json",
@@ -2171,7 +2171,7 @@
                             ids.push(value.s_uuid_hs);
                         });
 
-                        formAmbitUrl();
+                        formAmbitUrl(ids);
                         doneFn();
                     },
                     error: function (jhr, status, errText) { doneFn(errText); }
@@ -2181,7 +2181,8 @@
                         exFormat == "tsv"
                             ? [{ name: "wt", value: "json" }, { name: "json2tsv", value: true }]
                             : [{ name: 'wt', value: exFormat === 'xlsx' ? 'json' : exFormat }],
-                        selectedIds
+                        selectedIds,
+                        false
                         ).getAjax(this.solrUrl),
                     downloadFn = function (blob) {
                         if (!(blob instanceof Blob))
@@ -5438,6 +5439,10 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		this.settings = $.extend(true, {}, StudyKit.defaults, settings); // i.e. defaults from jToxStudy
 		this.settings.tab = this.settings.tab || jT.ui.fullUrl.hash;
 
+		// HACK: No meaningful way to communicate anything from the instance to render functions!
+		if (this.settings.errorDefault)
+			StudyKit.defaults.errorDefault = this.settings.errorDefault;
+
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
 		var tree$ = jT.ui.putTemplate('all-studies', ' ? ', this.rootElement),
@@ -5954,8 +5959,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			return jT.tables.renderMulti(data, type, full, function (data, type) {
 				var resText = jT.ui.renderRange(data.result, null, type);
 				if (data.result.errorValue != null)
-					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
-				return resText
+					resText += " (" + (data.result.errQualifier || StudyKit.defaults.errorDefault) + " " + data.result.errorValue + ")";
+				return resText;
 			}, { anno: "result result.errQualifier result.errValue"});
 		}
 	},
