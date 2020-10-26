@@ -153,7 +153,7 @@ jT.ItemListWidget.prototype = {
   
   getBaseUrl: function(doc) {
     return jT.fixBaseUrl(this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].server || 
-        this.settings.baseUrl || this.baseUrl);
+        this.settings && this.settings.baseUrl || this.baseUrl);
   },
 	
   renderComposition: function (doc, defValue) {
