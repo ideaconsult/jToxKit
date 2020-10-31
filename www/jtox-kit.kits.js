@@ -879,7 +879,7 @@
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
 				jT.tables.installHandlers(self, nRow);
-				$('.jtox-diagram icon', nRow).on('click', function () {
+				$('.jtox-diagram .icon', nRow).on('click', function () {
 					setTimeout(function () {
 						$(self.fixTable).dataTable().fnAdjustColumnSizing();
 						self.equalizeTables();
