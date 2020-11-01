@@ -1607,7 +1607,7 @@ jT.ambit = {
 		"http://www.opentox.org/api/1.1#Diagram": {
 			title: "Diagram", search: false, visibility: "main", primary: true, data: "compound.URI", 
 			column: {
-				'class': "paddingless",
+				'className': "paddingless",
 				'width': "125px"
 			},
 			render: function (data, type, full) {

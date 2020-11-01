@@ -1110,7 +1110,7 @@
 				}
 			},
 			"#DetailedInfoRow": {
-				title: "Diagram",
+				title: "InfoRow",
 				search: false,
 				data: "compound.URI",
 				basic: true,
