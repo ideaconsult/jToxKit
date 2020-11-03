@@ -540,10 +540,12 @@ jT.AutocompleteWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.target = $(settings.target);
   this.lookupMap = settings.lookupMap || {};
+  this.controlMode = this.tokenMode ? 'tokenfield' : 'autocomplete';
 };
 
 jT.AutocompleteWidget.prototype = {
   __expects: [ "doRequest", "onSelect" ],
+  tokenMode: true,
 
   init: function (manager) {
     var self = this;
@@ -557,11 +559,11 @@ jT.AutocompleteWidget.prototype = {
       if (!self.onSelect(thi$.val()))
         return;
         
-      thi$.blur().autocomplete("disable");
+      thi$.blur()[self.controlMode]("disable");
     });
 
     // configure the auto-complete box. 
-    self.findBox.autocomplete({
+    var boxOpts = {
       'minLength': 0,
       'source': function (request, callback) {
         self.reportCallback = callback;
@@ -570,13 +572,18 @@ jT.AutocompleteWidget.prototype = {
       'select': function(event, ui) {
         self.requestSent = ui.item && self.onSelect(ui.item);
       }
-    });
+    };
+
+    if (this.tokenMode)
+      boxOpts = { autocomplete: boxOpts };
+
+    this.findBox[this.controlMode](boxOpts);
 
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
   },
 
   resetValue: function(val) {
-    this.findBox.val(val).autocomplete("enable");
+    this.findBox.val(val)[this.controlMode]("enable");
     this.requestSent = false;
   },
   
