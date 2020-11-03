@@ -10,7 +10,6 @@ jT.AutocompleteWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.target = $(settings.target);
   this.lookupMap = settings.lookupMap || {};
-  this.controlMode = this.tokenMode ? 'tokenfield' : 'autocomplete';
 };
 
 jT.AutocompleteWidget.prototype = {
@@ -21,7 +20,7 @@ jT.AutocompleteWidget.prototype = {
     var self = this;
         
     // now configure the "accept value" behavior
-    self.findBox = this.target.find('input').on("change", function (e) {
+    this.findBox = this.target.find('input').on("change", function (e) {
       if (self.requestSent)
         return;
       
@@ -29,7 +28,7 @@ jT.AutocompleteWidget.prototype = {
       if (!self.onSelect(thi$.val()))
         return;
         
-      thi$.blur()[self.controlMode]("disable");
+      thi$.blur()[self.tokenMode ? 'tokenfield' : 'autocomplete']("disable");
     });
 
     // configure the auto-complete box. 
@@ -40,14 +39,24 @@ jT.AutocompleteWidget.prototype = {
         self.doRequest(request.term);
       },
       'select': function(event, ui) {
-        self.requestSent = ui.item && self.onSelect(ui.item);
+        self.requestSent = false;
+        if (!ui.item)
+          return;
+        if (self.onSelect)
+          self.requestSent = self.onSelect(ui.item);
+        if (self.onAdded)
+          self.requestSent = self.requestSent || self.onAdded(ui.item);
       }
     };
 
-    if (this.tokenMode)
-      boxOpts = { autocomplete: boxOpts };
-
-    this.findBox[this.controlMode](boxOpts);
+    if (!this.tokenMode)
+      this.findBox.autocomplete(boxOpts);
+    else
+      this.findBox
+        .on('tokenfield:removedtoken', function (e) {
+          self.requestSent = self.onRemoved && self.onRemoved(e.attrs.value);
+        })
+        .tokenfield({ autocomplete: boxOpts });
 
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
   },
@@ -59,5 +68,6 @@ jT.AutocompleteWidget.prototype = {
   
   onFound: function (list) {
     this.reportCallback && this.reportCallback(list);
+    this.requestSent = false;
   }
 };
