@@ -203,8 +203,21 @@
                 out += '-';
             }
             return out;
-        }
+        },
 
+        putInfo: function (href, title) {
+            return '<sup class="helper"><a target="_blank" href="' + (href || '#') + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
+        },
+
+        renderRelation: function (data, type, full) {
+            if (type != 'display')
+                return _.map(data, 'relation').join(',');
+
+            var res = '';
+            for (var i = 0, il = data.length; i < il; ++i)
+                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
+            return res;
+        }
     });
 
 // Now import all the actual skills ...
@@ -1225,9 +1238,7 @@ jT.tables = {
 				if (!!kit.settings.onDetails) {
 					$('.jtox-details-toggle', nRow).on('click', function (e) {
 						var root = jT.tables.toggleDetails(e, nRow);
-						if (!!root) {
-							jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
-						}
+						root && jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
 					});
 				}
 			}

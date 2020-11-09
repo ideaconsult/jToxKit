@@ -236,9 +236,7 @@ jT.tables = {
 				if (!!kit.settings.onDetails) {
 					$('.jtox-details-toggle', nRow).on('click', function (e) {
 						var root = jT.tables.toggleDetails(e, nRow);
-						if (!!root) {
-							jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
-						}
+						root && jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
 					});
 				}
 			}

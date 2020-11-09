@@ -589,6 +589,7 @@ td.jtox-multi table {
   padding: 0px;
   z-index: 10;
   height: auto;
+  overflow: scroll;
 }
 
 .jtox-ds-tables .jtox-inline,

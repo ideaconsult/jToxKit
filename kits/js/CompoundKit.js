@@ -38,6 +38,9 @@
 		if (this.settings.rememberChecks && this.settings.showTabs)
 			this.featureStates = {};
 
+		if (!settings.onDetails)
+			this.settings.onDetails = function (root, data) { this.expandedData(root, data); };
+
 		// finally make the query, if Uri is provided. This _invokes_ init() internally.
 		if (!this.settings.datasetUri)
 			this.datasetUri = this.settings.baseUrl + this.settings.defaultService;
@@ -88,42 +91,36 @@
 	/* make a tab-based widget with features and grouped on tabs. It relies on filled and processed 'self.feature' as well
 	as created 'self.groups'.
 	*/
-	CompoundKit.prototype.prepareTabs = function (root, isMain, groupFn) {
-		var self = this;
-
-		var all = document.createElement('div');
-		all.style.display = "none"; // we suppress the re-layouting engine this way, we'll show it at the end.
-		root.appendChild(all);
-		ulEl = document.createElement('ul');
-		all.appendChild(ulEl);
+	CompoundKit.prototype.prepareTabs = function (root, isMain, groupFn, groups) {
+		// we suppress the re-layouting engine this way, we'll show it at the end.		
+		var all = $('<div>').css('display', 'none').appendTo(root),
+			ulEl = $('<ul>').appendTo(all);
 
 		var createATab = function (grId, name) {
-			var liEl = document.createElement('li');
-			ulEl.appendChild(liEl);
-			var aEl = document.createElement('a');
-			aEl.href = "#" + grId;
-			aEl.innerHTML = name;
-			liEl.appendChild(aEl);
+			var liEl = $('<li>').appendTo(ulEl);
+			$('<a>')
+				.attr('href', "#" + grId)
+				.html(name)
+				.appendTo(liEl);
 			return liEl;
 		};
 
-		var emptyList = [];
-		var idx = 0;
-		for (var gr in self.groups) {
-			var grId = "jtox-ds-" + gr.replace(/\s/g, "_") + "-" + self.instanceNo + (isMain ? '' : '-details');
-			var grName = gr.replace(/_/g, " ");
-			var tabLi = createATab(grId, grName);
+		var emptyList = [],
+			idx = 0;
+		
+		for (var gr in (groups || this.groups)) {
+			var grId = "jtox-ds-" + gr.replace(/\s/g, "_") + "-" + this.instanceNo + (isMain ? '' : '-details'),
+				grName = gr.replace(/_/g, " "),
+				tabLi = createATab(grId, grName);
 			if (isMain)
-				tabLi.title = "Select which columns to be displayed";
+				tabLi.attr('title', "Select which columns to be displayed");
 
 			// now prepare the content...
-			var divEl = document.createElement('div');
-			divEl.id = grId;
-			all.appendChild(divEl);
+			var divEl = $('<div>').attr('id', grId).appendTo(all);
 			// add the group check multi-change
-			if (self.settings.groupSelection && isMain) {
+			if (this.settings.groupSelection && isMain) {
 				var sel = jT.ui.getTemplate('compound-one-tab');
-				$(divEl).append(sel);
+				divEl.append(sel);
 
 				$('.multi-select', sel).on('click', function (e) {
 					var par = $(this).closest('.ui-tabs-panel'),
@@ -136,49 +133,48 @@
 				});
 			}
 
-			if (groupFn(divEl, gr)) {
-				if (self.settings.hideEmpty) {
-					$(divEl).remove();
-					$(tabLi).remove();
+			if (groupFn(divEl[0], gr)) {
+				if (this.settings.hideEmpty) {
+					divEl.remove();
+					tabLi.remove();
 					--idx;
 				} else
 					emptyList.push(idx);
 			}
 			++idx;
 
-			jT.fireCallback(self.settings.onTab, self, divEl, tabLi, grName, isMain);
+			jT.fireCallback(this.settings.onTab, this, divEl[0], tabLi[0], grName, isMain);
 		}
 
-		if (isMain && self.settings.showExport) {
-			var tabId = "jtox-ds-export-" + self.instanceNo,
-				liEl = createATab(tabId, "Export");
-			$(liEl).addClass('jtox-ds-export');
+		if (isMain && this.settings.showExport) {
+			var tabId = "jtox-ds-export-" + this.instanceNo,
+				liEl = createATab(tabId, "Export").addClass('jtox-ds-export');
 			
 			var divEl = jT.ui.getTemplate('compound-export', { id: tabId });
-			$(all).append(divEl);
+			all.append(divEl);
 			
-			divEl = $('.jtox-exportlist', divEl)[0];
+			divEl = $('.jtox-exportlist', divEl);
 
-			for (var i = 0, elen = self.settings.exports.length; i < elen; ++i) {
-				var expo = self.settings.exports[i];
+			for (var i = 0, elen = this.settings.exports.length; i < elen; ++i) {
+				var expo = this.settings.exports[i];
 				var el = jT.ui.getTemplate('compound-download', {
-					link: jT.addParameter(self.datasetUri, "media=" + encodeURIComponent(expo.type)),
+					link: jT.addParameter(this.datasetUri, "media=" + encodeURIComponent(expo.type)),
 					type: expo.type,
 					icon: expo.icon
 				});
-				$(divEl).append(el);
+				divEl.append(el);
 			}
 
-			jT.fireCallback(self.settings.onTab, self, divEl, liEl, "Export", isMain);
+			jT.fireCallback(this.settings.onTab, this, divEl[0], liEl[0], "Export", isMain);
 		}
 
 		// now show the whole stuff and mark the disabled tabs
-		all.style.display = "block";
-		return $(all).tabs({
+		all.css('display', "block");
+		return all.tabs({
 			collapsible: isMain,
-			active: (self.settings.tabsFolded && isMain) ? false : 0,
+			active: (this.settings.tabsFolded && isMain) ? false : 0,
 			disabled: emptyList,
-			heightStyle: isMain ? "content" : (self.settings.detailsHeight == 'auto' ? 'auto' : 'fill')
+			heightStyle: isMain ? "content" : (this.settings.detailsHeight == 'auto' ? 'auto' : 'fill')
 		});
 	};
 
@@ -393,6 +389,7 @@
 
 			if (self.settings.preDetails != null && !jT.fireCallback(self.settings.preDetails, self, idx, cell) || !cell)
 				return; // the !cell  means you've forgotten to add #DetailedInfoRow feature somewhere.
+			
 			$(row).toggleClass('jtox-detailed-row');
 			var toShow = $(row).hasClass('jtox-detailed-row');
 
@@ -420,32 +417,9 @@
 					$(detDiv).height(self.settings.detailsHeight)
 
 				tabRoot.appendChild(detDiv);
-
-				self.prepareTabs(detDiv, false, function (parent, gr) {
-					var data = self.featureData(entry, self.groups[gr]);
-
-					if (data.length > 0 || !self.settings.hideEmpty) {
-						$(parent).addClass('jtox-details-table');
-						var tabTable = document.createElement('table');
-						parent.appendChild(tabTable);
-						$(tabTable).dataTable({
-							"paging": false,
-							"processing": true,
-							"lengthChange": false,
-							"autoWidth": false,
-							"dom": "rt<f>",
-							"columns": jT.tables.processColumns(self, 'compound'),
-							"ordering": true,
-						});
-						$(tabTable).dataTable().fnAddData(data);
-						$(tabTable).dataTable().fnAdjustColumnSizing();
-					}
-
-					return data.length == 0;
-				});
+				jT.fireCallback(self.settings.onDetails, self, detDiv, entry, cell);
 
 				$(cell).height(detDiv.offsetHeight);
-				jT.fireCallback(self.settings.onDetails, self, detDiv, entry, cell);
 				$(cell).data('detailsDiv', detDiv);
 				$(detDiv).data('rootCell', cell);
 			} else {
@@ -565,6 +539,32 @@
 			}
 		}))[0];
 	};
+
+	CompoundKit.prototype.expandedData = function (root, entry, groups) {
+		var self = this;
+
+		this.prepareTabs(root, false, function (parent, gr) {
+			var data = self.featureData(entry, self.groups[gr]);
+
+			if (data.length > 0 || !self.settings.hideEmpty) {
+				var tabTable = $('<table>').appendTo($(parent).addClass('jtox-details-table'));
+				tabTable.dataTable({
+					"paging": false,
+					"processing": true,
+					"lengthChange": false,
+					"autoWidth": false,
+					"dom": "rt<f>",
+					"columns": jT.tables.processColumns(self, 'compound'),
+					"ordering": true,
+				});
+				
+				tabTable.dataTable().fnAddData(data);
+				tabTable.dataTable().fnAdjustColumnSizing();
+			}
+
+			return data.length == 0;
+		}, groups);
+	},
 
 	CompoundKit.prototype.updateTables = function () {
 		var self = this;

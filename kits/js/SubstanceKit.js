@@ -59,7 +59,7 @@
 				nextPage: function () { self.nextPage(); },
 				prevPage: function () { self.prevPage(); },
 				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
-				filter: function () { $(self.table).DataTable().filter($(this).val()).draw(); }
+				filter: function () { $(self.table).dataTable().filter($(this).val()).draw(); }
 			});
 
 			opts['infoCallback'] = function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
@@ -79,15 +79,11 @@
 		if (!size || size < 0) size = this.pageSize;
 
 		var qStart = Math.floor(from / size),
-			qUri = jT.addParameter(self.substanceUri, "page=" + qStart + "&pagesize=" + size),
+			qUri = jT.addParameter(this.substanceUri, "page=" + qStart + "&pagesize=" + size),
 			self = this;
 
-		jT.ambit.call(self, qUri, function (result, jhr) {
-			if (!result && jhr.status != 200)
-				result = {
-					substabce: []
-				}; // empty one
-			if (!!result) {
+		jT.ambit.call(this, qUri, function (result, jhr) {
+			if (!!result && jhr.status == 200) {
 				self.pageSize = size;
 				self.pageStart = from;
 
@@ -102,8 +98,8 @@
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, result);
 				if (!self.settings.noInterface) {
-					$(self.table).DataTable().clear();
-					$(self.table).DataTable().add(result.substance).draw();
+					$(self.table).dataTable().fnClearTable();
+					$(self.table).dataTable().fnAddData(result.substance);
 
 					self.updateControls(from, result.substance.length);
 				}
