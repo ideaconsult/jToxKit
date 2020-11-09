@@ -1489,14 +1489,14 @@ jT.ambit = {
 	},
 
 	// Makes a server call for provided service, with settings form the given kit and calls 'callback' at the end - always.
-	call: function (kit, service, data, callback) {
+	call: function (kit, service, opts, callback) {
 		// some parameter deals in the begining.
-		if (typeof data === 'function') {
-			callback = data;
-			data = undefined;
+		if (typeof opts === 'function') {
+			callback = opts;
+			opts = undefined;
 		}
 
-		var settings = $.extend({}, kit.settings.ajaxSettings, { data: data }),
+		var settings = $.extend(true, {}, kit.settings.ajaxSettings, opts ),
 			accType = settings.plainText ? "text/plain" : (settings.jsonp ? "application/x-javascript" : "application/json");
 
 		if (!settings.data) {
