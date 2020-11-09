@@ -2476,7 +2476,58 @@
  * Created by Ivan Georgiev
 **/
 
-(function (_, $, jT) {
+(function (_, a$, $, jT) {
+
+	function UserWidget(settings) {
+		this.settings = $.extend(true, {}, UserWidget.defaults, settings);
+		// We rely on that fact that we're bound with jT.AutocompleteWidget, so
+		// `findBox` and `target` are here!
+	}
+
+	UserWidget.prototype.__expects = [ "onFound", "onSelect" ];
+	UserWidget.defaults = {
+		extraParam: "",
+		baseUrl: "",
+		permission: 'canRead'
+	};
+	
+	UserWidget.prototype.init = function (manager) {
+	    a$.pass(this, UserWidget, "init", manager);
+	};
+
+	UserWidget.prototype.callAmbit = function (data) {
+		var self = this,
+			uri = this.settings.baseUrl + '/myaccount/users';
+
+		if (typeof data === 'string') {
+			uri += '?' + data;
+			data = null;
+		}
+
+		this.findBox.addClass('loading');
+		jT.ambit.call(this, uri, data, function(result) {
+			self.findBox.removeClass('loading');
+			self.onFound(_.map(result || [], function (u) {
+				return {
+					value: u.id,
+					label: u.name
+				}
+			}));
+		});
+	};
+
+	UserWidget.prototype.doRequest = function (needle) { this.callAmbit('q=' + needle); };
+
+	UserWidget.prototype.onSelect =
+	UserWidget.prototype.onRemoved = 
+	UserWidget.prototype.updateUsers = function () {
+		var self = this,
+			data = _.map(el.val(), function (u) { return self.settings.permission + '=' + u; });
+
+		this.settings.extraParam && data.push(this.settings.extraParam);
+		this.callAmbit({ method: 'POST', data: data.join('&') });
+		return true;
+	};
 
 	function MatrixKit(settings) {
 		var self = this;
@@ -2513,7 +2564,7 @@
 
 		// initialize the tab structure for several versions of dataTables.
 		$(this.rootElement).tabs({
-			disabled: [1, 2, 3, 4],
+			// disabled: [1, 2, 3, 4], // TODO: remove this comment!
 			heightStyle: "content",
 			select: function(event, ui) { loadPanel(ui.panel); },
 			activate: function(event, ui) { ui.newPanel && loadPanel(ui.newPanel[0]); },
@@ -2523,33 +2574,21 @@
 		$('.jq-buttonset', this.rootElement).buttonset();
 		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
-		var updateUsers = function() {
-			var el = $(this.parentNode).find('select');
-			$(el.parentNode).addClass('loading');
-			var property = (el[0].id == 'users-write') ? 'canWrite' : 'canRead';
-			var data = 'bundle_number=' + self.bundle.number;
-			var users = el.val();
-			if (users) {
-				for (var i = 0, l = users.length; i < l; i++){
-					data += '&' + property + '=' + users[i];
-				}
-			}
-			jT.ambit.call(self, self.settings.baseUrl + '/myaccount/users', { method: 'POST', data: data }, function(result) {
-				$(el.parentNode).removeClass('loading');
-			});
-		}
+		var UserEditor = a$(jT.AutocompleteWidget, UserWidget);
+		$('.jtox-users-select', this.rootElement).each(function (el) {
+			var el$ = $(el),
+				theEditor = new UserEditor({
+					target: el,
+					baseUrl: self.settings.baseUrl,
+					tokenMode: true,
+					extraParam: 'bundle_number=' + self.bundle.number,
+					permission: el$.data('permission')
+				});
 
-		// TODO: replace with bootstrap-tokenfield
-		// $('.jtox-users-select', this.rootElement).tokenize({
-		// 	datas: self.settings.baseUrl + '/myaccount/users',
-		// 	searchParam: 'q',
-		// 	valueField: 'id',
-		// 	textField: 'name'
-		// 	//onAddToken: updateUsers,
-		// 	//onRemoveToken: updateUsers
-		// });
+			theEditor.init();
+		});
 
-		$('.jtox-users-submit', this.rootElement).on('click', updateUsers);
+		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
 		self.onIdentifiers(null, $('#jtox-identifiers', self.rootElement)[0]);
 		// finally, if provided - load the given bundleUri
@@ -4365,7 +4404,7 @@
 
 	jT.ui.Matrix = MatrixKit;
 
-})(_, jQuery, jToxKit);
+})(_, asSys, jQuery, jToxKit);
 (function (Solr, a$, $, jT) {
   
   function buildValueRange(stats, isUnits) {
@@ -6506,8 +6545,7 @@ jT.ui.templates['all-matrix']  =
 "<th class=\"right size-third top\"><label for=\"users-write\">Users with write access</label><a href='#'" +
 "class='chelp bundle_rw'>?</a>:</th>" +
 "<td class=\"jtox-user-rights\">" +
-"<select name=\"users-write\" id=\"users-write\" multiple class=\"jtox-users-select\">" +
-"</select>" +
+"<input name=\"users-write\" id=\"users-write\" class=\"jtox-users-select\" data-permission=\"canWrite\"/>" +
 "<button type=\"button\" class=\"jtox-users-submit\">Save</button>" +
 "</td>" +
 "</tr>" +
@@ -6515,8 +6553,7 @@ jT.ui.templates['all-matrix']  =
 "<th class=\"right size-third top\"><label for=\"users-read\">Users with read access</label><a href='#'" +
 "class='chelp bundle_rw'>?</a>:</th>" +
 "<td class=\"jtox-user-rights\">" +
-"<select name=\"users-read\" id=\"users-read\" multiple class=\"jtox-users-select\">" +
-"</select>" +
+"<input name=\"users-read\" id=\"users-read\" class=\"jtox-users-select\" data-permission=\"canRead\"/>" +
 "<button type=\"button\" class=\"jtox-users-submit\">Save</button>" +
 "</td>" +
 "</tr>" +

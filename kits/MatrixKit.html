@@ -168,8 +168,7 @@
                     <th class="right size-third top"><label for="users-write">Users with write access</label><a href='#'
                         class='chelp bundle_rw'>?</a>:</th>
                     <td class="jtox-user-rights">
-                      <select name="users-write" id="users-write" multiple class="jtox-users-select">
-                      </select>
+                      <input name="users-write" id="users-write" class="jtox-users-select" data-permission="canWrite"/>
                       <button type="button" class="jtox-users-submit">Save</button>
                     </td>
                   </tr>
@@ -177,8 +176,7 @@
                     <th class="right size-third top"><label for="users-read">Users with read access</label><a href='#'
                         class='chelp bundle_rw'>?</a>:</th>
                     <td class="jtox-user-rights">
-                      <select name="users-read" id="users-read" multiple class="jtox-users-select">
-                      </select>
+                      <input name="users-read" id="users-read" class="jtox-users-select" data-permission="canRead"/>
                       <button type="button" class="jtox-users-submit">Save</button>
                     </td>
                   </tr>
