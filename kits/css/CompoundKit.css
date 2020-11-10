@@ -45,21 +45,9 @@
   position: relative;
 }
 
-.jtox-ds-tables .jt-processing,
 .jtox-ds-tables .jt-error {
   text-align: center;
   display: none;
-}
-
-.jtox-ds-tables .jt-processing .message {
-  background: url("../images/waiting_big.gif") left center no-repeat;
-  background-size: 30px 30px;
-  width: auto;
-  min-height: 30px;
-  padding-left: 35px;
-  padding-top: 8px;
-  overflow: visible;
-  display: inline-block;
 }
 
 .jtox-ds-tables .jt-error .message {

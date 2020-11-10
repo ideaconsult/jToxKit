@@ -72,7 +72,6 @@
 				filter: function () { self.updateTables(); }
 			});
 
-			this.$procDiv = $('.jt-processing', this.rootElement);
 			this.$errDiv = $('.jt-error', this.rootElement);
 		}
 	};
@@ -486,7 +485,7 @@
 				});
 			},
 			"language": {
-				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.process || 'Feeding data...') + '</span>'
+				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.process || self.settings.language.loadingRecords || 'Feeding data...') + '</span>'
 			}
 		}))[0];
 
@@ -751,7 +750,6 @@
 		// now make the actual call...
 		jT.ambit.call(self, queryUri, function (result, jhr) {
 			if (!result && jhr.status != 200) {
-				self.$procDiv.hide();
 				self.$errDiv.show().find('.message').html('Server error: ' + jhr.statusText);
 			}
 
@@ -829,13 +827,9 @@
 		// remember the _original_ datasetUri and make a call with one size length to retrieve all features...
 		self.datasetUri = (datasetUri.indexOf('http') != 0 ? self.settings.baseUrl : '') + datasetUri;
 
-		self.$procDiv.show();
 		self.$errDiv.hide();
-		if (!!self.settings.language.loadingRecords)
-			$('.message', procDiv).html(self.settings.language.loadingRecords);
 
 		self.queryFeatures(featureUri, function (dataset) {
-			self.$procDiv.hide();
 			self.queryEntries(self.pageStart, self.pageSize, dataset);
 		});
 	};
