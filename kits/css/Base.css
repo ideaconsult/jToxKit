@@ -456,21 +456,3 @@ td.jtox-multi table {
   font-weight: bold;
   font-size: 1.1em;
 }
-.jtox-substance table td div.shortened {
-  width: 120px;
-}
-.jtox-toolkit table.composition-info.dataTable td,
-.jtox-toolkit table.composition-info.dataTable th {
-  border: 0px;
-  padding-bottom: 0px;
-  padding-top: 0px;
-}
-
-.jtox-toolkit table.composition-info.dataTable th {
-  width: 20%;
-  text-align: right;
-}
-
-.jtox-toolkit table.composition-table td {
-  vertical-align: top;
-}

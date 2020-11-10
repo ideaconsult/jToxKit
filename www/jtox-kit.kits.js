@@ -6634,9 +6634,7 @@ jT.ui.templates['all-substance']  =
 "<a class=\"paginate_disabled_previous prev-field\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next next-field\" tabindex=\"0\" role=\"button\">Next</a>" +
 "<input type=\"text\" class=\"filterbox\" placeholder=\"Filter...\" />" +
 "</div>" +
-"<div>" +
 "<table class=\"display\"></table>" +
-"</div>" +
 "</div>" +
 ""; // end of #jtox-substance 
 
