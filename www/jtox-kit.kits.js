@@ -917,7 +917,7 @@
 	CompoundKit.prototype.expandedData = function (root, entry, groups) {
 		var self = this;
 
-		this.prepareTabs(root, false, function (parent, gr) {
+		return this.prepareTabs(root, false, function (parent, gr) {
 			var data = self.featureData(entry, self.groups[gr]);
 
 			if (data.length > 0 || !self.settings.hideEmpty) {
