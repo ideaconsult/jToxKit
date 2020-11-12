@@ -1031,12 +1031,10 @@ jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
             manager.getParameter("q").value = "";
 
             queryDef.forEach(function (par) {
-                if (par.faceter)
-                    manager.getListener(par.faceter).addValue(par.value);
-                else if (typeof par.parameter === "object")
-                    manager.addParameter(par.parameter);
+                if (par.id)
+                    manager.getListener(par.id).addValue(par.value);
                 else
-                    manager.addParameter(par.name, par.value, par.domain);
+                    manager.addParameter(par);
             });
 
             manager.doRequest();
