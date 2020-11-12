@@ -191,10 +191,10 @@ var	Settings = {
           title: "P-Chem from GRACIOUS",
           description: "A Pub-Chem filtered studies conducted from GRACIOUS on their substances",
           filters: [{ 
-            faceter: "studies",
+            id: "studies",
             value: "topcategory:P-CHEM"
           },{
-            faceter: "owner_name",
+            id: "owner_name",
             value: "GRACIOUS"
           }]
         }
