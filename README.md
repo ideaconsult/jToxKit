@@ -246,7 +246,7 @@ savedQueries: [
     title: "P-Chem",
     description: "Physcicochemical studies",
     filters: [{ 
-      faceter: "studies",
+      id: "studies",
       value: "topcategory:P-CHEM"
     }]
   }, {
