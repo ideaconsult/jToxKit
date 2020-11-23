@@ -1542,10 +1542,8 @@
  */
 
 (function (Solr, a$, $, jT) {
-
     var
         mainLookupMap = {},
-        uiConfiguration = {},
         defaultSettings = {
             servlet: "select",
             multipleSelection: true,
@@ -1600,19 +1598,11 @@
             summaryRenderers: {}
         },
 
-        uiUpdateTimer = null,
-        uiUpdate = function () {
-            if (uiUpdateTimer != null)
-                clearTimeout(uiUpdateTimer);
-            uiUpdateTimer = setTimeout(function () {
-                var state = jT.modifyURL(window.location.href, "ui", encodeURIComponent(JSON.stringify(uiConfiguration)));
-
-                if (!!state)
-                    window.history.pushState({
-                        query: window.location.search
-                    }, document.title, state);
-                uiUpdateTimer = null;
-            }, 1000);
+        storeSelection = function (selection) {
+            window.history.pushState(
+                selection, 
+                document.title, 
+                jT.modifyURL(window.location.href, "sel", encodeURIComponent(JSON.stringify(selection))));
         },
 
         tagRender = function (tag) {
@@ -1647,11 +1637,6 @@
             var hdr = this.getHeaderText();
             hdr.textContent = jT.ui.updateCounter(hdr.textContent, total);
             a$.act(this, this.header.data("refreshPanel"));
-
-            var ui = uiConfiguration[this.id] || {};
-            ui.values = this.getValues();
-            uiConfiguration[this.id] = ui;
-            uiUpdate();
         },
 
         toggleAggregate = function (el) {
@@ -1664,11 +1649,6 @@
             for (var i = 0; i < pars.length; ++i)
                 this.addValue(pars[i]);
             this.doRequest();
-
-            var ui = uiConfiguration[this.id] || {};
-            ui.aggregate = !option;
-            uiConfiguration[this.id] = ui;
-            uiUpdate();
         };
 
     jT.ui.FacetedSearch = function (settings) {
@@ -1685,10 +1665,6 @@
 
         $(settings.target).html(jT.ui.templates['faceted-search-kit']);
         delete this.target;
-
-        var uiConf = jT.parseURL(window.location.href).params['ui'];
-        if (uiConf != null)
-            uiConfiguration = JSON.parse(decodeURIComponent(uiConf));
 
         this.initDom();
         this.initComm();
@@ -1832,7 +1808,7 @@
         /** The actual widget and communication initialization routine!
          */
         initComm: function () {
-            var Manager, Basket,
+            var Manager, Basket, Persister,
                 PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
                 TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
 
@@ -1886,14 +1862,13 @@
             // Now the actual initialization of facet widgets
             for (var i = 0, fl = this.facets.length; i < fl; ++i) {
                 var f = this.facets[i],
-                    ui = uiConfiguration[f.id],
                     w = new TagWidget($.extend({
                         target: this.accordion,
                         expansionTemplate: "tab-topcategory",
                         subtarget: "ul",
                         runMethod: toggleAggregate,
                         multivalue: this.multipleSelection,
-                        aggregate: ui === undefined || ui.aggregate === undefined ? this.aggregateFacets : ui.aggregate,
+                        aggregate: this.aggregateFacets,
                         exclusion: this.multipleSelection || this.keepAllFacets,
                         useJson: true,
                         renderItem: tagRender,
@@ -1987,19 +1962,17 @@
                 }
             }));
 
+            Manager.addListeners(Persister = new Solr.UrlPersistency({
+                id: 'persist',
+                storedParams: ['q', 'fq', 'json.filter']
+            }));
             a$.act(this, this.onPreInit, Manager);
             Manager.init();
 
-            // Scan the ui-persistency values
-            for (var fid in uiConfiguration) {
-                var vals = uiConfiguration[fid].values,
-                    w = Manager.getListener(fid);
-                a$.each(vals, function (v) {
-                    w.addValue(v)
-                });
-            }
+            // Resture the previous state, if such exists in the URL
+            Persister.restore();
 
-            // now get the search parameters passed via URL
+            // Make the request
             Manager.doRequest();
         },
 
@@ -2022,7 +1995,7 @@
         },
 
         initQueries: function () {
-            var manager = this.manager;
+            var self = this;
 
             this.queries = new(a$(jT.ListWidget))({
                 id: 'queries',
@@ -2033,23 +2006,7 @@
                 el$ = jT.ui.getTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
-                    var queryDef = $(this).data('query');
-
-                    // Clear the current search - whatever it is.
-                    manager.removeParameters("fq");
-                    manager.removeParameters("json.filter");
-                    manager.getParameter("q").value = "";
-
-                    queryDef.forEach(function (par) {
-                        if (par.faceter)
-                            manager.getListener(par.faceter).addValue(par.value);
-                        else if (typeof par.parameter === "object")
-                            manager.addParameter(par.parameter);
-                        else
-                            manager.addParameter(par.name, par.value, par.domain);
-                    });
-
-                    manager.doRequest();
+                    self.executeQuery($(this).data('query'));
                     $("#result-tabs").tabs("option", "active", 0);
                 });
                 return el$;
@@ -2126,6 +2083,24 @@
                     }
                 }
             });
+        },
+
+        executeQuery: function (queryDef) {
+            var manager = this.manager;
+
+            // Clear the current search - whatever it is.
+            manager.removeParameters("fq");
+            manager.removeParameters("json.filter");
+            manager.getParameter("q").value = "";
+
+            queryDef.forEach(function (par) {
+                if (par.id)
+                    manager.getListener(par.id).addValue(par.value);
+                else
+                    manager.addParameter(par);
+            });
+
+            manager.doRequest();
         },
 
         makeExport: function (form, doneFn) {
