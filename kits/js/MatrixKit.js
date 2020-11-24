@@ -1,61 +1,10 @@
-/* MatrixKit - Read-across UI tool. Migrated.
+/* MatrixKit.js - Read-across multi-purpose, big kit. Migrated from before!
  *
- * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
- * Created by Ivan Georgiev
-**/
+ * Copyright 2020, IDEAconsult Ltd. http://www.ideaconsult.net/
+ * Created by Ivan (Jonan) Georgiev
+ **/
 
 (function (_, a$, $, jT) {
-
-	function UserWidget(settings) {
-		this.settings = $.extend(true, {}, UserWidget.defaults, settings);
-		// We rely on that fact that we're bound with jT.AutocompleteWidget, so
-		// `findBox` and `target` are here!
-	}
-
-	UserWidget.prototype.__expects = [ "onFound", "onSelect" ];
-	UserWidget.defaults = {
-		extraParam: "",
-		baseUrl: "",
-		permission: 'canRead'
-	};
-	
-	UserWidget.prototype.init = function (manager) {
-	    a$.pass(this, UserWidget, "init", manager);
-	};
-
-	UserWidget.prototype.callAmbit = function (data) {
-		var self = this,
-			uri = this.settings.baseUrl + '/myaccount/users';
-
-		if (typeof data === 'string') {
-			uri += '?' + data;
-			data = null;
-		}
-
-		this.findBox.addClass('loading');
-		jT.ambit.call(this, uri, data, function(result) {
-			self.findBox.removeClass('loading');
-			self.onFound(_.map(result || [], function (u) {
-				return {
-					value: u.id,
-					label: u.name
-				}
-			}));
-		});
-	};
-
-	UserWidget.prototype.doRequest = function (needle) { this.callAmbit('q=' + needle); };
-
-	UserWidget.prototype.onSelect =
-	UserWidget.prototype.onRemoved = 
-	UserWidget.prototype.updateUsers = function () {
-		var self = this,
-			data = _.map(el.val(), function (u) { return self.settings.permission + '=' + u; });
-
-		this.settings.extraParam && data.push(this.settings.extraParam);
-		this.callAmbit({ method: 'POST', data: data.join('&') });
-		return true;
-	};
 
 	function MatrixKit(settings) {
 		var self = this;
@@ -64,6 +13,15 @@
 		jT.ui.putTemplate('all-matrix', ' ? ', this.rootElement);
 
 		this.settings = $.extend(true, {}, MatrixKit.defaults, settings);
+		this.bundleSummary = {
+			compounds: 0,
+			substances: 0,
+			properties: 0,
+			matrices: 0,
+		};
+		this.editSummary ={
+			study: [],
+		};
 
 		// deal with some configuration
 		if (typeof this.settings.studyTypeList === 'string')
@@ -74,10 +32,7 @@
 			if (!this.checked)
 				return;
 			document.body.className = this.id;
-			var method = $(this).parent().data('action');
-			if (!method)
-				return;
-			jT.fireCallback(self[method], self, this.id, $(this).closest('.ui-tabs-panel')[0], false);
+			jT.fireCallback(self[$(this).parent().data('loader')], self, this.id, $(this).closest('.ui-tabs-panel')[0], false);
 		};
 
 		var loadPanel = function(panel) {
@@ -86,7 +41,7 @@
 				if (subs.length > 0)
 					subs.each(loadAction);
 				else
-					jT.fireCallback(self[$(panel).data('action')], self, panel.id, panel, true);
+					jT.fireCallback(self[$(panel).data('loader')], self, panel.id, panel, true);
 			}
 		};
 
@@ -102,29 +57,89 @@
 		$('.jq-buttonset', this.rootElement).buttonset();
 		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
-		var UserEditor = a$(jT.AutocompleteWidget, UserWidget);
+		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
 		$('.jtox-users-select', this.rootElement).each(function (el) {
-			var el$ = $(el),
-				theEditor = new UserEditor({
-					target: el,
-					baseUrl: self.settings.baseUrl,
-					tokenMode: true,
-					extraParam: 'bundle_number=' + self.bundle.number,
-					permission: el$.data('permission')
-				});
-
-			theEditor.init();
+			(new UserEditor({
+				target: el,
+				baseUrl: self.settings.baseUrl,
+				tokenMode: true,
+				extraParam: 'bundle_number=1', // + self.bundle && self.bundle.number,
+				permission: $(el).data('permission')
+			})).init();
 		});
 
 		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
-		self.onIdentifiers(null, $('#jtox-identifiers', self.rootElement)[0]);
+		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
+		
 		// finally, if provided - load the given bundleUri
-		var bUri = self.settings.bundleUri;
-		if (!!bUri)
-			self.load(bUri);
+		this.settings.bundleUri && this.loadBundle(this.settings.bundleUri);
 
-		return self;
+		return this;
+	};
+
+	MatrixKit.prototype.initStructures = function () {
+		var self = this;
+
+		this.browserKit = jT.ui.initKit($('#struct-browser'), {
+			baseUrl: this.settings.baseUrl,
+			onLoaded: function (dataset) {
+				self.bundleSummary.compounds = dataset.dataEntry.length;
+				self.progressTabs();
+			},
+			onDetails: function (substRoot, data) {
+				new jT.ui.Substance($.extend(true, {}, this.settings, {
+					target: $(substRoot).addClass('jtox-details-table'),
+					selectionHandler: null,
+					substanceUri: this.settings.baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
+					showControls: false,
+					onLoaded: null,
+					onDetails: function (studyRoot, data) {
+						new jT.ui.Study($.extend({}, this.settings, {
+							target: studyRoot,
+							substanceUri: data.URI
+						}));
+					}
+				}));
+			},
+			onRow: function (row, data) {
+				if (!data.bundles) return;
+	
+				var bundleInfo = data.bundles[self.bundleUri] || {};
+				// we need to setup remarks field regardless of bundleInfo presence
+				var noteEl = $('textarea.remark', row).on('change', function (e) {
+					var data = jT.ui.rowData(this),
+						el = this,
+						bInfo = data.bundles[self.bundleUri] || {};
+					$(el).addClass('loading');
+					jT.ambit.call(self, self.bundleUri + '/compound', {
+						'method': 'PUT',
+						'data': {
+							compound_uri: data.compound.URI,
+							command: 'add',
+							tag: bInfo.tag,
+							remarks: $(el).val()
+						}
+					}, function (result) {
+						$(el).removeClass('loading');
+					});
+				});
+	
+				if (!!bundleInfo.tag) {
+					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
+					noteEl.val(bundleInfo.remarks);
+				}
+				else
+					noteEl.prop('disabled', true).val(' ');
+			}
+		});
+
+		this.queryKit = jT.ui.initKit($('#struct-query'), {
+			mainKit: this.browserKit,
+			customSearch: function () {
+				// TODO: Integrate here, after implementing in the QueryKit - the "selected only"
+			}
+		});
 	};
 
 	MatrixKit.prototype.starHighlight = function (root, stars) {
@@ -138,128 +153,128 @@
 
 	MatrixKit.prototype.onIdentifiers = function (id, panel) {
 		var self = this;
-		if (!panel) return;
-		if (!$(panel).hasClass('initialized')) {
-			$(panel).addClass('initialized');
+		if (!panel || $(panel).hasClass('initialized'))
+			return;
 
-			self.createForm = $('form', panel)[0];
+		$(panel).addClass('initialized');
 
-			self.createForm.onsubmit = function (e) {
-				e.preventDefault();
-				e.stopPropagation();
+		self.createForm = $('form', panel)[0];
 
-				if (jT.validateForm(self.createForm)) {
-					jT.ambit.call(self, self.settings.baseUrl + '/bundle', { method: 'POST', data: $(self.createForm).serializeArray()},
-						function (bundleUri, jhr) {
-						if (!!bundleUri) {
-							self.load(bundleUri);
-							var url = jT.parseURL( window.location.href );
-							if (url.query != '' )
-								url.query += '&bundleUri=' + bundleUri;
-							else
-								url.query = '?bundleUri=' + bundleUri;
-							var href = url.protocol + '://' + url.host + ( (url.port != '') ? ':' + url.port : '' ) + url.path + url.query + ( (url.hash != '') ? '#' + url.hash : '' );
-							if ( 'pushState' in window.history )
-								window.history.pushState(null, '', href );
-							else
-								document.location = href;
-						}
-						else {
-							// TODO: report an error
-							console.log("Error on creating bundle [" + jhr.status + "]: " + jhr.statusText);
-						}
-					});
-				}
-			};
+		self.createForm.onsubmit = function (e) {
+			e.preventDefault();
+			e.stopPropagation();
 
-			self.createForm.assFinalize.onclick = function (e) {
-				e.preventDefault();
-				e.stopPropagation();
-				if (!self.bundleUri) return;
-
-				var $this = $(this),
-					data = { status: 'published' };
-
-				$this.addClass('loading');
-				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-					$this.removeClass('loading');
-					if (!result) // i.e. on error - request the old data
-						self.load(self.bundleUri);
-					else
-						$('.data-field[data-field="status"]').html(formatStatus('published'));
-				});
-			};
-
-			self.createForm.assNewVersion.onclick = function (e) {
-				e.preventDefault();
-				e.stopPropagation();
-				if (!self.bundleUri) return;
-
-				var $this = $(this),
-					data = { status: 'archived' };
-
-				$this.addClass('loading');
-				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-					$this.removeClass('loading');
-					if (!result) // i.e. on error - request the old data
-						self.load(self.bundleUri);
-				});
-
-				jT.ambit.call(self, self.bundleUri + '/version', { method: 'POST' }, function (bundleUri, jhr) {
-					if (!!bundleUri)
+			if (jT.validateForm(self.createForm)) {
+				jT.ambit.call(self, self.settings.baseUrl + '/bundle', { method: 'POST', data: $(self.createForm).serializeArray()},
+					function (bundleUri, jhr) {
+					if (!!bundleUri) {
 						self.load(bundleUri);
-					else
+						var url = jT.parseURL( window.location.href );
+						if (url.query != '' )
+							url.query += '&bundleUri=' + bundleUri;
+						else
+							url.query = '?bundleUri=' + bundleUri;
+						var href = url.protocol + '://' + url.host + ( (url.port != '') ? ':' + url.port : '' ) + url.path + url.query + ( (url.hash != '') ? '#' + url.hash : '' );
+						if ( 'pushState' in window.history )
+							window.history.pushState(null, '', href );
+						else
+							document.location = href;
+					}
+					else {
 						// TODO: report an error
-						console.log("Error on creating bundle [" + jhr.status + ": " + jhr.statusText);
+						console.log("Error on creating bundle [" + jhr.status + "]: " + jhr.statusText);
+					}
 				});
-			};
+			}
+		};
 
-			self.createForm.assFinalize.style.display = 'none';
-			self.createForm.assNewVersion.style.display = 'none';
+		self.createForm.assFinalize.onclick = function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			if (!self.bundleUri) return;
 
-			var starsEl = $('.data-stars-field', self.createForm)[0];
-			starsEl.innerHTML += jT.ui.putStars(self, 0, "Assessment rating");
-			$('span.ui-icon-star', starsEl)
-				.on('mouseover', function (e) {
-					for (var el = this; !!el; el = el.previousElementSibling)
-						$(el).removeClass('transparent');
-					for (var el = this.nextElementSibling; !!el; el = el.nextElementSibling)
-						$(el).addClass('transparent');
-				})
-				.on('click', function (e) {
-					var cnt = 0;
-					for (var el = this; !!el; el = el.previousElementSibling, ++cnt);
-					self.createForm.stars.value = cnt;
-					$(self.createForm.stars).trigger('change');
-				})
-				.parent().on('mouseout', function (e) {
-					self.starHighlight(this, parseInt(self.createForm.stars.value));
-				});
+			var $this = $(this),
+				data = { status: 'published' };
 
-			// install change handlers so that we can update the values
-			$('input, select, textarea', self.createForm).on('change', function (e) {
-				e.preventDefault();
-				e.stopPropagation();
-				if (!self.bundleUri) return;
+			$this.addClass('loading');
+			jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+				$this.removeClass('loading');
+				if (!result) // i.e. on error - request the old data
+					self.load(self.bundleUri);
+				else
+					$('.data-field[data-field="status"]').html(formatStatus('published'));
+			});
+		};
 
-				var el = this;
-				if (jT.fireCallback(checkForm, el, e)) {
-					var data = {};
-					data[el.name] = el.value;
-					$(el).addClass('loading');
-					jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-						$(el).removeClass('loading');
-						if (!result) { // i.e. on error - request the old data
-							self.load(self.bundleUri);
-						}
-					});
-				}
+		self.createForm.assNewVersion.onclick = function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			if (!self.bundleUri) return;
+
+			var $this = $(this),
+				data = { status: 'archived' };
+
+			$this.addClass('loading');
+			jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+				$this.removeClass('loading');
+				if (!result) // i.e. on error - request the old data
+					self.load(self.bundleUri);
 			});
 
-			var link = $('#source-link')[0], $source = $('#source');
-			link.href = $source[0].value;
-			$source.on('change', function() { link.href = this.value; });
-		}
+			jT.ambit.call(self, self.bundleUri + '/version', { method: 'POST' }, function (bundleUri, jhr) {
+				if (!!bundleUri)
+					self.load(bundleUri);
+				else
+					// TODO: report an error
+					console.log("Error on creating bundle [" + jhr.status + ": " + jhr.statusText);
+			});
+		};
+
+		self.createForm.assFinalize.style.display = 'none';
+		self.createForm.assNewVersion.style.display = 'none';
+
+		var starsEl = $('.data-stars-field', self.createForm)[0];
+		starsEl.innerHTML += jT.ui.putStars(self, 0, "Assessment rating");
+		$('span.ui-icon-star', starsEl)
+			.on('mouseover', function (e) {
+				for (var el = this; !!el; el = el.previousElementSibling)
+					$(el).removeClass('transparent');
+				for (var el = this.nextElementSibling; !!el; el = el.nextElementSibling)
+					$(el).addClass('transparent');
+			})
+			.on('click', function (e) {
+				var cnt = 0;
+				for (var el = this; !!el; el = el.previousElementSibling, ++cnt);
+				self.createForm.stars.value = cnt;
+				$(self.createForm.stars).trigger('change');
+			})
+			.parent().on('mouseout', function (e) {
+				self.starHighlight(this, parseInt(self.createForm.stars.value));
+			});
+
+		// install change handlers so that we can update the values
+		$('input, select, textarea', self.createForm).on('change', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			if (!self.bundleUri) return;
+
+			var el = this;
+			if (jT.fireCallback(checkForm, el, e)) {
+				var data = {};
+				data[el.name] = el.value;
+				$(el).addClass('loading');
+				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
+					$(el).removeClass('loading');
+					if (!result) { // i.e. on error - request the old data
+						self.load(self.bundleUri);
+					}
+				});
+			}
+		});
+
+		var link = $('#source-link')[0], $source = $('#source');
+		link.href = $source[0].value;
+		$source.on('change', function() { link.href = this.value; });
 	};
 
 	// called when a sub-action in bundle details tab is called
@@ -270,7 +285,7 @@
 			var saveButton = $('.save-button', panel)[0];
 			saveButton.disabled = true;
 			var dressButton = function() {
-				if (self.edit.study.length < 1) {
+				if (self.editSummary.study.length < 1) {
 					saveButton.disabled = true;
 					$(saveButton).removeClass('jt-alert').addClass('jt-disabled');
 					saveButton.innerHTML = "Saved";
@@ -283,8 +298,8 @@
 			};
 
 			$(saveButton).on('click', function() {
-				if (self.edit.study.length > 0) {
-					var toAdd = JSON.stringify({ study: self.edit.study });
+				if (self.editSummary.study.length > 0) {
+					var toAdd = JSON.stringify({ study: self.editSummary.study });
 
 					// make two nested calls - for adding and for deleting
 					$(saveButton).addClass('loading');
@@ -293,7 +308,7 @@
 							jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
 								$(saveButton).removeClass('loading');
 								if (!!result) {
-									self.edit.study = [];
+									self.editSummary.study = [];
 									self.matrixKit.query(self.bundleUri + '/matrix');
 									dressButton();
 								}
@@ -363,7 +378,7 @@
 						endpoint: feature.title,
 						guidance: feature.creator,
 						value: jT.ui.renderRange(val[valueIdx], feature.units, 'display'),
-					});
+					}, self.settings.formatters);
 
 					if (isDelete) {
 						$('.delete-box', infoDiv).show();
@@ -450,11 +465,11 @@
 			};
 
 			var addFeature = function(data, fId, value, element) {
-				self.edit.study.push(value);
+				self.editSummary.study.push(value);
 				dressButton();
 
 				// now fix the UI a bit, so we can see the
-				fId += '/' + self.edit.study.length;
+				fId += '/' + self.editSummary.study.length;
 
 				var catId = jT.ambit.parseFeatureId(fId).category,
 						config = jT.$.extend(true, {}, self.matrixKit.settings.configuration.columns["_"], self.matrixKit.settings.configuration.columns[catId]),
@@ -478,7 +493,7 @@
 				var preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? f.title : null;
 				preVal = [f.creator, preVal].filter(function(value){return value!==null}).join(' ');
 
-				var html = 	'<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.edit.study.length - 1) + '"></span>&nbsp;' + 
+				var html = 	'<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.editSummary.study.length - 1) + '"></span>&nbsp;' + 
 							'<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(value.effects[0].result, null, 'display', preVal) + '</a>',
 					span = document.createElement('div');
 
@@ -489,14 +504,14 @@
 				$('.info-popup', span).on('click', function (e) { onEditClick.call(this, data); });
 				$('.delete-popup', span).on('click', function (e) {
 					var idx = $(this).data('index');
-					self.edit.study.splice(idx, 1);
+					self.editSummary.study.splice(idx, 1);
 					$(this.parentNode).remove();
 					dressButton();
 				});
 			};
 
 			var deleteFeature = function (data, featureId, valueIdx, reason, element) {
-				self.edit.study.push({
+				self.editSummary.study.push({
 					owner: { substance: { uuid: data.compound.i5uuid } },
 					effects_to_delete: [{
 						result: {
@@ -513,18 +528,18 @@
 				$('span', element.parentNode)
 					.removeClass('ui-icon-circle-minus')
 					.addClass('ui-icon-circle-plus')
-					.data('index', self.edit.study.length - 1)
+					.data('index', self.editSummary.study.length - 1)
 					.on('click.undodelete', function () {
 						var idx = $(this).data('index');
 						$(this).addClass('ui-icon-circle-minus').removeClass('ui-icon-circle-plus').off('click.undodelete').data('index', null);
 						$('a', this.parentNode).removeClass('unsaved-study');
-						self.edit.study.splice(idx, 1);
+						self.editSummary.study.splice(idx, 1);
 						dressButton();
 					});
 			};
 
-			var infoDiv = $('#info-box')[0];
-			var editDiv = $('#edit-box')[0];
+			var infoDiv = $('div.info-box', self.rootElement)[0];
+			var editDiv = $('div.edit-box', self.rootElement)[0];
 
 			// now, fill the select with proper values...
 			var df = document.createDocumentFragment();
@@ -577,8 +592,8 @@
 						$('.save-button', panel).show();
 						$('.create-button', panel).hide();
 						$('#xfinal').button('enable');
-						self.bundleSummary.matrix++;
-						self.edit.matrixEditable = true;
+						self.bundleSummary.matrices++;
+						self.editSummary.matrixEditable = true;
 						self.matrixKit.query(self.bundleUri + '/matrix/working');
 					}
 				});
@@ -593,17 +608,17 @@
 		var queryUri = null;
 		if (panId == 'xinitial') {
 			$('.jtox-toolkit', panel).show();
-			self.edit.matrixEditable = false;
+			self.editSummary.matrixEditable = false;
 			queryUri = self.bundleUri + '/dataset?mergeDatasets=true';
 		}
 		else {
 			var queryPath = (panId == 'xfinal') ? '/matrix/final' : '/matrix/working',
 					editable = (panId != 'xfinal');
 					
-			if (self.bundleSummary.matrix > 0) {
+			if (self.bundleSummary.matrices > 0) {
 				$('.jtox-toolkit', panel).show();
 				queryUri = self.bundleUri + queryPath;
-				self.edit.matrixEditable = editable;
+				self.editSummary.matrixEditable = editable;
 				if (editable)
 					$('.save-button', panel).show();
 				else
@@ -675,49 +690,13 @@
 
 	// called when a sub-action in structures selection tab is called
 	MatrixKit.prototype.onStructures = function (id, panel) {
-		var self = this;
-		if (!self.queryKit) {
-			self.queryKit = jT.kit($('#jtox-query')[0]);
-			self.queryKit.setWidget("bundle", self.rootElement);
-			self.queryKit.kit().settings.fixedWidth = '200px';
-			// provid onRow function so the buttons can be se properly...
-			self.queryKit.kit().settings.onRow = function (row, data, index) {
-				if (!data.bundles)
-					return;
-
-				var bundleInfo = data.bundles[self.bundleUri] || {};
-				// we need to setup remarks field regardless of bundleInfo presence
-				var noteEl = $('textarea.remark', row).on('change', function (e) {
-					var data = jT.ui.rowData(this),
-							el = this,
-							bInfo = data.bundles[self.bundleUri] || {};
-					$(el).addClass('loading');
-					jT.ambit.call(self, self.bundleUri + '/compound', {
-						'method': 'PUT',
-						'data': {
-							compound_uri: data.compound.URI,
-							command: 'add',
-							tag: bInfo.tag,
-							remarks: $(el).val()
-						}
-					}, function (result) {
-						$(el).removeClass('loading');
-					});
-				});
-
-				if (!!bundleInfo.tag) {
-					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
-					noteEl.val(bundleInfo.remarks);
-				}
-				else
-					noteEl.prop('disabled', true).val(' ');
-			};
-		}
+		if (!this.queryKit)
+			this.initStructures(panel);
 
 		if (id == 'structlist')
-			self.queryKit.kit().queryDataset(self.bundleUri + '/compound');
+			this.queryKit.kit().queryDataset(self.bundleUri + '/compound');
 		else
-			self.queryKit.query();
+			this.queryKit.query();
 	};
 
 	MatrixKit.prototype.onReport = function(id, panel){
@@ -725,7 +704,7 @@
 
 		if (!$(panel).hasClass('initialized')) {
 
-			jT.ui.updateTree(panel, self.bundle);
+			jT.ui.updateTree(panel, self.bundle, self.settings.formatters);
 
 			$('#generate-doc').on('click', function(){
 				var loadFile = function(url, callback){
@@ -1006,7 +985,7 @@
 		}
 
 		if (!self.reportQueryKit) {
-			self.reportQueryKit = jT.kit($('#jtox-report-query')[0]);
+			self.reportQueryKit = jT.ui.kit($('#jtox-report-query')[0]);
 			self.reportQueryKit.setWidget("bundle", self.rootElement);
 			self.reportQueryKit.kit().settings.fixedWidth = '200px';
 			// provid onRow function so the buttons can be se properly...
@@ -1148,12 +1127,16 @@
 					if( !addedData[i] ) continue;
 					var newSection = substanceSection.clone().removeAttr('id');
 					var substance = self.dataset.dataEntry[i];
-					jT.ui.updateTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
+					jT.ui.updateTree(newSection[0], {
+						name: (substance.compound.name || substance.compound.tradename), 
+						number: substance.number
+					}, self.settings.formatters);
+
 					for(fId in addedData[i]){
 						var set = addedData[i][fId];
 
 						var newFeature = featureSection.clone().removeAttr('id');
-						jT.ui.updateTree(newFeature[0], {title: self.dataset.feature[fId].title});
+						jT.ui.updateTree(newFeature[0], { title: self.dataset.feature[fId].title }, self.settings.formatters);
 
 						for ( var j = 0, sl = set.length; j < sl; j++ ) {
 
@@ -1195,7 +1178,7 @@
 								value: jT.ui.renderRange(value, feature.units, 'display'),
 								remarks: feature.creator,
 								studyType: feature.source.type
-							});
+							}, self.settings.formatters);
 
 							newFeature.append( newInfo );
 						}
@@ -1210,12 +1193,16 @@
 					if( !deletedData[i] ) continue;
 					var newSection = substanceSection.clone().removeAttr('id');
 					var substance = self.dataset.dataEntry[i];
-					jT.ui.updateTree(newSection[0], {name: (substance.compound.name || substance.compound.tradename), number: substance.number});
+					jT.ui.updateTree(newSection[0], {
+						name: (substance.compound.name || substance.compound.tradename),
+						number: substance.number
+					}, self.settings.formatters);
+
 					for(fId in deletedData[i]){
 
 						var set = deletedData[i][fId];
 						var newFeature = featureSection.clone().removeAttr('id');
-						jT.ui.updateTree(newFeature[0], {title: self.dataset.feature[fId].title});
+						jT.ui.updateTree(newFeature[0], { title: self.dataset.feature[fId].title }, self.settings.formatters);
 
 						for ( var j = 0, sl = set.length; j < sl; j++ ) {
 
@@ -1256,7 +1243,7 @@
 								guidance: feature.creator,
 								value: jT.ui.renderRange(value, feature.units, 'display'),
 								remarks: value.remarks
-							});
+							}, self.settings.formatters);
 
 							newInfo.find('h5').remove();
 
@@ -1288,7 +1275,7 @@
 	MatrixKit.prototype.prepareSubstanceKit = function(rootEl){
 		var self = this;
 
-		var kit = jT.kit(rootEl);
+		var kit = jT.ui.kit(rootEl);
 
 		kit.setWidget("bundle", self.rootElement);
 		kit.kit().settings.fixedWidth = '100%';
@@ -1391,17 +1378,13 @@
 						// now - ready to produce HTML
 						for (var i = 0, vl = theData.length; i < vl; ++i) {
 							var d = theData[i];
-							if (d.deleted && !self.edit.matrixEditable)
+							if (d.deleted && !self.editSummary.matrixEditable)
 								continue;
 							html += '<div>';
-							if (self.edit.matrixEditable) {
-								if (d.deleted){
-									html += '<span class="ui-icon ui-icon-info delete-popup"></span>&nbsp;';
-								}
-								else {
-									html += '<span class="ui-icon ui-icon-circle-minus delete-popup"></span>&nbsp;';
-								}
-							}
+
+							if (self.editSummary.matrixEditable)
+								html += '<span class="ui-icon ' + (d.deleted ? 'ui-icon-info' : 'ui-icon-circle-minus')+ ' delete-popup"></span>&nbsp;';
+
 							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
 									+ studyType
 									+ ' ' + postVal;
@@ -1410,7 +1393,7 @@
 						}
 					}
 
-					if (self.edit.matrixEditable)
+					if (self.editSummary.matrixEditable)
 						html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
 
 					return  html;
@@ -1489,7 +1472,7 @@
 				tag = bInfo.tag;
 			}
 			var html = "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>";
-			if (self.edit.matrixEditable) {
+			if (self.editSummary.matrixEditable) {
 				html += '<button class="jt-toggle jtox-handler target' + ( (tag == 'target') ? ' active' : '') + '" data-tag="target" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Target">T</button>' +
 						'<button class="jt-toggle jtox-handler source' + ( (tag == 'source') ? ' active' : '') + '" data-tag="source" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Source">S</button>' +
 						'<button class="jt-toggle jtox-handler cm' + ( (tag == 'cm') ? ' active' : '') + '" data-tag="cm" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Category Member">CM</button>';
@@ -1528,7 +1511,7 @@
 
 		var featuresInitialized = false;
 
-		matrixKit = new jToxCompound(rootEl, {
+		matrixKit = new jT.ui.Compound(rootEl, {
 			rememberChecks: true,
 			tabsFolded: true,
 			showDiagrams: true,
@@ -1587,9 +1570,9 @@
 		return matrixKit;
 	};
 
-	MatrixKit.prototype.load = function(bundleUri) {
+	MatrixKit.prototype.loadBundle = function(bundleUri) {
 		var self = this;
-		jT.call(self, bundleUri, function (bundle) {
+		jT.ambit.call(self, bundleUri, function (bundle) {
 			if (!!bundle) {
 				bundle = bundle.dataset[0];
 				self.bundleUri = bundle.URI;
@@ -1597,7 +1580,7 @@
 
 				if (!!self.createForm) {
 
-					jT.ui.updateTree(self.createForm, bundle);
+					jT.ui.updateTree(self.createForm, bundle, self.settings.formatters);
 
 					$('#status-' + bundle.status).prop('checked', true);
 
@@ -1614,7 +1597,7 @@
 				$(self.rootElement).tabs('enable', 1);
 
 				// now request and process the bundle summary
-				jT.call(self, bundle.URI + "/summary", function (summary) {
+				jT.ambit.call(self, bundle.URI + "/summary", function (summary) {
 					if (!!summary) {
 						for (var i = 0, sl = summary.facet.length; i < sl; ++i) {
 							var facet = summary.facet[i];
@@ -1624,7 +1607,7 @@
 					self.progressTabs();
 				});
 
-				self.loadUsers();
+				// self.loadUsers();
 
 				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
 				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1640,7 +1623,7 @@
 		var self = this;
 		var bundle = self.bundle;
 		// request and process users with write access
-		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
 			if (!!users) {
 				var select = $('#users-write');
 				if (select.length == 0) return;
@@ -1653,7 +1636,7 @@
 		});
 
 		// request and process users with read only access
-		jT.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
 			if (!!users) {
 				var select = $('#users-read');
 				if (select.length == 0) return;
@@ -1667,9 +1650,10 @@
 	};
 
 	MatrixKit.prototype.progressTabs = function () {
-		$(this.rootElement).tabs(this.bundleSummary.compound > 0 ? 'enable' : 'disable', 2);
-		$(this.rootElement).tabs(this.bundleSummary.substance > 0  && this.bundleSummary.property > 0 ? 'enable' : 'disable', 3);
-		if (this.bundleSummary.matrix > 0) {
+		// TODO: Check what is this all about!
+		$(this.rootElement).tabs(this.bundleSummary.compounds > 0 ? 'enable' : 'disable', 2);
+		$(this.rootElement).tabs(this.bundleSummary.substances > 0  && this.bundleSummary.properties > 0 ? 'enable' : 'disable', 3);
+		if (this.bundleSummary.matrices > 0) {
 			$('#xfinal').button('enable');
 			$(this.rootElement).tabs('enable', 4);
 		}
@@ -1695,24 +1679,17 @@
 			if (!!result) {
 				$(el).toggleClass('active');
 				if (activate) {
-					self.bundleSummary.compound++;
+					self.bundleSummary.compounds++;
 					$('button', el.parentNode).removeClass('active');
 					$(el).addClass('active');
 				}
 				else
-					self.bundleSummary.compound--;
+					self.bundleSummary.compounds--;
 
 				$(noteEl).prop('disabled', !activate).val(activate ? "" : " ");
 				self.progressTabs();
 			}
 		});
-	};
-
-	MatrixKit.prototype.structuresLoaded = function (kit, dataset) {
-		if ($(this.rootElement).hasClass('structlist')) {
-			this.bundleSummary.compound = dataset.dataEntry.length;
-			this.progressTabs();
-		}
 	};
 
 	MatrixKit.prototype.selectSubstance = function (uri, el) {
@@ -1724,9 +1701,9 @@
 				el.checked = !el.checked; // i.e. revert
 			else {
 				if (el.checked)
-					self.bundleSummary.substance++;
+					self.bundleSummary.substances++;
 				else
-					self.bundleSummary.substance--;
+					self.bundleSummary.substances--;
 				self.progressTabs();
 				//console.log("Substance [" + uri + "] selected");
 			}
@@ -1766,9 +1743,9 @@
 				el.checked = !el.checked; // i.e. revert
 			else {
 				if (el.checked)
-					self.bundleSummary.property++;
+					self.bundleSummary.properties++;
 				else
-					self.bundleSummary.property--;
+					self.bundleSummary.properties--;
 				self.progressTabs();
 				//console.log("Endpoint [" + endpoint + "] selected");
 			}
@@ -1778,10 +1755,6 @@
 	// Now some handlers - they should be outside, because they are called within windows' context.
 	function onSelectStructure(e) {
 		MatrixKit.selectStructure($(this).data('data'), $(this).data('tag'), this);
-	};
-
-	function onBrowserFilled(dataset) {
-		MatrixKit.structuresLoaded(this, dataset);
 	};
 
 	function onSelectSubstance(e) {
@@ -1829,7 +1802,7 @@
 			var div = document.createElement('div');
 			$cell.append(div);
 
-			new jToxSubstance(div, {
+			new jT.ui.Substance(div, {
 				showDiagrams: true,
 				embedComposition: true,
 				substanceUri: uri,
@@ -1855,22 +1828,6 @@
 		this.equalizeTables();
 
 		return false;
-	};
-
-	function onDetailedRow(row, data, event) {
-		var el = $('.jtox-details-composition', row)[0];
-		if (!el)
-			return;
-		var uri = this.settings.baseUrl + '/substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI);
-		el = $(el).parents('table')[0];
-		el = el.parentNode;
-		$(el).empty();
-		$(el).addClass('paddingless');
-		var div = document.createElement('div');
-		el.appendChild(div);
-		new jToxSubstance(div, $.extend(true, {}, this.settings, {selectionHandler: null, substanceUri: uri, showControls: false, onLoaded: null, onDetails: function (root, data, element) {
-			new jToxStudy(root, $.extend({}, this.settings, {substanceUri: data.URI}));
-		} } ) );
 	};
 
 	function onReportSubstancesLoaded(dataset) {
@@ -1900,33 +1857,37 @@
 		createForm: null,
 		rootElement: null,
 		bundleUri: null,
-		bundleSummary: {
-			compound: 0,
-			substance: 0,
-			property: 0,
-			matrix: 0,
-		},
+		studyTypeList: {},
+		maxStars: 10,
+		matrixIdentifiers: [
+			"http://www.opentox.org/api/1.1#CASRN",
+			"#SubstanceName",
+			"#SubstanceUUID",
+			"http://www.opentox.org/api/1.1#SubstanceDataSource",
+		],
+		matrixMultiRows: [
+			"#Tag",
+			"http://www.opentox.org/api/1.1#Diagram",
+			"#ConstituentName",
+			"#ConstituentContent",
+			"#ConstituentContainedAs"
+		],
+		formatters: {
+			formatStatus: function (status) {
+				var statuses = {
+				  'draft': 'Draft Version',
+				  'published': 'Final Assessment',
+				  'archived': 'Archived Version'
+				}
+				return statuses[status];
+			},
+			formatDate: function (timestamp) {
+				var d = new Date(timestamp),
+					day = d.getDate(),
+					month = d.getMonth() + 1;
 
-		edit: {
-			study: [],
-		},
-
-		settings: {
-			studyTypeList: {},
-			maxStars: 10,
-			matrixIdentifiers: [
-				"http://www.opentox.org/api/1.1#CASRN",
-				"#SubstanceName",
-				"#SubstanceUUID",
-				"http://www.opentox.org/api/1.1#SubstanceDataSource",
-			],
-			matrixMultiRows: [
-				"#Tag",
-				"http://www.opentox.org/api/1.1#Diagram",
-				"#ConstituentName",
-				"#ConstituentContent",
-				"#ConstituentContainedAs"
-			]
+				return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
+			}
 		}
 	};
 

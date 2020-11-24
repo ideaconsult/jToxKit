@@ -6,10 +6,10 @@
  */
 
 jT = a$.extend(jT, {
-  templateRegExp: /\{\{([^}]+)\}\}/,
+  templateRegExp: /\{\{([^}|]+)(|[^}]+)?\}\}/,
   /* formats a string, replacing {{number | property}} in it with the corresponding value in the arguments
    */
-  formatString: function (str, info, def) {
+  formatString: function (str, info, def, formatters) {
     var pieces = str.split(jT.templateRegExp),
       pl = pieces.length,
       out = "";
@@ -19,9 +19,13 @@ jT = a$.extend(jT, {
       if (i >= pl)
         break;
 
-      var f = _.get(info, _.trim(pieces[i]), null);
-      if (f != null) // i.e. we've found it.
-        out += f;
+      var val = _.get(info, _.trim(pieces[i++]), null),
+        fmt = formatters && pieces[i] && formatters[pieces[i].substr(1)];
+      
+      if (typeof fmt === 'function')
+        val = fmt(val);
+      if (val != null) // i.e. we've found it.
+        out += val;
       else if (typeof def === 'function') // not found, but we have default function.
         out += def(pieces[i]);
       else if (typeof def === 'string') // not found, but default string.

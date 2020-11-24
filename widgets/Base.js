@@ -12,29 +12,41 @@
 
         bakeTemplate: function (html, info, def) {
             var all$ = $(html);
-            $('*', all$[0]).each(function (i, el) {
-                var liveEl = null,
-                    liveData = {};
 
+            $('*', all$).each(function (i, el) {
+                var liveData = null;
+
+                // first, deal with the value field
+                if (el.value && el.value.match(jT.templateRegExp)) {
+                    liveData = { 'value': el.value };
+                    el.value = jT.formatString(el.value, info, def);
+                }
+
+                // then, jump to deal with the attributes
                 var allAttrs = el.attributes;
                 for (var i = 0;i < allAttrs.length; ++i) {
                     if (allAttrs[i].specified && allAttrs[i].value.match(jT.templateRegExp)) {
-                        liveData[allAttrs[i].name]  = allAttrs[i].value;
+                        if (liveData == null)
+                            liveData = {};
+                        liveData[allAttrs[i].name] = allAttrs[i].value;
                         allAttrs[i].value = jT.formatString(allAttrs[i].value, info, def);
                     }
                 }
-                if (el.childNodes.length == 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
-                    el = el.childNodes[0];
 
-                    if (el.textContent.match(jT.templateRegExp)) {
-                        liveEl = $(el).parent();
-                        liveData[''] = el.textContent;
-                        el.textContent = jT.formatString(el.textContent, info, def);
+                // finally, go to text subnodes
+                if (el.childNodes.length == 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
+                    var subEl = el.childNodes[0];
+
+                    if (subEl.textContent.match(jT.templateRegExp)) {
+                        if (liveData == null)
+                            liveData = {};
+                        liveData[''] = subEl.textContent;
+                        subEl.textContent = jT.formatString(subEl.textContent, info, def);
                     }                    
                 }
 
-                if (liveEl != null)
-                    liveEl.addClass('jtox-live-data').data('jtox-live-data', liveData);
+                if (liveData != null)
+                    $(el).addClass('jtox-live-data').data('jtox-live-data', liveData);
             });
 
             return all$;
@@ -45,12 +57,17 @@
             return !root ? html : $(root).append(html);
         },
 
-        updateTree: function (root, info, def) {
+        updateTree: function (root, info, formatters) {
+            // This is the default value provider... if it exists, at all.
+            var def = formatters && formatters[''];
+
             $('.jtox-live-data', root).each(function (i, el) {
                 $.each($(el).data('jtox-live-data'), function (k, v) {
-                    v = jT.formatString(v, info, def)
+                    v = jT.formatString(v, info, def, formatters)
                     if (k === '')
                         el.innerHTML = v;
+                    else if (k === 'value')
+                        el.value = v;
                     else
                         el.attributes[k] = v;
                 });
@@ -207,6 +224,23 @@
 
         putInfo: function (href, title) {
             return '<sup class="helper"><a target="_blank" href="' + (href || '#') + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
+        },
+
+        putStars: function (kit, stars, title) {
+            if (!kit.settings.shortStars) {
+                var res = '<div title="' + title + '">';
+                for (var i = 0;i < kit.settings.maxStars;++i) {
+                    res += '<span class="ui-icon ui-icon-star jtox-inline';
+                    if (i >= stars)
+                        res += ' transparent';
+                    res += '"></span>';
+                }
+                
+                return res + '</div>';
+            }
+            else { // i.e. short version
+                return '<span class="ui-icon ui-icon-star jtox-inline" title="' + title + '"></span>' + stars;
+            }
         },
 
         renderRelation: function (data, type, full) {

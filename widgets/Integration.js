@@ -12,12 +12,16 @@ jT.ui = a$.extend(jT.ui, {
 	callId: 0,
 
   // initializes one kit, based on the kit name passed, either as params, or found within data-XXX parameters of the element
-  initKit: function(element) {
+  initKit: function(element, opts) {
     var self = this,
         dataParams = element.data(),
         kit = dataParams.kit,
-        topSettings = $.extend(true, {}, self.rootSettings),
+        topSettings = $.extend(true, {}, self.rootSettings, opts),
         parent = null;
+
+    // first - skip, if we're manual...
+    if (!!dataParams.manualInit)
+      return null;
 
   	// we need to traverse up, to collect some parent's settings...
   	a$.each(element.parents('.jtox-kit,.jtox-widget').toArray().reverse(), function(el) {
@@ -38,7 +42,7 @@ jT.ui = a$.extend(jT.ui, {
       dataParams.id = element.attr('id');
 
 	  // the real initialization function
-    var realInit = function (params, element) {
+    var realInit = function (params) {
     	if (!kit)
         return null;
         
@@ -127,7 +131,7 @@ jT.ui = a$.extend(jT.ui, {
   	}
 
   	// now scan all insertion divs
-  	var fnInit = function() { if (!$(this).data('manualInit')) self.initKit($(this)); };
+  	var fnInit = function() { self.initKit($(this)); };
   	$('.jtox-kit', root).each(fnInit);
   	$('.jtox-widget', root).each(fnInit);
 	},
