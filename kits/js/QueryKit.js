@@ -13,7 +13,7 @@
 	};
 
 	function QueryKit(settings) {
-		this.settings = $.extend(true,  QueryKit.defaults, settings);
+		this.settings = $.extend(true, {}, QueryKit.defaults, settings);
 		$(this.rootElement = settings.target)
 			.addClass('jtox-toolkit') // to make sure it is there even in manual initialization.
 			.append(jT.ui.getTemplate('kit-query-all', this.settings));
@@ -206,8 +206,10 @@
 			;
 		else if (typeof this.settings.mainKit === 'string')
 			this.mainKit = jT.ui.kit($(this.settings.mainKit));
-		else
+		else if (this.settings.mainKit instanceof Element)
 			this.mainKit = jT.ui.kit(this.settings.mainKit);
+		else if (typeof this.settings.mainKit === 'object')
+			this.mainKit = this.settings.mainKit;
 		
 		return this.mainKit;
 	};

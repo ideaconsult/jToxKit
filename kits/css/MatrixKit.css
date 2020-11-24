@@ -32,7 +32,6 @@
 #jtox-identifiers form textarea,
 #jtox-identifiers form input {
 	width: 100%;
-	border: 0px;
 }
 
 #jtox-identifiers form input[type="radio"],
@@ -76,13 +75,13 @@
   border: 0px;
 }
 
-div.jtox-matrix-kit.structlist #jtox-query .jtox-foldable {
+/* div.jtox-matrix-kit.structlist #struct-query .jtox-foldable {
   display: none;
 }
 
-div.jtox-matrix-kit.structlist #browser {
+div.jtox-matrix-kit.structlist #struct-browser {
   margin-top: 5px;
-}
+} */
 
 #structures-expand-all, #structures-collapse-all {
   font-size: 0.8em;
