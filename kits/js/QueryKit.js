@@ -36,9 +36,7 @@
 			}
 		}
 
-		if (this.settings.hideContext)
-			$(form.searchcontext).hide();
-		else if (!!form.searchcontext) {
+		if (!!form.searchcontext) {
 			form.searchcontext.value = this.settings.contextUri;
 			$(form.searchcontext).on('change', function (e) {
 				this.settings.contextUri = this.value;
@@ -87,17 +85,27 @@
 			});
 		}
 
-		var radios = $('.jq-buttonset', this.rootElement).buttonset();
+		var radios = $('.jq-buttonset', this.rootElement);
+		$.each(this.settings.customSearches, function (key, info) {
+			info.id = key;
+			jT.ui.getTemplate('kit-query-option', info).appendTo(radios);
+		});
+
+		radios = radios.buttonset();
 		var onTypeClicked = function () {
 			form.searchbox.placeholder = $(this).data('placeholder');
 			$('.search-pane .auto-hide', self.rootElement).addClass('hidden');
 			$('.search-pane .' + this.id, self.rootElement).removeClass('hidden');
 			self.search.queryType = this.value;
 			if (this.value == 'uri') {
+				$('div.search-pane', form).show();
 				$(form.drawbutton).addClass('hidden');
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('enable');
+			} else if (self.settings.customSearches[this.value]) {
+				jT.fireCallback(self.settings.customSearches[this.value].onSelected, this, self, form);
 			} else {
+				$('div.search-pane', form).show();
 				$(form.drawbutton).removeClass('hidden');
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('disable');
@@ -283,8 +291,8 @@
 	QueryKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		defaultNeedle: '50-00-0', // which is the default search string, if empty one is provided
 		smartsList: 'funcgroups', // which global JS variable to seek for smartsList
-		hideOptions: '', // comma separated list of search options to hide
-		hideContext: false, // whether to hide the context box
+		hideOptions: '', // comma separated list of search options to hide. You can use `context` too.
+		customSearches: null, // A list of custom options to be added. Each is { 'title':... , 'onSelected':..., 'uri': ... }.
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
