@@ -2529,17 +2529,6 @@
 		$('.jq-buttonset', this.rootElement).buttonset();
 		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
-		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
-		$('.jtox-users-select', this.rootElement).each(function (el) {
-			(new UserEditor({
-				target: el,
-				baseUrl: self.settings.baseUrl,
-				tokenMode: true,
-				extraParam: 'bundle_number=1', // + self.bundle && self.bundle.number,
-				permission: $(el).data('permission')
-			})).init();
-		});
-
 		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
 		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
@@ -2608,9 +2597,58 @@
 
 		this.queryKit = jT.ui.initKit($('#struct-query'), {
 			mainKit: this.browserKit,
-			customSearch: function () {
-				// TODO: Integrate here, after implementing in the QueryKit - the "selected only"
+			customSearches: {
+				selected: {
+					title: "Selected",
+					description: "List selected structures",
+					onSelected: function (kit, form) {
+						$('div.search-pane', form).hide();
+						self.browserKit.query(self.bundleUri + '/compound');
+					}
+				}
 			}
+		});
+	};
+
+	MatrixKit.prototype.initUsers = function () {
+		var self = this;
+		var bundle = self.bundle;
+
+		// request and process users with write access
+		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+			if (!!users) {
+				var select = $('#users-write');
+				if (select.length == 0) return;
+				select.data('tokenize').clear();
+				for (var i = 0, l = users.length; i < l; ++i) {
+					var u = users[i];
+					select.data('tokenize').tokenAdd(u.id, u.name, true);
+				}
+			}
+		});
+
+		// request and process users with read only access
+		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+			if (!!users) {
+				var select = $('#users-read');
+				if (select.length == 0) return;
+				select.data('tokenize').clear();
+				for (var i = 0, l = users.length; i < l; ++i) {
+					var u = users[i];
+					select.data('tokenize').tokenAdd(u.id, u.name, true);
+				}
+			}
+		});
+
+		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
+		$('.jtox-users-select', this.rootElement).each(function (el) {
+			(new UserEditor({
+				target: el,
+				baseUrl: self.settings.baseUrl,
+				tokenMode: true,
+				extraParam: 'bundle_number=' + self.bundle && self.bundle.number,
+				permission: $(el).data('permission')
+			})).init();
 		});
 	};
 
@@ -4079,7 +4117,7 @@
 					self.progressTabs();
 				});
 
-				// self.loadUsers();
+				// self.initUsers();
 
 				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
 				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -4087,36 +4125,6 @@
 				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
 				jT.fireCallback(self.settings.onLoaded, self);
-			}
-		});
-	};
-
-	MatrixKit.prototype.loadUsers = function () {
-		var self = this;
-		var bundle = self.bundle;
-		// request and process users with write access
-		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
-			if (!!users) {
-				var select = $('#users-write');
-				if (select.length == 0) return;
-				select.data('tokenize').clear();
-				for (var i = 0, l = users.length; i < l; ++i) {
-					var u = users[i];
-					select.data('tokenize').tokenAdd(u.id, u.name, true);
-				}
-			}
-		});
-
-		// request and process users with read only access
-		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
-			if (!!users) {
-				var select = $('#users-read');
-				if (select.length == 0) return;
-				select.data('tokenize').clear();
-				for (var i = 0, l = users.length; i < l; ++i) {
-					var u = users[i];
-					select.data('tokenize').tokenAdd(u.id, u.name, true);
-				}
 			}
 		});
 	};
@@ -4588,9 +4596,7 @@
 			}
 		}
 
-		if (this.settings.hideContext)
-			$(form.searchcontext).hide();
-		else if (!!form.searchcontext) {
+		if (!!form.searchcontext) {
 			form.searchcontext.value = this.settings.contextUri;
 			$(form.searchcontext).on('change', function (e) {
 				this.settings.contextUri = this.value;
@@ -4639,17 +4645,27 @@
 			});
 		}
 
-		var radios = $('.jq-buttonset', this.rootElement).buttonset();
+		var radios = $('.jq-buttonset', this.rootElement);
+		$.each(this.settings.customSearches, function (key, info) {
+			info.id = key;
+			jT.ui.getTemplate('kit-query-option', info).appendTo(radios);
+		});
+
+		radios = radios.buttonset();
 		var onTypeClicked = function () {
 			form.searchbox.placeholder = $(this).data('placeholder');
 			$('.search-pane .auto-hide', self.rootElement).addClass('hidden');
 			$('.search-pane .' + this.id, self.rootElement).removeClass('hidden');
 			self.search.queryType = this.value;
 			if (this.value == 'uri') {
+				$('div.search-pane', form).show();
 				$(form.drawbutton).addClass('hidden');
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('enable');
+			} else if (self.settings.customSearches[this.value]) {
+				jT.fireCallback(self.settings.customSearches[this.value].onSelected, this, self, form);
 			} else {
+				$('div.search-pane', form).show();
 				$(form.drawbutton).removeClass('hidden');
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('disable');
@@ -4835,8 +4851,8 @@
 	QueryKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		defaultNeedle: '50-00-0', // which is the default search string, if empty one is provided
 		smartsList: 'funcgroups', // which global JS variable to seek for smartsList
-		hideOptions: '', // comma separated list of search options to hide
-		hideContext: false, // whether to hide the context box
+		hideOptions: '', // comma separated list of search options to hide. You can use `context` too.
+		customSearches: null, // A list of custom options to be added. Each is { 'title':... , 'onSelected':..., 'uri': ... }.
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
@@ -6782,6 +6798,11 @@ jT.ui.templates['kit-query-composer']  =
 "</div>" +
 "</div>" +
 ""; // end of #kit-query-composer 
+
+jT.ui.templates['kit-query-option']  = 
+"<input type=\"radio\" id=\"search{{id}}\" value=\"{{id}}\" name=\"searchtype\" data-placeholder=\"...\" />" +
+"<label for=\"search{{id}}\" title=\"{{description}}\">{{title}}</label>" +
+""; // end of #kit-query-option 
 
 jT.ui.templates['all-studies']  = 
 "<div>" +

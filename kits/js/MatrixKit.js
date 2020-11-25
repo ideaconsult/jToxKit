@@ -57,17 +57,6 @@
 		$('.jq-buttonset', this.rootElement).buttonset();
 		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
-		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
-		$('.jtox-users-select', this.rootElement).each(function (el) {
-			(new UserEditor({
-				target: el,
-				baseUrl: self.settings.baseUrl,
-				tokenMode: true,
-				extraParam: 'bundle_number=1', // + self.bundle && self.bundle.number,
-				permission: $(el).data('permission')
-			})).init();
-		});
-
 		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
 		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
@@ -136,9 +125,58 @@
 
 		this.queryKit = jT.ui.initKit($('#struct-query'), {
 			mainKit: this.browserKit,
-			customSearch: function () {
-				// TODO: Integrate here, after implementing in the QueryKit - the "selected only"
+			customSearches: {
+				selected: {
+					title: "Selected",
+					description: "List selected structures",
+					onSelected: function (kit, form) {
+						$('div.search-pane', form).hide();
+						self.browserKit.query(self.bundleUri + '/compound');
+					}
+				}
 			}
+		});
+	};
+
+	MatrixKit.prototype.initUsers = function () {
+		var self = this;
+		var bundle = self.bundle;
+
+		// request and process users with write access
+		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+			if (!!users) {
+				var select = $('#users-write');
+				if (select.length == 0) return;
+				select.data('tokenize').clear();
+				for (var i = 0, l = users.length; i < l; ++i) {
+					var u = users[i];
+					select.data('tokenize').tokenAdd(u.id, u.name, true);
+				}
+			}
+		});
+
+		// request and process users with read only access
+		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
+			if (!!users) {
+				var select = $('#users-read');
+				if (select.length == 0) return;
+				select.data('tokenize').clear();
+				for (var i = 0, l = users.length; i < l; ++i) {
+					var u = users[i];
+					select.data('tokenize').tokenAdd(u.id, u.name, true);
+				}
+			}
+		});
+
+		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
+		$('.jtox-users-select', this.rootElement).each(function (el) {
+			(new UserEditor({
+				target: el,
+				baseUrl: self.settings.baseUrl,
+				tokenMode: true,
+				extraParam: 'bundle_number=' + self.bundle && self.bundle.number,
+				permission: $(el).data('permission')
+			})).init();
 		});
 	};
 
@@ -1607,7 +1645,7 @@
 					self.progressTabs();
 				});
 
-				// self.loadUsers();
+				// self.initUsers();
 
 				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
 				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1615,36 +1653,6 @@
 				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
 				jT.fireCallback(self.settings.onLoaded, self);
-			}
-		});
-	};
-
-	MatrixKit.prototype.loadUsers = function () {
-		var self = this;
-		var bundle = self.bundle;
-		// request and process users with write access
-		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
-			if (!!users) {
-				var select = $('#users-write');
-				if (select.length == 0) return;
-				select.data('tokenize').clear();
-				for (var i = 0, l = users.length; i < l; ++i) {
-					var u = users[i];
-					select.data('tokenize').tokenAdd(u.id, u.name, true);
-				}
-			}
-		});
-
-		// request and process users with read only access
-		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
-			if (!!users) {
-				var select = $('#users-read');
-				if (select.length == 0) return;
-				select.data('tokenize').clear();
-				for (var i = 0, l = users.length; i < l; ++i) {
-					var u = users[i];
-					select.data('tokenize').tokenAdd(u.id, u.name, true);
-				}
 			}
 		});
 	};
