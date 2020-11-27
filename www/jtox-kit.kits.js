@@ -2540,19 +2540,23 @@
 	};
 
 	MatrixKit.prototype.initStructures = function () {
-		var self = this;
+		var self = this,
+			selectedQuery = false;
 
 		this.browserKit = jT.ui.initKit($('#struct-browser'), {
 			baseUrl: this.settings.baseUrl,
 			onLoaded: function (dataset) {
-				self.bundleSummary.compounds = dataset.dataEntry.length;
-				self.progressTabs();
+				if (selectedQuery) {
+					self.bundleSummary.compounds = dataset.dataEntry.length;
+					self.progressTabs();
+				}
 			},
 			onDetails: function (substRoot, data) {
+				var baseUrl = jT.formBaseUrl(this.datasetUri);
 				new jT.ui.Substance($.extend(true, {}, this.settings, {
 					target: $(substRoot).addClass('jtox-details-table'),
 					selectionHandler: null,
-					substanceUri: this.settings.baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
+					substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 					showControls: false,
 					onLoaded: null,
 					onDetails: function (studyRoot, data) {
@@ -2604,6 +2608,7 @@
 					onSelected: function (kit, form) {
 						$('div.search-pane', form).hide();
 						self.browserKit.query(self.bundleUri + '/compound');
+						selectedQuery = true;
 					}
 				}
 			}
