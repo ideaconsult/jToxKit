@@ -124,6 +124,7 @@
             }
             return res;
         },
+
         linkedData: function (content, message, data) {
             var res = '';
 
@@ -138,20 +139,13 @@
             }
             return res;
         },
-        changeTabsIds: function (root, suffix) {
-            $('ul li a', root).each(function () {
-                var id = $(this).attr('href').substr(1),
-                    el = document.getElementById(id);
-                id += suffix;
-                el.id = id;
-                $(this).attr('href', '#' + id);
-            })
-        },
 
         addTab: function (root, name, id, content) {
             // first try to see if there is same already...
-            if (document.getElementById(id) != null)
+            if (document.getElementById(id) != null) {
+                console.warn('jToxKit: Trying to add a tab [' + name + '] with existing id:'  + id);
                 return;
+            }
 
             // first, create and add li/a element
             var a$ = $('<a>', { href: '#' + id }).html(name);

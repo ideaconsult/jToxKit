@@ -166,6 +166,7 @@
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
 
 		this.settings = $.extend(true, {}, CompositionKit.defaults, settings);
+		this.instanceNo = CompositionKit.instancesCount++;
 
 		// finally, if provided - make the query
 		if (!!this.settings.compositionUri)
@@ -207,7 +208,11 @@
 			}));
 		}
 		// READYY! Go and prepare THE table.
-		self.table = jT.tables.putTable(self, $('table.composition-table', tab)[0], 'composition', { "columns": cols });
+		self.table = jT.tables.putTable(self, 
+			$('table.composition-table', tab).attr('id', 'jtox-comp-info' + self.instanceNo)[0], 
+			'composition', 
+			{ "columns": cols }
+		);
 
 		$(self.table).DataTable().rows.add(json).draw();
 		
@@ -287,6 +292,7 @@
 	};
 
 
+	CompositionKit.instancesCount = 0;
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		selectionHandler: null, // selection handler, if needed for selection checkbox, which will be inserted if this is non-null
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
@@ -2554,7 +2560,7 @@
 			onDetails: function (substRoot, data) {
 				var baseUrl = jT.formBaseUrl(this.datasetUri);
 				new jT.ui.Substance($.extend(true, {}, this.settings, {
-					target: $(substRoot).addClass('jtox-details-table'),
+					target: substRoot,
 					selectionHandler: null,
 					substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 					showControls: false,
@@ -4667,7 +4673,7 @@
 				$(form.drawbutton).addClass('hidden');
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('enable');
-			} else if (self.settings.customSearches[this.value]) {
+			} else if (self.settings.customSearches && self.settings.customSearches[this.value]) {
 				jT.fireCallback(self.settings.customSearches[this.value].onSelected, this, self, form);
 			} else {
 				$('div.search-pane', form).show();
@@ -5430,10 +5436,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = jT.ui.putTemplate('all-studies', ' ? ', this.rootElement),
+		var tree$ = jT.ui.putTemplate('all-studies', { instanceNo: this.instanceNo }, this.rootElement),
 			self = this;
-
-		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
 
 		// initialize the tab structure for several versions of tabs.
 		this.tabs = tree$.tabs({
@@ -5663,9 +5667,10 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		function addStudyTab(top, sum) {
 			var tabInfo = jT.ui.addTab(self.tabs, 
-				(knownNames[top] || sum.topcategory.title), 
-				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
-				jT.ui.getTemplate('one-category', self.substance));
+					(knownNames[top] || sum.topcategory.title), 
+					"jtox-" + top.toLowerCase() + '-' + self.instanceNo, 
+					jT.ui.getTemplate('one-category', self.substance)
+				);
 
 			tabInfo.tab.data('type', top);
 			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);
@@ -6192,7 +6197,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 					title: "Reference substance UUID",
 					data: "referenceSubstance",
 					render: function (data, type, full) {
-						if (data.i5uuid == null || data.i5uuid == 'null') return '';
+						if (!data || !data.i5uuid || data.i5uuid == 'null') return '';
 						return (type != 'display') ? data.i5uuid : jT.ui.shortenedData('<a target="_blank" href="' + data.uri + '">' + data.i5uuid + '</a>', "Press to copy the UUID in the clipboard", data.i5uuid);
 					}
 				},
@@ -6810,10 +6815,10 @@ jT.ui.templates['kit-query-option']  =
 jT.ui.templates['all-studies']  = 
 "<div>" +
 "<ul>" +
-"<li><a href=\"#jtox-substance\">IUC Substance</a></li>" +
-"<li><a href=\"#jtox-compo-tab\">Composition</a></li>" +
+"<li><a href=\"#jtox-substance-{{instanceNo}}\">IUC Substance</a></li>" +
+"<li><a href=\"#jtox-compo-tab-{{instanceNo}}\">Composition</a></li>" +
 "</ul>" +
-"<div id=\"jtox-substance\" class=\"jtox-substance\">" +
+"<div id=\"jtox-substance-{{instanceNo}}\" class=\"jtox-substance\">" +
 "<table class=\"dataTable display\">" +
 "<thead>" +
 "<tr>" +
@@ -6871,7 +6876,7 @@ jT.ui.templates['all-studies']  =
 "</thead>" +
 "</table>" +
 "</div>" +
-"<div id=\"jtox-compo-tab\" class=\"jtox-compo-tab\"></div>" +
+"<div id=\"jtox-compo-tab-{{instanceNo}}\" class=\"jtox-compo-tab\"></div>" +
 "</div>" +
 ""; // end of #jtox-studies 
 

@@ -21,10 +21,8 @@
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = jT.ui.putTemplate('all-studies', ' ? ', this.rootElement),
+		var tree$ = jT.ui.putTemplate('all-studies', { instanceNo: this.instanceNo }, this.rootElement),
 			self = this;
-
-		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
 
 		// initialize the tab structure for several versions of tabs.
 		this.tabs = tree$.tabs({
@@ -254,9 +252,10 @@
 
 		function addStudyTab(top, sum) {
 			var tabInfo = jT.ui.addTab(self.tabs, 
-				(knownNames[top] || sum.topcategory.title), 
-				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
-				jT.ui.getTemplate('one-category', self.substance));
+					(knownNames[top] || sum.topcategory.title), 
+					"jtox-" + top.toLowerCase() + '-' + self.instanceNo, 
+					jT.ui.getTemplate('one-category', self.substance)
+				);
 
 			tabInfo.tab.data('type', top);
 			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);

@@ -10,6 +10,7 @@
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
 
 		this.settings = $.extend(true, {}, CompositionKit.defaults, settings);
+		this.instanceNo = CompositionKit.instancesCount++;
 
 		// finally, if provided - make the query
 		if (!!this.settings.compositionUri)
@@ -51,7 +52,11 @@
 			}));
 		}
 		// READYY! Go and prepare THE table.
-		self.table = jT.tables.putTable(self, $('table.composition-table', tab)[0], 'composition', { "columns": cols });
+		self.table = jT.tables.putTable(self, 
+			$('table.composition-table', tab).attr('id', 'jtox-comp-info' + self.instanceNo)[0], 
+			'composition', 
+			{ "columns": cols }
+		);
 
 		$(self.table).DataTable().rows.add(json).draw();
 		
@@ -131,6 +136,7 @@
 	};
 
 
+	CompositionKit.instancesCount = 0;
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		selectionHandler: null, // selection handler, if needed for selection checkbox, which will be inserted if this is non-null
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
