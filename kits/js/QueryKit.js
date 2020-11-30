@@ -102,7 +102,7 @@
 				$(form.drawbutton).addClass('hidden');
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('enable');
-			} else if (self.settings.customSearches[this.value]) {
+			} else if (self.settings.customSearches && self.settings.customSearches[this.value]) {
 				jT.fireCallback(self.settings.customSearches[this.value].onSelected, this, self, form);
 			} else {
 				$('div.search-pane', form).show();

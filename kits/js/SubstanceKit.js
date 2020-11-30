@@ -182,7 +182,7 @@
 					title: "Reference substance UUID",
 					data: "referenceSubstance",
 					render: function (data, type, full) {
-						if (data.i5uuid == null || data.i5uuid == 'null') return '';
+						if (!data || !data.i5uuid || data.i5uuid == 'null') return '';
 						return (type != 'display') ? data.i5uuid : jT.ui.shortenedData('<a target="_blank" href="' + data.uri + '">' + data.i5uuid + '</a>', "Press to copy the UUID in the clipboard", data.i5uuid);
 					}
 				},

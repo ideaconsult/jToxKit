@@ -82,7 +82,7 @@
 			onDetails: function (substRoot, data) {
 				var baseUrl = jT.formBaseUrl(this.datasetUri);
 				new jT.ui.Substance($.extend(true, {}, this.settings, {
-					target: $(substRoot).addClass('jtox-details-table'),
+					target: substRoot,
 					selectionHandler: null,
 					substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 					showControls: false,

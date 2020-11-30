@@ -60,10 +60,10 @@
 <!--[[ jT.ui.templates['all-studies'] -->
 		<div>
 			<ul>
-				<li><a href="#jtox-substance">IUC Substance</a></li>
-				<li><a href="#jtox-compo-tab">Composition</a></li>
+				<li><a href="#jtox-substance-{{instanceNo}}">IUC Substance</a></li>
+				<li><a href="#jtox-compo-tab-{{instanceNo}}">Composition</a></li>
 			</ul>
-			<div id="jtox-substance" class="jtox-substance">
+			<div id="jtox-substance-{{instanceNo}}" class="jtox-substance">
 				<table class="dataTable display">
 					<thead>
 						<tr>
@@ -121,7 +121,7 @@
 					</thead>
 				</table>
 			</div>
-			<div id="jtox-compo-tab" class="jtox-compo-tab"></div>
+			<div id="jtox-compo-tab-{{instanceNo}}" class="jtox-compo-tab"></div>
 		</div>
 <!-- // end of #jtox-studies ]]-->
 <!--[[ jT.ui.templates['one-category'] -->
