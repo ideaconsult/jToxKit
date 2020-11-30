@@ -109,6 +109,34 @@
                 this.blur();
         },
 
+        installHandlers: function (kit, root) {
+            if (root == null)
+                root = kit.rootElement;
+    
+            $('.jtox-handler', root).each(function () {
+                var thi$ = $(this),
+                    name = thi$.data('handler'),
+                    handler = _.get(kit.settings, [ 'handlers', name ], null) || kit[name] || window[name];
+    
+                if (!handler) {
+                    console.warn("jToxQuery: referring unknown handler: '" + name + "'");
+                    return;
+                }
+
+                // Build the proper handler, taking into account if we want debouncing...
+                var eventHnd = _.bind(handler, kit),
+                    eventDelay = thi$.data('handler-delay');
+                if (eventDelay != null)
+                    eventHnd = _.debounce(eventHnd, parseInt(eventDelay));
+                
+                // Now, attach the handler, in the proper way
+                if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
+                    thi$.on('change', eventHnd).on('keydown', jT.ui.enterBlur);
+                else // all the rest respond on click
+                    thi$.on('click', eventHnd);
+            });
+        },
+
         shortenedData: function (content, message, data) {
             var res = '';
 
@@ -995,19 +1023,29 @@ jT.tables = {
 
 	updateControls: function (qStart, qSize) {
 		var pane = $('.jtox-controls', this.rootElement);
+		if (!this.settings.showControls) {
+			pane.hide();
+			return;
+		}
+
+		if (qStart == null)
+			qStart = this.settings.pageStart;
+		if (qSize == null)			
+			qSize = this.settings.pageSize;
+
 		jT.ui.updateTree(pane, {
+			"pagesize": qSize,
 			"pagestart": qSize > 0 ? qStart + 1 : 0,
 			"pageend": qStart + qSize
 		});
-		pane = pane[0];
 
-		var nextBut = $('.next-field', pane);
+		var nextBut = $('.jtox-handler[data-handler=nextPage]', pane);
 		if (this.entriesCount == null || qStart + qSize < this.entriesCount)
 			$(nextBut).addClass('paginate_enabled_next').removeClass('paginate_disabled_next');
 		else
 			$(nextBut).addClass('paginate_disabled_next').removeClass('paginate_enabled_next');
 
-		var prevBut = $('.prev-field', pane);
+		var prevBut = $('.jtox-handler[data-handler=prevPage]', pane);
 		if (qStart > 0)
 			$(prevBut).addClass('paginate_enabled_previous').removeClass('paginate_disabled_previous');
 		else
@@ -1087,24 +1125,6 @@ jT.tables = {
 		return df;
 	},
 
-	inlineChanger: function (location, breed, holder, handler) {
-		if (handler == null)
-			handler = "changed";
-
-		if (breed == "select")
-			return function (data, type, full) {
-				return type != 'display' ? (data || '') : '<select class="jt-inlineaction jtox-handler" data-handler="' + handler + '" data-data="' + location + '" value="' + (data || '') + '">' + (holder || '') + '</select>';
-			};
-		else if (breed == "checkbox") // we use holder as 'isChecked' value
-			return function (data, type, full) {
-				return type != 'display' ? (data || '') : '<input type="checkbox" class="jt-inlineaction jtox-handler" data-handler="' + handler + '" data-data="' + location + '"' + (((!!holder && data == holder) || !!data) ? 'checked="checked"' : '') + '"/>';
-			};
-		else if (breed == "text")
-			return function (data, type, full) {
-				return type != 'display' ? (data || '') : '<input type="text" class="jt-inlineaction jtox-handler" data-handler="' + handler + '" data-data="' + location + '" value="' + (data || '') + '"' + (!holder ? '' : ' placeholder="' + holder + '"') + '/>';
-			};
-	},
-
 	installMultiSelect: function (root, callback, parenter) {
 		if (parenter == null)
 			parenter = function (el) {
@@ -1125,23 +1145,6 @@ jT.tables = {
 			});
 			if (callback != null)
 				callback.call(this, e);
-		});
-	},
-
-	installHandlers: function (kit, root) {
-		if (root == null)
-			root = kit.rootElement;
-
-		$('.jtox-handler', root).each(function () {
-			var name = $(this).data('handler'),
-				handler = _.get(kit.settings, [ 'configuration', 'handlers', name ], null) || window[name];
-
-			if (!handler)
-				console.log("jToxQuery: referring unknown handler: " + name);
-			else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
-				$(this).on('change', _.bind(handler, kit)).on('keydown', jT.ui.enterBlur);
-			else // all the rest respond on click
-				$(this).on('click', _.bind(handler, kit));
 		});
 	},
 
@@ -1205,7 +1208,7 @@ jT.tables = {
 				jT.tables.equalizeHeights.apply(window, $('td.jtox-multi table tbody', nRow).toArray());
 
 				// handle a selection click.. if any
-				jT.tables.installHandlers(kit, nRow);
+				jT.ui.installHandlers(kit, nRow);
 				if (typeof kit.settings.selectionHandler == "function")
 					$('input.jt-selection', nRow).on('change', kit.settings.selectionHandler);
 				// other (non-function) handlers are installed via installHandlers().
@@ -1227,28 +1230,6 @@ jT.tables = {
 		var table = $(root).dataTable(opts);
 		$(table).DataTable().columns.adjust();
 		return table;
-	},
-
-	bindControls: function (kit, handlers) {
-		var pane = $('.jtox-controls', kit.rootElement);
-		if (kit.settings.showControls) {
-			jT.ui.updateTree(pane, { "pagesize": kit.settings.pageSize });
-			pane = pane[0];
-
-			$('.next-field', pane).on('click', handlers.nextPage);
-			$('.prev-field', pane).on('click', handlers.prevPage);
-			$('select', pane).on('change', handlers.sizeChange)
-			var pressTimeout = null;
-			$('input', pane).on('keydown', function (e) {
-				var el = this;
-				if (pressTimeout != null)
-					clearTimeout(pressTimeout);
-				pressTimeout = setTimeout(function () {
-					handlers.filter.apply(el, [e]);
-				}, 350);
-			});
-		} else // ok - hide me
-			pane.style.display = "none";
 	},
 
 	putActions: function (kit, col, ignoreOriginal) {
