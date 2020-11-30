@@ -5,6 +5,9 @@
  **/
 
 (function (_, a$, $, jT) {
+	function getRowData(row) {
+
+	}
 
 	function MatrixKit(settings) {
 		var self = this;
@@ -69,7 +72,8 @@
 
 	MatrixKit.prototype.initStructures = function () {
 		var self = this,
-			selectedQuery = false;
+			selectedQuery = false,
+			ambitCall = function (rowInfo) {};
 
 		this.browserKit = jT.ui.initKit($('#struct-browser'), {
 			baseUrl: this.settings.baseUrl,
@@ -1506,7 +1510,7 @@
 
 		var conf = $.extend(true, {}, jTConfig.matrix, config_study);
 
-		conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "sClass": "center"}, render: function (data, type, full) {
+		conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "className": "center"}, render: function (data, type, full) {
 			if (type != 'display')
 				return data || 0;
 			var bInfo = full.bundles[self.bundleUri];
@@ -1529,7 +1533,7 @@
 			return html;
 		} };
 
-		conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "sClass": "center"}, render: function (data, type, full) {
+		conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "className": "center"}, render: function (data, type, full) {
 
 			if (type != 'display')
 				return data || 0;
@@ -1867,24 +1871,29 @@
 	};
 
 	MatrixKit.defaults = {
-		createForm: null,
 		rootElement: null,
-		bundleUri: null,
-		studyTypeList: {},
 		maxStars: 10,
-		matrixIdentifiers: [
-			"http://www.opentox.org/api/1.1#CASRN",
-			"#SubstanceName",
-			"#SubstanceUUID",
-			"http://www.opentox.org/api/1.1#SubstanceDataSource",
-		],
-		matrixMultiRows: [
-			"#Tag",
-			"http://www.opentox.org/api/1.1#Diagram",
-			"#ConstituentName",
-			"#ConstituentContent",
-			"#ConstituentContainedAs"
-		],
+		studyTypeList: {},
+		structuresGroups: {
+
+		},
+		matrixGroups: {
+			// matrixIdentifiers
+			Identifiers: [
+				"http://www.opentox.org/api/1.1#CASRN",
+				"#SubstanceName",
+				"#SubstanceUUID",
+				"http://www.opentox.org/api/1.1#SubstanceDataSource",
+			],
+			// matrixMultiRows
+			MultiRows: [
+				"#Tag",
+				"http://www.opentox.org/api/1.1#Diagram",
+				"#ConstituentName",
+				"#ConstituentContent",
+				"#ConstituentContainedAs"
+			]
+		},
 		formatters: {
 			formatStatus: function (status) {
 				var statuses = {

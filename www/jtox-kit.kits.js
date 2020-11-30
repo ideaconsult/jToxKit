@@ -443,15 +443,9 @@
 		this.pageSize = this.settings.pageSize;
 
 		if (!this.settings.noInterface) {
-			var self = this;
-			jT.ui.putTemplate('all-compound', ' ? ', this.rootElement);
-
-			jT.tables.bindControls(this, {
-				nextPage: function () { self.nextPage(); },
-				prevPage: function () { self.prevPage(); },
-				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
-				filter: function () { self.updateTables(); }
-			});
+			jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
+			jT.ui.installHandlers(this);
+			jT.tables.updateControls.call(this);
 
 			this.$errDiv = $('.jt-error', this.rootElement);
 		}
@@ -857,7 +851,7 @@
 				$(nRow).data('jtox-index', iDataIndex);
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.tables.installHandlers(self, nRow);
+				jT.ui.installHandlers(self, nRow);
 				$('.jtox-diagram .icon', nRow).on('click', function () {
 					setTimeout(function () {
 						$(self.fixTable).dataTable().fnAdjustColumnSizing();
@@ -899,7 +893,7 @@
 				$(nRow).addClass('jtox-row');
 				$(nRow).data('jtox-index', iDataIndex);
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.tables.installHandlers(self, nRow);
+				jT.ui.installHandlers(self, nRow);
 			},
 			"drawCallback": function (oSettings) {
 				// this is for synchro-sorting the two tables
@@ -1101,7 +1095,7 @@
 					self.updateTables();
 					if (self.settings.showControls) {
 						// finally - go and update controls if they are visible
-						self.updateControls(qStart, dataset.dataEntry.length);
+						jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
 					}
 				}
 			} else {
@@ -1221,10 +1215,6 @@
 		this.queryDataset(uri);
 	};
 	// end of prototype
-
-	CompoundKit.prototype.nextPage = jT.tables.nextPage;
-	CompoundKit.prototype.prevPage = jT.tables.prevPage;
-	CompoundKit.prototype.updateControls = jT.tables.updateControls;
 
 	// some public, static methods
 	CompoundKit.processEntry = function (entry, features, fnValue) {
@@ -1372,6 +1362,12 @@
 			if (oldVal.toLowerCase().indexOf(newVal.toLowerCase()) >= 0)
 				return oldVal;
 			return oldVal + ", " + newVal;
+		},
+		"handlers": {
+			"nextPage": jT.tables.nextPage,
+			"prevPage": jT.tables.prevPage,
+			"sizeChange": function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
+			"filter": function () { this.updateTables(); }
 		},
 		"groups": {
 			"Identifiers": [
@@ -2483,6 +2479,9 @@
  **/
 
 (function (_, a$, $, jT) {
+	function getRowData(row) {
+
+	}
 
 	function MatrixKit(settings) {
 		var self = this;
@@ -2547,7 +2546,8 @@
 
 	MatrixKit.prototype.initStructures = function () {
 		var self = this,
-			selectedQuery = false;
+			selectedQuery = false,
+			ambitCall = function (rowInfo) {};
 
 		this.browserKit = jT.ui.initKit($('#struct-browser'), {
 			baseUrl: this.settings.baseUrl,
@@ -3984,7 +3984,7 @@
 
 		var conf = $.extend(true, {}, jTConfig.matrix, config_study);
 
-		conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "sClass": "center"}, render: function (data, type, full) {
+		conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "className": "center"}, render: function (data, type, full) {
 			if (type != 'display')
 				return data || 0;
 			var bInfo = full.bundles[self.bundleUri];
@@ -4007,7 +4007,7 @@
 			return html;
 		} };
 
-		conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "sClass": "center"}, render: function (data, type, full) {
+		conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "className": "center"}, render: function (data, type, full) {
 
 			if (type != 'display')
 				return data || 0;
@@ -4345,24 +4345,29 @@
 	};
 
 	MatrixKit.defaults = {
-		createForm: null,
 		rootElement: null,
-		bundleUri: null,
-		studyTypeList: {},
 		maxStars: 10,
-		matrixIdentifiers: [
-			"http://www.opentox.org/api/1.1#CASRN",
-			"#SubstanceName",
-			"#SubstanceUUID",
-			"http://www.opentox.org/api/1.1#SubstanceDataSource",
-		],
-		matrixMultiRows: [
-			"#Tag",
-			"http://www.opentox.org/api/1.1#Diagram",
-			"#ConstituentName",
-			"#ConstituentContent",
-			"#ConstituentContainedAs"
-		],
+		studyTypeList: {},
+		structuresGroups: {
+
+		},
+		matrixGroups: {
+			// matrixIdentifiers
+			Identifiers: [
+				"http://www.opentox.org/api/1.1#CASRN",
+				"#SubstanceName",
+				"#SubstanceUUID",
+				"http://www.opentox.org/api/1.1#SubstanceDataSource",
+			],
+			// matrixMultiRows
+			MultiRows: [
+				"#Tag",
+				"http://www.opentox.org/api/1.1#Diagram",
+				"#ConstituentName",
+				"#ConstituentContent",
+				"#ConstituentContainedAs"
+			]
+		},
 		formatters: {
 			formatStatus: function (status) {
 				var statuses = {
@@ -4749,8 +4754,7 @@
 			doQuery = true;
 		}
 
-		// and very finally - install the handlers...
-		jT.tables.installHandlers(this);
+		jT.ui.installHandlers(this);
 		doQuery && this.settings.initialQuery && _.defer(function (self) { self.query(); }, this);
 	};
 
@@ -4867,10 +4871,8 @@
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
-		configuration: {
-			handlers: {
-				query: function (e) { this.query(); },
-			}
+		handlers: {
+			query: function () {this.query(); }
 		}
 	};
 
@@ -6053,7 +6055,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			this.querySubstance(self.settings.substanceUri)
 	};
 
-	SubstanceKit.prototype.init = function (settings) {
+	SubstanceKit.prototype.init = function () {
 		var self = this;
 
 		// deal if the selection is chosen
@@ -6070,12 +6072,8 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		var opts = { "dom": "rti" };
 		if (self.settings.showControls) {
-			jT.tables.bindControls(self, {
-				nextPage: function () { self.nextPage(); },
-				prevPage: function () { self.prevPage(); },
-				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
-				filter: function () { $(self.table).dataTable().filter($(this).val()).draw(); }
-			});
+			jT.ui.installHandlers(this);
+			jT.tables.updateControls.call(self);
 
 			opts['infoCallback'] = function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
 				var needle = $('.filterbox', self.rootElement).val();
@@ -6116,7 +6114,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 					$(self.table).dataTable().fnClearTable();
 					$(self.table).dataTable().fnAddData(result.substance);
 
-					self.updateControls(from, result.substance.length);
+					jT.tables.updateControls.call(self, from, result.substance.length);
 				}
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
@@ -6132,11 +6130,6 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	SubstanceKit.prototype.query = function (uri) {
 		this.querySubstance(uri);
 	};
-
-	// some "inheritance" :-)
-	SubstanceKit.prototype.nextPage = jT.tables.nextPage;
-	SubstanceKit.prototype.prevPage = jT.tables.prevPage;
-	SubstanceKit.prototype.updateControls = jT.tables.updateControls;
 
 	SubstanceKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showControls: true, // show navigation controls or not
@@ -6154,6 +6147,12 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		pageStart: 0,
 		pageSize: 10,
+		handlers: {
+			nextPage: jT.tables.nextPage,
+			prevPage: jT.tables.prevPage,
+			sizeChange: function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
+			filter: function (e) { $(this.table).dataTable().filter($(e.target).val()).draw(); }
+		},
 		/* substanceUri */
 		columns: {
 			substance: {
@@ -6310,15 +6309,16 @@ jT.ui.templates['all-compound']  =
 "<div class=\"jtox-compound\">" +
 "<div class=\"jtox-ds-features\"></div>" +
 "<div class=\"jtox-controls\">" +
-"Showing from<span class=\"high\">{{ pagestart }}</span> to <span class=\"high\">{{ pageend }}</span><span>{{ filtered-text }}</span>in pages of <select value=\"{{ pagesize }}\">" +
+"Showing from<span class=\"high\">{{ pagestart }}</span> to <span class=\"high\">{{ pageend }}</span><span>{{ filtered-text }}</span>in pages of" +
+"<select value=\"{{ pagesize }}\" class=\"jtox-handler\" data-handler=\"sizeChange\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"30\">30</option>" +
 "<option value=\"50\">50</option>" +
 "<option value=\"100\">100</option>" +
 "</select> entries" +
-"<a class=\"paginate_disabled_previous prev-field\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next next-field\" tabindex=\"0\" role=\"button\">Next</a>" +
-"<input type=\"text\" class=\"filterbox\" placeholder=\"Filter...\" />" +
+"<a class=\"paginate_disabled_previous jtox-handler\" data-handler=\"prevPage\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next jtox-handler\" data-handler=\"nextPage\" tabindex=\"0\" role=\"button\">Next</a>" +
+"<input type=\"text\" class=\"filterbox jtox-handler\" data-handler=\"filter\" placeholder=\"Filter...\" />" +
 "</div>" +
 "<div class=\"jtox-ds-tables\">" +
 "<div class=\"jt-error\">" +
@@ -6704,6 +6704,16 @@ jT.ui.templates['info-box']  =
 "</div>" +
 ""; // end of info-box 
 
+jT.ui.templates['matrix-tag-col']  = 
+"<div class=\"jt-matrix-tagging\">" +
+"<i class=\"jt-up fa fa-arrow-up jtox-handler\" title=\"Move the {{subject}} up in the list\"></i>" +
+"<button class=\"jt-toggle jtox-handler jt-target\" data-tag=\"target\" title=\"Select the {{subject}} as Target\">T</button>" +
+"<button class=\"jt-toggle jtox-handler jt-source\" data-tag=\"source\" title=\"Select the {{subject}} as Source\">S</button>" +
+"<button class=\"jt-toggle jtox-handler jt-cm\" data-tag=\"cm\" title=\"Select the {{subject}} as Category Member\">CM</button>" +
+"<i class=\"jt-up fa fa-arrow-down jtox-handler\" title=\"Move the {{subject}} down in the list\"></i>" +
+"</div>" +
+""; // end of matrix-tag-col 
+
 jT.ui.templates['edit-box']  = 
 "<div class=\"edit-box\">" +
 "<div class=\"jtox-medium-box box-field\" data-name=\"type\">" +
@@ -6774,7 +6784,7 @@ jT.ui.templates['kit-query-all']  =
 "</div>" +
 "<div class=\"jtox-inline\">" +
 "<input type=\"text\" name=\"searchbox\" />" +
-"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\"><i class=\"fa fa-search\"></i></button>" +
+"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\" data-handler-delay=\"350\"><i class=\"fa fa-search\"></i></button>" +
 "<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\" data-toggle=\"modal\" data-target=\"#mol-composer\"><i class=\"fa fa-edit\"></i></button>" +
 "</div>" +
 "</div>" +
@@ -6904,7 +6914,8 @@ jT.ui.templates['one-study']  =
 jT.ui.templates['all-substance']  = 
 "<div class=\"jtox-substance\">" +
 "<div class=\"jtox-controls\">" +
-"Showing from<span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high jtox-live-data\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of <select value=\"{{ pagesize }}\">" +
+"Showing from<span class=\"high jtox-live-data\">{{ pagestart }}</span> to <span class=\"high jtox-live-data\">{{ pageend }}</span><span class=\"filtered-text\"> </span>in pages of" +
+"<select value=\"{{ pagesize }}\" class=\"jtox-handler\" data-handler=\"sizeChange\">" +
 "<option value=\"10\" selected=\"yes\">10</option>" +
 "<option value=\"20\">20</option>" +
 "<option value=\"50\">50</option>" +
@@ -6912,8 +6923,8 @@ jT.ui.templates['all-substance']  =
 "<option value=\"200\">200</option>" +
 "<option value=\"500\">500</option>" +
 "</select> substances" +
-"<a class=\"paginate_disabled_previous prev-field\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next next-field\" tabindex=\"0\" role=\"button\">Next</a>" +
-"<input type=\"text\" class=\"filterbox\" placeholder=\"Filter...\" />" +
+"<a class=\"paginate_disabled_previous jtox-handler\" data-handler=\"prevPage\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next jtox-handler\" data-handler=\"nextPage\" tabindex=\"0\" role=\"button\">Next</a>" +
+"<input type=\"text\" class=\"filterbox jtox-handler\" data-handler=\"filter\" placeholder=\"Filter...\" />" +
 "</div>" +
 "<table class=\"display\"></table>" +
 "</div>" +

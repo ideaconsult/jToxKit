@@ -62,15 +62,9 @@
 		this.pageSize = this.settings.pageSize;
 
 		if (!this.settings.noInterface) {
-			var self = this;
-			jT.ui.putTemplate('all-compound', ' ? ', this.rootElement);
-
-			jT.tables.bindControls(this, {
-				nextPage: function () { self.nextPage(); },
-				prevPage: function () { self.prevPage(); },
-				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
-				filter: function () { self.updateTables(); }
-			});
+			jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
+			jT.ui.installHandlers(this);
+			jT.tables.updateControls.call(this);
 
 			this.$errDiv = $('.jt-error', this.rootElement);
 		}
@@ -476,7 +470,7 @@
 				$(nRow).data('jtox-index', iDataIndex);
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.tables.installHandlers(self, nRow);
+				jT.ui.installHandlers(self, nRow);
 				$('.jtox-diagram .icon', nRow).on('click', function () {
 					setTimeout(function () {
 						$(self.fixTable).dataTable().fnAdjustColumnSizing();
@@ -518,7 +512,7 @@
 				$(nRow).addClass('jtox-row');
 				$(nRow).data('jtox-index', iDataIndex);
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.tables.installHandlers(self, nRow);
+				jT.ui.installHandlers(self, nRow);
 			},
 			"drawCallback": function (oSettings) {
 				// this is for synchro-sorting the two tables
@@ -720,7 +714,7 @@
 					self.updateTables();
 					if (self.settings.showControls) {
 						// finally - go and update controls if they are visible
-						self.updateControls(qStart, dataset.dataEntry.length);
+						jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
 					}
 				}
 			} else {
@@ -840,10 +834,6 @@
 		this.queryDataset(uri);
 	};
 	// end of prototype
-
-	CompoundKit.prototype.nextPage = jT.tables.nextPage;
-	CompoundKit.prototype.prevPage = jT.tables.prevPage;
-	CompoundKit.prototype.updateControls = jT.tables.updateControls;
 
 	// some public, static methods
 	CompoundKit.processEntry = function (entry, features, fnValue) {
@@ -991,6 +981,12 @@
 			if (oldVal.toLowerCase().indexOf(newVal.toLowerCase()) >= 0)
 				return oldVal;
 			return oldVal + ", " + newVal;
+		},
+		"handlers": {
+			"nextPage": jT.tables.nextPage,
+			"prevPage": jT.tables.prevPage,
+			"sizeChange": function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
+			"filter": function () { this.updateTables(); }
 		},
 		"groups": {
 			"Identifiers": [

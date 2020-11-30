@@ -38,7 +38,7 @@
 			this.querySubstance(self.settings.substanceUri)
 	};
 
-	SubstanceKit.prototype.init = function (settings) {
+	SubstanceKit.prototype.init = function () {
 		var self = this;
 
 		// deal if the selection is chosen
@@ -55,12 +55,8 @@
 
 		var opts = { "dom": "rti" };
 		if (self.settings.showControls) {
-			jT.tables.bindControls(self, {
-				nextPage: function () { self.nextPage(); },
-				prevPage: function () { self.prevPage(); },
-				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
-				filter: function () { $(self.table).dataTable().filter($(this).val()).draw(); }
-			});
+			jT.ui.installHandlers(this);
+			jT.tables.updateControls.call(self);
 
 			opts['infoCallback'] = function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
 				var needle = $('.filterbox', self.rootElement).val();
@@ -101,7 +97,7 @@
 					$(self.table).dataTable().fnClearTable();
 					$(self.table).dataTable().fnAddData(result.substance);
 
-					self.updateControls(from, result.substance.length);
+					jT.tables.updateControls.call(self, from, result.substance.length);
 				}
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
@@ -117,11 +113,6 @@
 	SubstanceKit.prototype.query = function (uri) {
 		this.querySubstance(uri);
 	};
-
-	// some "inheritance" :-)
-	SubstanceKit.prototype.nextPage = jT.tables.nextPage;
-	SubstanceKit.prototype.prevPage = jT.tables.prevPage;
-	SubstanceKit.prototype.updateControls = jT.tables.updateControls;
 
 	SubstanceKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showControls: true, // show navigation controls or not
@@ -139,6 +130,12 @@
 
 		pageStart: 0,
 		pageSize: 10,
+		handlers: {
+			nextPage: jT.tables.nextPage,
+			prevPage: jT.tables.prevPage,
+			sizeChange: function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
+			filter: function (e) { $(this.table).dataTable().filter($(e.target).val()).draw(); }
+		},
 		/* substanceUri */
 		columns: {
 			substance: {

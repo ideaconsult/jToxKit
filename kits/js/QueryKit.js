@@ -178,8 +178,7 @@
 			doQuery = true;
 		}
 
-		// and very finally - install the handlers...
-		jT.tables.installHandlers(this);
+		jT.ui.installHandlers(this);
 		doQuery && this.settings.initialQuery && _.defer(function (self) { self.query(); }, this);
 	};
 
@@ -296,10 +295,8 @@
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
-		configuration: {
-			handlers: {
-				query: function (e) { this.query(); },
-			}
+		handlers: {
+			query: function () {this.query(); }
 		}
 	};
 

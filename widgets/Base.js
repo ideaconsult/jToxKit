@@ -109,6 +109,34 @@
                 this.blur();
         },
 
+        installHandlers: function (kit, root) {
+            if (root == null)
+                root = kit.rootElement;
+    
+            $('.jtox-handler', root).each(function () {
+                var thi$ = $(this),
+                    name = thi$.data('handler'),
+                    handler = _.get(kit.settings, [ 'handlers', name ], null) || kit[name] || window[name];
+    
+                if (!handler) {
+                    console.warn("jToxQuery: referring unknown handler: '" + name + "'");
+                    return;
+                }
+
+                // Build the proper handler, taking into account if we want debouncing...
+                var eventHnd = _.bind(handler, kit),
+                    eventDelay = thi$.data('handler-delay');
+                if (eventDelay != null)
+                    eventHnd = _.debounce(eventHnd, parseInt(eventDelay));
+                
+                // Now, attach the handler, in the proper way
+                if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
+                    thi$.on('change', eventHnd).on('keydown', jT.ui.enterBlur);
+                else // all the rest respond on click
+                    thi$.on('click', eventHnd);
+            });
+        },
+
         shortenedData: function (content, message, data) {
             var res = '';
 
