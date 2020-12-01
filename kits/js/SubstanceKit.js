@@ -41,12 +41,12 @@
 	SubstanceKit.prototype.init = function () {
 		var self = this;
 
-		// deal if the selection is chosen
+		// deal with the additions to the id column with details and selection
 		var colId = self.settings.columns.substance['Id'];
-		if (colId) {
-			jT.tables.putActions(self, colId);
-			colId.title = '';
-		}
+		if (typeof this.settings.onDetails === 'function')
+			jT.tables.insertRenderer(true, colId, jT.tables.getDetailsRenderer('substance'));
+		if (typeof this.settings.handlers.toggleSelection === 'function')
+			jT.tables.insertRenderer(true, colId, jT.tables.getSelectionRenderer('substance'));
 
 		// Leave that here, because `self` is used...
 		self.settings.columns.substance['Owner'].render = function (data, type, full) {
@@ -55,7 +55,7 @@
 
 		var opts = { "dom": "rti" };
 		if (self.settings.showControls) {
-			jT.ui.installHandlers(this);
+			jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
 			jT.tables.updateControls.call(self);
 
 			opts['infoCallback'] = function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
@@ -116,7 +116,6 @@
 
 	SubstanceKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showControls: true, // show navigation controls or not
-		selectionHandler: null, // if given - this will be the name of the handler, which will be invoked by jToxQuery when the attached selection box has changed...
 		embedComposition: null, // embed composition listing as details for each substance - it valid only if onDetails is not given.
 		noInterface: false, // run in interface-less mode - only data retrieval and callback calling.
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
@@ -131,10 +130,9 @@
 		pageStart: 0,
 		pageSize: 10,
 		handlers: {
-			nextPage: jT.tables.nextPage,
-			prevPage: jT.tables.prevPage,
 			sizeChange: function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
-			filter: function (e) { $(this.table).dataTable().filter($(e.target).val()).draw(); }
+			filter: function (e) { $(this.table).dataTable().filter($(e.target).val()).draw(); },
+			alignTables: function () { $(this.table).dataTable().fnAdjustColumnSizing(); }
 		},
 		/* substanceUri */
 		columns: {

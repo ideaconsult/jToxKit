@@ -178,8 +178,8 @@
 
 		// deal if the selection is chosen
 		var colId = self.settings.columns.composition && self.settings.columns.composition.Name;
-		if (colId && !!self.settings.selectionHandler) {
-			jT.tables.putActions(self, colId);
+		if (colId && !!self.settings.handlers.toggleSelection) {
+			jT.tables.insertRenderer(true, colId, jT.tables.getSelectionRenderer('substance'));
 			colId.sWidth = "60px";
 		}
 
@@ -294,12 +294,12 @@
 
 	CompositionKit.instancesCount = 0;
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-		selectionHandler: null, // selection handler, if needed for selection checkbox, which will be inserted if this is non-null
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
 		showDiagrams: false, // whether to show diagram for each compound in the composition
 		noInterface: false, // run in interface-less mode - just data retrieval and callback calling.
 		sDom: "rt<Ffp>", // compounds (ingredients) table sDom
 		onLoaded: null,
+		handlers: { },
 
 		/* compositionUri */
 		columns: {
@@ -419,7 +419,7 @@
 		if (this.settings.rememberChecks && this.settings.showTabs)
 			this.featureStates = {};
 
-		if (!settings.onDetails)
+		if (!settings.onDetails && settings.hasDetails)
 			this.settings.onDetails = function (root, data) { this.expandedData(root, data); };
 
 		// finally make the query, if Uri is provided. This _invokes_ init() internally.
@@ -444,7 +444,7 @@
 
 		if (!this.settings.noInterface) {
 			jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
-			jT.ui.installHandlers(this);
+			jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
 			jT.tables.updateControls.call(this);
 
 			this.$errDiv = $('.jt-error', this.rootElement);
@@ -688,27 +688,15 @@
 	};
 
 	CompoundKit.prototype.prepareTables = function () {
-		var self = this;
-		var varCols = [];
-		var fixCols = [];
+		var self = this,
+			varCols = [],
+			fixCols = [];
 
 		// first, some preparation of the first, IdRow column
 		var idFeature = self.settings.baseFeatures['#IdRow'];
-		if (!idFeature.render) {
-			idFeature.render = self.settings.hasDetails ?
-				function (data, type, full) {
-					return (type != "display") ?
-						'' + data :
-						"&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>" +
-						'<i class="jtox-details-open fa fa-folder" title="Press to open/close detailed info for this compound"></i>';
-				} : // no details case
-				function (data, type, full) {
-					return (type != "display") ?
-						'' + data :
-						"&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;";
-				};
-		}
-
+		if (!!this.settings.onDetails)
+			idFeature = jT.tables.insertRenderer(idFeature, jT.tables.getDetailsRenderer('compound'));
+		
 		fixCols.push(
 			self.prepareColumn('#IdRow', idFeature), {
 				"className": "jtox-hidden",
@@ -757,15 +745,16 @@
 				cell.removeAttribute('colspan');
 		};
 
-		var fnShowDetails = (self.settings.hasDetails ? function (row, event) {
-			var cell = $(".jtox-ds-details", row)[0];
-			var idx = $(row).data('jtox-index');
+		if (self.settings.hasDetails) self.settings.handlers.toggleDetails = function (event) {
+			var row = $(event.target).closest('tr'),
+				idx = row.data('jtox-index'),
+				cell = $(".jtox-ds-details", row)[0];
 
 			if (self.settings.preDetails != null && !jT.fireCallback(self.settings.preDetails, self, idx, cell) || !cell)
 				return; // the !cell  means you've forgotten to add #DetailedInfoRow feature somewhere.
 			
-			$(row).toggleClass('jtox-detailed-row');
-			var toShow = $(row).hasClass('jtox-detailed-row');
+			row.toggleClass('jtox-detailed-row');
+			var toShow = row.hasClass('jtox-detailed-row');
 
 			// now go and expand both fixed and variable table details' cells.
 			fnExpandCell(cell, toShow);
@@ -804,7 +793,7 @@
 			}
 
 			self.equalizeTables();
-		} : null); // fnShowDetails definition end
+		};
 
 		// now proceed to enter all other columns
 		for (var gr in self.groups) {
@@ -844,20 +833,10 @@
 			"createdRow": function (nRow, aData) {
 				// attach the click handling
 				var iDataIndex = aData.index;
-				if (self.settings.hasDetails)
-					$('.jtox-details-open', nRow).on('click', function (e) {
-						fnShowDetails(nRow, e);
-					});
 				$(nRow).data('jtox-index', iDataIndex);
 
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.ui.installHandlers(self, nRow);
-				$('.jtox-diagram .icon', nRow).on('click', function () {
-					setTimeout(function () {
-						$(self.fixTable).dataTable().fnAdjustColumnSizing();
-						self.equalizeTables();
-					}, 50);
-				});
+				jT.ui.installHandlers(self, nRow, jT.tables.commonHandlers);
 			},
 			"language": {
 				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.process || self.settings.language.loadingRecords || 'Feeding data...') + '</span>'
@@ -893,7 +872,7 @@
 				$(nRow).addClass('jtox-row');
 				$(nRow).data('jtox-index', iDataIndex);
 				jT.fireCallback(self.settings.onRow, self, nRow, aData, iDataIndex);
-				jT.ui.installHandlers(self, nRow);
+				jT.ui.installHandlers(self, nRow, jT.tables.commonHandlers);
 			},
 			"drawCallback": function (oSettings) {
 				// this is for synchro-sorting the two tables
@@ -1364,10 +1343,12 @@
 			return oldVal + ", " + newVal;
 		},
 		"handlers": {
-			"nextPage": jT.tables.nextPage,
-			"prevPage": jT.tables.prevPage,
 			"sizeChange": function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
-			"filter": function () { this.updateTables(); }
+			"filter": function () { this.updateTables(); },
+			"alignTables": function () {
+				$(this.fixTable).dataTable().fnAdjustColumnSizing();
+				this.equalizeTables();
+			}
 		},
 		"groups": {
 			"Identifiers": [
@@ -1456,46 +1437,6 @@
 
 		// These are instance-wide pre-definitions of default baseFeatures as described below.
 		"baseFeatures": {
-			// and one for unified way of processing diagram. This can be used as template too
-			"http://www.opentox.org/api/1.1#Diagram": {
-				title: "Diagram",
-				search: false,
-				visibility: "main",
-				primary: true,
-				data: "compound.URI",
-				column: {
-					className: "paddingless",
-					width: "125px"
-				},
-				render: function (data, type, full) {
-					dUri = jT.ambit.diagramUri(data);
-					return (type != "display") ? dUri : '<div class="jtox-diagram borderless"><i class="icon fa fa-search-plus"></i><a target="_blank" href="' + data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
-				}
-			},
-			'#IdRow': {
-				used: true,
-				basic: true,
-				data: "number",
-				column: {
-					className: "middle"
-				}
-			},
-			"#DetailedInfoRow": {
-				title: "InfoRow",
-				search: false,
-				data: "compound.URI",
-				basic: true,
-				primary: true,
-				column: {
-					className: "jtox-hidden jtox-ds-details paddingless",
-					width: "0px"
-				},
-				visibility: "none",
-				render: function (data, type, full) {
-					return '';
-				}
-			},
-
 			"http://www.opentox.org/api/1.1#Similarity": {
 				title: "Similarity",
 				data: "compound.metric",
@@ -2479,10 +2420,6 @@
  **/
 
 (function (_, a$, $, jT) {
-	function getRowData(row) {
-
-	}
-
 	function MatrixKit(settings) {
 		var self = this;
 
@@ -2561,10 +2498,10 @@
 				var baseUrl = jT.formBaseUrl(this.datasetUri);
 				new jT.ui.Substance($.extend(true, {}, this.settings, {
 					target: substRoot,
-					selectionHandler: null,
 					substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 					showControls: false,
 					onLoaded: null,
+					handlers: jT.tables.commonHandlers,
 					onDetails: function (studyRoot, data) {
 						new jT.ui.Study($.extend({}, this.settings, {
 							target: studyRoot,
@@ -6058,12 +5995,12 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	SubstanceKit.prototype.init = function () {
 		var self = this;
 
-		// deal if the selection is chosen
+		// deal with the additions to the id column with details and selection
 		var colId = self.settings.columns.substance['Id'];
-		if (colId) {
-			jT.tables.putActions(self, colId);
-			colId.title = '';
-		}
+		if (typeof this.settings.onDetails === 'function')
+			jT.tables.insertRenderer(true, colId, jT.tables.getDetailsRenderer('substance'));
+		if (typeof this.settings.handlers.toggleSelection === 'function')
+			jT.tables.insertRenderer(true, colId, jT.tables.getSelectionRenderer('substance'));
 
 		// Leave that here, because `self` is used...
 		self.settings.columns.substance['Owner'].render = function (data, type, full) {
@@ -6072,7 +6009,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 		var opts = { "dom": "rti" };
 		if (self.settings.showControls) {
-			jT.ui.installHandlers(this);
+			jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
 			jT.tables.updateControls.call(self);
 
 			opts['infoCallback'] = function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
@@ -6133,7 +6070,6 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	SubstanceKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showControls: true, // show navigation controls or not
-		selectionHandler: null, // if given - this will be the name of the handler, which will be invoked by jToxQuery when the attached selection box has changed...
 		embedComposition: null, // embed composition listing as details for each substance - it valid only if onDetails is not given.
 		noInterface: false, // run in interface-less mode - only data retrieval and callback calling.
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
@@ -6148,10 +6084,9 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		pageStart: 0,
 		pageSize: 10,
 		handlers: {
-			nextPage: jT.tables.nextPage,
-			prevPage: jT.tables.prevPage,
 			sizeChange: function (e) { this.queryEntries(this.pageStart, parseInt($(e.target).val())); },
-			filter: function (e) { $(this.table).dataTable().filter($(e.target).val()).draw(); }
+			filter: function (e) { $(this.table).dataTable().filter($(e.target).val()).draw(); },
+			alignTables: function () { $(this.table).dataTable().fnAdjustColumnSizing(); }
 		},
 		/* substanceUri */
 		columns: {
@@ -6318,7 +6253,7 @@ jT.ui.templates['all-compound']  =
 "<option value=\"100\">100</option>" +
 "</select> entries" +
 "<a class=\"paginate_disabled_previous jtox-handler\" data-handler=\"prevPage\" tabindex=\"0\" role=\"button\">Previous</a><a class=\"paginate_enabled_next jtox-handler\" data-handler=\"nextPage\" tabindex=\"0\" role=\"button\">Next</a>" +
-"<input type=\"text\" class=\"filterbox jtox-handler\" data-handler=\"filter\" placeholder=\"Filter...\" />" +
+"<input type=\"text\" class=\"filterbox jtox-handler\" data-handler=\"filter\" data-handler-delay=\"350\" data-handler-event=\"keydown\" placeholder=\"Filter...\" />" +
 "</div>" +
 "<div class=\"jtox-ds-tables\">" +
 "<div class=\"jt-error\">" +
@@ -6708,11 +6643,11 @@ jT.ui.templates['info-box']  =
 
 jT.ui.templates['matrix-tag-col']  = 
 "<div class=\"jt-matrix-tagging\">" +
-"<i class=\"jt-up fa fa-arrow-up jtox-handler\" title=\"Move the {{subject}} up in the list\"></i>" +
-"<button class=\"jt-toggle jtox-handler jt-target\" data-tag=\"target\" title=\"Select the {{subject}} as Target\">T</button>" +
-"<button class=\"jt-toggle jtox-handler jt-source\" data-tag=\"source\" title=\"Select the {{subject}} as Source\">S</button>" +
-"<button class=\"jt-toggle jtox-handler jt-cm\" data-tag=\"cm\" title=\"Select the {{subject}} as Category Member\">CM</button>" +
-"<i class=\"jt-up fa fa-arrow-down jtox-handler\" title=\"Move the {{subject}} down in the list\"></i>" +
+"<i class=\"jt-up fa fa-arrow-up jtox-handler\" data-handler=\"substanceMove\" data-direction=\"up\" title=\"Move the {{subject}} up in the list\"></i>" +
+"<button class=\"jt-toggle jtox-handler jt-target\" data-handler=\"{{subject}}Tag\" data-tag=\"target\" title=\"Select the {{subject}} as Target\">T</button>" +
+"<button class=\"jt-toggle jtox-handler jt-source\" data-handler=\"{{subject}}Tag\" data-tag=\"source\" title=\"Select the {{subject}} as Source\">S</button>" +
+"<button class=\"jt-toggle jtox-handler jt-cm\" data-handler=\"{{subject}}Tag\" data-tag=\"cm\" title=\"Select the {{subject}} as Category Member\">CM</button>" +
+"<i class=\"jt-up fa fa-arrow-down jtox-handler\" data-handler=\"substanceMove\" data-direction=\"down\" title=\"Move the {{subject}} down in the list\"></i>" +
 "</div>" +
 ""; // end of matrix-tag-col 
 
@@ -6786,7 +6721,7 @@ jT.ui.templates['kit-query-all']  =
 "</div>" +
 "<div class=\"jtox-inline\">" +
 "<input type=\"text\" name=\"searchbox\" />" +
-"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\" data-handler-delay=\"350\"><i class=\"fa fa-search\"></i></button>" +
+"<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\"><i class=\"fa fa-search\"></i></button>" +
 "<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\" data-toggle=\"modal\" data-target=\"#mol-composer\"><i class=\"fa fa-edit\"></i></button>" +
 "</div>" +
 "</div>" +

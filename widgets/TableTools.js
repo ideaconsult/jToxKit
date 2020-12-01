@@ -6,16 +6,6 @@
  */
 
 jT.tables = {
-	nextPage: function () {
-		if (this.entriesCount == null || this.pageStart + this.pageSize < this.entriesCount)
-			this.queryEntries(this.pageStart + this.pageSize);
-	},
-
-	prevPage: function () {
-		if (this.pageStart > 0)
-			this.queryEntries(this.pageStart - this.pageSize);
-	},
-
 	updateControls: function (qStart, qSize) {
 		var pane = $('.jtox-controls', this.rootElement);
 		if (!this.settings.showControls) {
@@ -162,6 +152,12 @@ jT.tables = {
 		return out;
 	},
 
+	getRowData: function (el) {
+		var table = $(el).closest('table').DataTable(),
+			row = $(el).closest('tr')[0];
+		return table && table.row(row).data();
+	},
+
 	queryInfo: function (data) {
 		var info = {};
 		for (var i = 0, dl = data.length; i < dl; ++i)
@@ -203,17 +199,7 @@ jT.tables = {
 				jT.tables.equalizeHeights.apply(window, $('td.jtox-multi table tbody', nRow).toArray());
 
 				// handle a selection click.. if any
-				jT.ui.installHandlers(kit, nRow);
-				if (typeof kit.settings.selectionHandler == "function")
-					$('input.jt-selection', nRow).on('change', kit.settings.selectionHandler);
-				// other (non-function) handlers are installed via installHandlers().
-
-				if (!!kit.settings.onDetails) {
-					$('.jtox-details-toggle', nRow).on('click', function (e) {
-						var root = jT.tables.toggleDetails(e, nRow);
-						root && jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
-					});
-				}
+				jT.ui.installHandlers(kit, nRow, jT.tables.commonHandlers);
 			}
 		}, settings);
 
@@ -227,59 +213,41 @@ jT.tables = {
 		return table;
 	},
 
-	putActions: function (kit, col, ignoreOriginal) {
-		if (!!kit.settings.selectionHandler || !!kit.settings.onDetails) {
-			var oldFn = col.render;
-			var newFn = function (data, type, full) {
-				var html = oldFn(data, type, full);
-				if (type != 'display')
-					return html;
+	insertRenderer: function (inplace, colDef, render, pos) {
+		if (typeof inplace !== 'boolean') {
+			pos = render;
+			render = colDef;
+			colDef = inplace;
+			inplace = false;
+		}
 
-				if (!!ignoreOriginal)
-					html = '';
+		var oldRender = colDef.render,
+			newRender = !oldRender ? render : function (data, type, full) {
+				var oldContent = oldRender(data, type, full),
+					newContent = render(data, type, full);
 
-				// this is inserted BEFORE the original, starting with given PRE-content
-				if (!!kit.settings.selectionHandler)
-					html = '<input type="checkbox" value="' + data + '" class="' +
-					(typeof kit.settings.selectionHandler == 'string' ? 'jtox-handler" data-handler="' + kit.settings.selectionHandler + '"' : 'jt-selection"') +
-					'/>' + html;
-
-				// strange enough - this is inserted AFTER the original
-				if (!!kit.settings.onDetails)
-					html += '<span class="jtox-details-toggle ui-icon ui-icon-folder-collapsed" data-data="' + data + '" title="Press to open/close detailed info for this entry"></span>';
-
-				return html;
+				return (pos === 'before') ? newContent + oldContent : oldContent + newContent;
 			};
 
-			col.render = newFn;
-		}
-		return col;
+		if (inplace)
+			colDef.render = newRender;
+		else
+			colDef = $.extend({}, colDef, { render: newRender });
+		return colDef;
 	},
 
-	toggleDetails: function (event, row) {
-		$(event.currentTarget).toggleClass('ui-icon-folder-collapsed');
-		$(event.currentTarget).toggleClass('ui-icon-folder-open');
-		$(event.currentTarget).toggleClass('jtox-openned');
-		if (!row)
-			row = $(event.currentTarget).parents('tr')[0];
+	getDetailsRenderer: function (subject, handler) {
+		var html = '<i class="jtox-details-open fa fa-folder jtox-handler" data-handler="' + (handler || 'toggleDetails') + 
+			'" title="Press to open/close detailed info for this ' + subject + '"></i>';
+		return function (data, type)  { return type === 'display' ? html : data; }
+	},
 
-		var cell = $(event.currentTarget).parents('td')[0];
-
-		if ($(event.currentTarget).hasClass('jtox-openned')) {
-			var detRow = document.createElement('tr');
-			var detCell = document.createElement('td');
-			detRow.appendChild(detCell);
-			$(detCell).addClass('jtox-details');
-
-			detCell.setAttribute('colspan', $(row).children().length - 1);
-			row.parentNode.insertBefore(detRow, row.nextElementSibling);
-
-			cell.setAttribute('rowspan', '2');
-			return detCell;
-		} else {
-			cell.removeAttribute('rowspan');
-			$($(row).next()).remove();
-			return null;
+	getSelectionRenderer: function (subject, handler) {
+		return function (data, type, full) {
+			return type !== 'display' 
+				? data 
+				: '<input type="checkbox" value="' + data + '" class="jt-selection jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
+				'" title="Add this ' + (subject || 'entry') + ' to the selection"' + '/>';
 		}
 	},
 
@@ -311,5 +279,41 @@ jT.tables = {
 				}
 			}
 		}
+	},
+	commonHandlers: {
+		nextPage: function () {
+			if (this.entriesCount == null || this.pageStart + this.pageSize < this.entriesCount)
+				this.queryEntries(this.pageStart + this.pageSize);
+		},
+	
+		prevPage: function () {
+			if (this.pageStart > 0)
+				this.queryEntries(this.pageStart - this.pageSize);
+		},
+		toggleDetails: function (event) {
+			var el$ = $(event.target),
+				row = el$.closest('tr')[0],
+				cell = el$.closest('td')[0];
+
+			el$.toggleClass('fa-folder fa-folder-open jtox-openned');
+	
+			if (el$.hasClass('jtox-openned')) {
+				var detRow = document.createElement('tr'),
+					detCell = document.createElement('td');
+				detRow.appendChild(detCell);
+				$(detCell).addClass('jtox-details');
+	
+				detCell.setAttribute('colspan', $(row).children().length - 1);
+				row.parentNode.insertBefore(detRow, row.nextElementSibling);
+	
+				cell.setAttribute('rowspan', '2');
+	
+				return jT.fireCallback(this.settings.onDetails, this, detCell, jT.tables.getRowData(row), el$[0]);
+			} else {
+				cell.removeAttribute('rowspan');
+				$($(row).next()).remove();
+				return null;
+			}
+		},
 	}
 };

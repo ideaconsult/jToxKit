@@ -22,8 +22,8 @@
 
 		// deal if the selection is chosen
 		var colId = self.settings.columns.composition && self.settings.columns.composition.Name;
-		if (colId && !!self.settings.selectionHandler) {
-			jT.tables.putActions(self, colId);
+		if (colId && !!self.settings.handlers.toggleSelection) {
+			jT.tables.insertRenderer(true, colId, jT.tables.getSelectionRenderer('substance'));
 			colId.sWidth = "60px";
 		}
 
@@ -138,12 +138,12 @@
 
 	CompositionKit.instancesCount = 0;
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-		selectionHandler: null, // selection handler, if needed for selection checkbox, which will be inserted if this is non-null
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
 		showDiagrams: false, // whether to show diagram for each compound in the composition
 		noInterface: false, // run in interface-less mode - just data retrieval and callback calling.
 		sDom: "rt<Ffp>", // compounds (ingredients) table sDom
 		onLoaded: null,
+		handlers: { },
 
 		/* compositionUri */
 		columns: {

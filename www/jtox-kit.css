@@ -1255,14 +1255,6 @@ input.widget-filter {
   border: 0px;
 }
 
-/* div.jtox-matrix-kit.structlist #struct-query .jtox-foldable {
-  display: none;
-}
-
-div.jtox-matrix-kit.structlist #struct-browser {
-  margin-top: 5px;
-} */
-
 #structures-expand-all, #structures-collapse-all {
   font-size: 0.8em;
   padding: .25em .8em;
