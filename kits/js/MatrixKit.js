@@ -5,6 +5,21 @@
  **/
 
 (function (_, a$, $, jT) {
+	var defTagButtons = {
+		'T': {
+			tag: 'target',
+			name: 'Target'
+		},
+		'S': {
+			tag: 'source',
+			name: 'Source'
+		},
+		'CM': {
+			tag: 'cm',
+			name: 'Category Member'
+		}
+	};
+
 	function MatrixKit(settings) {
 		var self = this;
 
@@ -12,6 +27,8 @@
 		jT.ui.putTemplate('all-matrix', ' ? ', this.rootElement);
 
 		this.settings = $.extend(true, {}, MatrixKit.defaults, settings);
+		jT.ui.rebindRenderers(this, this.settings.baseFeatures, true);
+
 		this.bundleSummary = {
 			compounds: 0,
 			substances: 0,
@@ -69,10 +86,17 @@
 	MatrixKit.prototype.initStructures = function () {
 		var self = this,
 			selectedQuery = false,
-			ambitCall = function (rowInfo) {};
+			ambitCall = function (rowInfo) {
+
+			};
 
 		this.browserKit = jT.ui.initKit($('#struct-browser'), {
 			baseUrl: this.settings.baseUrl,
+			baseFeatures: _.defaults({
+				'#SelectionRow': this.getSelectionCol('structure', ['T', 'S', 'CM'], true)
+				}, this.settings.baseFeatures),
+			groups: this.settings.groups.structure,
+			handlers: this.settings.handlers,
 			onLoaded: function (dataset) {
 				if (selectedQuery) {
 					self.bundleSummary.compounds = dataset.dataEntry.length;
@@ -95,36 +119,36 @@
 					}
 				}));
 			},
-			onRow: function (row, data) {
-				if (!data.bundles) return;
+			// onRow: function (row, data) {
+			// 	if (!data.bundles) return;
 	
-				var bundleInfo = data.bundles[self.bundleUri] || {};
-				// we need to setup remarks field regardless of bundleInfo presence
-				var noteEl = $('textarea.remark', row).on('change', function (e) {
-					var data = jT.ui.rowData(this),
-						el = this,
-						bInfo = data.bundles[self.bundleUri] || {};
-					$(el).addClass('loading');
-					jT.ambit.call(self, self.bundleUri + '/compound', {
-						'method': 'PUT',
-						'data': {
-							compound_uri: data.compound.URI,
-							command: 'add',
-							tag: bInfo.tag,
-							remarks: $(el).val()
-						}
-					}, function (result) {
-						$(el).removeClass('loading');
-					});
-				});
+			// 	var bundleInfo = data.bundles[self.bundleUri] || {};
+			// 	// we need to setup remarks field regardless of bundleInfo presence
+			// 	var noteEl = $('textarea.remark', row).on('change', function (e) {
+			// 		var data = jT.ui.rowData(this),
+			// 			el = this,
+			// 			bInfo = data.bundles[self.bundleUri] || {};
+			// 		$(el).addClass('loading');
+			// 		jT.ambit.call(self, self.bundleUri + '/compound', {
+			// 			'method': 'PUT',
+			// 			'data': {
+			// 				compound_uri: data.compound.URI,
+			// 				command: 'add',
+			// 				tag: bInfo.tag,
+			// 				remarks: $(el).val()
+			// 			}
+			// 		}, function (result) {
+			// 			$(el).removeClass('loading');
+			// 		});
+			// 	});
 	
-				if (!!bundleInfo.tag) {
-					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
-					noteEl.val(bundleInfo.remarks);
-				}
-				else
-					noteEl.prop('disabled', true).val(' ');
-			}
+			// 	if (!!bundleInfo.tag) {
+			// 		$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
+			// 		noteEl.val(bundleInfo.remarks);
+			// 	}
+			// 	else
+			// 		noteEl.prop('disabled', true).val(' ');
+			// }
 		});
 
 		this.queryKit = jT.ui.initKit($('#struct-query'), {
@@ -142,6 +166,47 @@
 			}
 		});
 	};
+
+	MatrixKit.prototype.getSelectionCol = function (subject, buttons, arrows) {
+		var self = this,
+			colDef = this.settings.baseFeatures['#SelectionRow'],
+			newRenderer = function (data, type, full) {
+				data = ((data[self.bundleUri] || {}).tag || '').toLowerCase();
+
+				if (type !== 'display')
+					return data;
+
+				var html = '';
+				if (arrows && full.index > 0)
+					html += jT.ui.fillHtml('matrix-sel-arrow', {
+						direction: 'up',
+						subject: subject
+					});
+				for (var i = 0;i < buttons.length; ++i) {
+					var bDef = defTagButtons[buttons[i]];
+
+					html += jT.ui.fillHtml('matrix-tag-button', $.extend({
+						code: buttons[i],
+						subject: subject,
+						status: bDef.tag == data ? 'active' : ''
+					}, bDef));
+				}
+				// TODO: How to tell if everything?
+				if (arrows )
+					html += jT.ui.fillHtml('matrix-sel-arrow', {
+						direction: 'down',
+						subject: subject
+					});
+
+				return html;
+			};
+
+		return jT.tables.insertRenderer(
+			colDef, 
+			newRenderer,  
+			{ separator: '<br/>' }
+		);
+	},
 
 	MatrixKit.prototype.initUsers = function () {
 		var self = this;
@@ -1852,20 +1917,6 @@
 		}, 16);
 	};
 
-
-	$(document).ready(function(){
-		$('#logger').on('click', function () { $(this).toggleClass('hidden'); });
-	});
-
-	function formatStatus(status) {
-		var statuses = {
-			'draft': 'Draft Version',
-			'published': 'Final Assessment',
-			'archived': 'Archived Version'
-		}
-		return statuses[status];
-	};
-
 	MatrixKit.defaults = {
 		rootElement: null,
 		maxStars: 10,
@@ -1873,22 +1924,50 @@
 		structuresGroups: {
 
 		},
-		matrixGroups: {
-			// matrixIdentifiers
-			Identifiers: [
-				"http://www.opentox.org/api/1.1#CASRN",
-				"#SubstanceName",
-				"#SubstanceUUID",
-				"http://www.opentox.org/api/1.1#SubstanceDataSource",
-			],
-			// matrixMultiRows
-			MultiRows: [
-				"#Tag",
-				"http://www.opentox.org/api/1.1#Diagram",
-				"#ConstituentName",
-				"#ConstituentContent",
-				"#ConstituentContainedAs"
-			]
+		handlers: {
+			substanceMove: function (e) { },
+			structureTag: function (e) { },
+			substanceTag: function(e) { },
+			structureReason: function (e) { }
+		},
+		groups: {
+			structure: {
+				Identifiers: [
+					"#SelectionRow",
+					"http://www.opentox.org/api/1.1#Diagram",
+					"#DetailedInfoRow",
+					"http://www.opentox.org/api/1.1#CASRN",
+					"http://www.opentox.org/api/1.1#EINECS",
+					"http://www.opentox.org/api/1.1#IUCLID5_UUID"
+				],
+				Names: [
+					"http://www.opentox.org/api/1.1#ChemicalName",
+					"http://www.opentox.org/api/1.1#TradeName",
+					"http://www.opentox.org/api/1.1#IUPACName",
+					"http://www.opentox.org/api/1.1#SMILES",
+					"http://www.opentox.org/api/1.1#InChIKey",
+					"http://www.opentox.org/api/1.1#InChI",
+					"http://www.opentox.org/api/1.1#REACHRegistrationDate"
+				],
+				Other: [
+					"http://www.opentox.org/api/1.1#Reasoning"
+				]
+			},	
+			matrix: {
+				Identifiers: [
+					"http://www.opentox.org/api/1.1#CASRN",
+					"#SubstanceName",
+					"#SubstanceUUID",
+					"http://www.opentox.org/api/1.1#SubstanceDataSource",
+				],
+				MultiRows: [
+					"#Tag",
+					"http://www.opentox.org/api/1.1#Diagram",
+					"#ConstituentName",
+					"#ConstituentContent",
+					"#ConstituentContainedAs"
+				]
+			}
 		},
 		formatters: {
 			formatStatus: function (status) {
@@ -1905,6 +1984,26 @@
 					month = d.getMonth() + 1;
 
 				return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
+			}
+		},
+		baseFeatures: {
+			"#SelectionRow" : {
+				data: "bundles",
+				column: { className: "center" },
+				search: true,
+				primary: true
+			},
+			"http://www.opentox.org/api/1.1#Reasoning" : {
+				title: "Rationale",
+				data: "compound.URI",
+				search: true,
+				column: { width: "300px", className: "paddingless" },
+				render : function(data, type, full) {
+					// This `this` is available due to rebinding in the initialization step.
+					var bundleInfo = full.bundles[this.bundleUri] || {};
+					data = bundleInfo.tag && bundleInfo.remarks || '';
+					return (type != 'display') ? data : '<textarea class="remark jtox-handler" data-handler="structureReason" placeholder="Reason for selection_">' + data + '</textarea>';
+				}
 			}
 		}
 	};

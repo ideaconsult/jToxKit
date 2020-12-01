@@ -278,6 +278,22 @@
             for (var i = 0, il = data.length; i < il; ++i)
                 res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
             return res;
+        },
+
+        rebindRenderers: function (kit, features, inplace) {
+            var newFeats = {};
+
+            for (var fId in features) {
+                var fDef = features[fId];
+                if (typeof fDef.render !== 'function')
+                    continue;
+                else if (inplace)
+                    fDef.render = _.bind(fDef.render, kit);
+                else
+                    newFeats[fId] = _.defaults({ render: _.bind(fDef.render, kit) }, fDef);
+            }
+
+            return inplace ? features : _.defaults(newFeats, features);
         }
     });
 
@@ -293,7 +309,6 @@
 
 jT.ui = a$.extend(jT.ui, {
   rootSettings: {}, // These can be modified from the URL string itself.
-  kitsMap: {},      // all found kits are put here.
 	templateRoot: null,
 	callId: 0,
 
@@ -350,9 +365,6 @@ jT.ui = a$.extend(jT.ui, {
           fn.prototype.__kits = [];
         fn.prototype.__kits.push(obj);
         obj.parentKit = parent;
-        
-        if (dataParams.id !== null)
-          self.kitsMap[dataParams.id] = obj;
       }
       else
         console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
@@ -423,12 +435,7 @@ jT.ui = a$.extend(jT.ui, {
 	},
 
 	kit: function (element) {
-  	if (typeof element !== "string")
-  	  return $(element).data('jtKit');
-    else if (this.kitsMap[element] !== undefined)
-      return this.kitsMap[element];
-    else
-      return $("#" + element).data('jtKit');
+    return $(element).closest('.jtox-kit,.jtox-widget').data('jtKit');
 	},
 	
 	attachKit: function (element, kit) {
@@ -449,17 +456,7 @@ jT.ui = a$.extend(jT.ui, {
     });
 
     return query;
-  },
-
-	insertTool: function (name, root) {
-	  var html = this.tools[name];
-	  if (html != null) {
-  	  root.innerHTML = html;
-  	  this.init(root); // since we're pasting as HTML - we need to make re-traverse and initiazaltion of possible jTox kits.
-    }
-    return root;
-	}
-
+  }
 });
 /** jToxKit - chem-informatics multi-tool-kit.
   * A generic widget for list management
@@ -1236,23 +1233,19 @@ jT.tables = {
 		return table;
 	},
 
-	insertRenderer: function (inplace, colDef, render, pos) {
-		if (typeof inplace !== 'boolean') {
-			pos = render;
-			render = colDef;
-			colDef = inplace;
-			inplace = false;
-		}
-
+	insertRenderer: function (colDef, render, opts) {
+		opts = opts || {};
 		var oldRender = colDef.render,
 			newRender = !oldRender ? render : function (data, type, full) {
 				var oldContent = oldRender(data, type, full),
 					newContent = render(data, type, full);
 
-				return (pos === 'before') ? newContent + oldContent : oldContent + newContent;
+				return (opts.position === 'before') 
+					? newContent + (opts.separator || '') + oldContent 
+					: oldContent + (opts.separator || '') + newContent;
 			};
 
-		if (inplace)
+		if (opts.inplace)
 			colDef.render = newRender;
 		else
 			colDef = $.extend({}, colDef, { render: newRender });
@@ -1595,10 +1588,7 @@ jT.ambit = {
 		"http://www.opentox.org/api/dblinks#ToxbankWiki": { title: "Toxbank Wiki", accumulate: true, basic: true },
 		"http://www.opentox.org/api/1.1#Diagram": {
 			title: "Diagram", search: false, visibility: "main", primary: true, data: "compound.URI", 
-			column: {
-				className: "paddingless",
-				width: "125px"
-			},
+			column: { className: "paddingless", width: "125px" },
 			render: function (data, type, full) {
 				dUri = jT.ambit.getDiagramUri(data);
 				return (type != "display") 
@@ -1609,19 +1599,14 @@ jT.ambit = {
 		},
 		'#IdRow': {
 			used: true, basic: true, data: "number",
-			column: {
-				className: "middle"
-			},
+			column: { className: "middle center" },
 			render: function (data, type, full) { 
 				return (type != "display") ? data : "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;"; 
 			}
 		},
 		"#DetailedInfoRow": {
 			title: "InfoRow", search: false, data: "compound.URI", basic: true, primary: true, visibility: "none",
-			column: {
-				className: "jtox-hidden jtox-ds-details paddingless",
-				width: "0px"
-			},
+			column: { className: "jtox-hidden jtox-ds-details paddingless", width: "0px" },
 			render: function (data, type, full) { return ''; }
 		}
 	}

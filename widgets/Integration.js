@@ -7,7 +7,6 @@
 
 jT.ui = a$.extend(jT.ui, {
   rootSettings: {}, // These can be modified from the URL string itself.
-  kitsMap: {},      // all found kits are put here.
 	templateRoot: null,
 	callId: 0,
 
@@ -64,9 +63,6 @@ jT.ui = a$.extend(jT.ui, {
           fn.prototype.__kits = [];
         fn.prototype.__kits.push(obj);
         obj.parentKit = parent;
-        
-        if (dataParams.id !== null)
-          self.kitsMap[dataParams.id] = obj;
       }
       else
         console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
@@ -137,12 +133,7 @@ jT.ui = a$.extend(jT.ui, {
 	},
 
 	kit: function (element) {
-  	if (typeof element !== "string")
-  	  return $(element).data('jtKit');
-    else if (this.kitsMap[element] !== undefined)
-      return this.kitsMap[element];
-    else
-      return $("#" + element).data('jtKit');
+    return $(element).closest('.jtox-kit,.jtox-widget').data('jtKit');
 	},
 	
 	attachKit: function (element, kit) {
@@ -163,15 +154,5 @@ jT.ui = a$.extend(jT.ui, {
     });
 
     return query;
-  },
-
-	insertTool: function (name, root) {
-	  var html = this.tools[name];
-	  if (html != null) {
-  	  root.innerHTML = html;
-  	  this.init(root); // since we're pasting as HTML - we need to make re-traverse and initiazaltion of possible jTox kits.
-    }
-    return root;
-	}
-
+  }
 });

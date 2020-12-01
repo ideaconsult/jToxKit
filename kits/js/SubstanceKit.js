@@ -42,11 +42,15 @@
 		var self = this;
 
 		// deal with the additions to the id column with details and selection
-		var colId = self.settings.columns.substance['Id'];
+		var colId = self.settings.columns.substance['Id'],
+			inserterOpts = {
+				inplace: true,
+				separator: '<br/>'
+			}
 		if (typeof this.settings.onDetails === 'function')
-			jT.tables.insertRenderer(true, colId, jT.tables.getDetailsRenderer('substance'));
+			jT.tables.insertRenderer(colId, jT.tables.getDetailsRenderer('substance'), inserterOpts);
 		if (typeof this.settings.handlers.toggleSelection === 'function')
-			jT.tables.insertRenderer(true, colId, jT.tables.getSelectionRenderer('substance'));
+			jT.tables.insertRenderer(colId, jT.tables.getSelectionRenderer('substance'), inserterOpts);
 
 		// Leave that here, because `self` is used...
 		self.settings.columns.substance['Owner'].render = function (data, type, full) {

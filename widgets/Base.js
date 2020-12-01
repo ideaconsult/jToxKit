@@ -278,6 +278,22 @@
             for (var i = 0, il = data.length; i < il; ++i)
                 res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
             return res;
+        },
+
+        rebindRenderers: function (kit, features, inplace) {
+            var newFeats = {};
+
+            for (var fId in features) {
+                var fDef = features[fId];
+                if (typeof fDef.render !== 'function')
+                    continue;
+                else if (inplace)
+                    fDef.render = _.bind(fDef.render, kit);
+                else
+                    newFeats[fId] = _.defaults({ render: _.bind(fDef.render, kit) }, fDef);
+            }
+
+            return inplace ? features : _.defaults(newFeats, features);
         }
     });
 

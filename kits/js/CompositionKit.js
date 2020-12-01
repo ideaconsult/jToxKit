@@ -23,7 +23,7 @@
 		// deal if the selection is chosen
 		var colId = self.settings.columns.composition && self.settings.columns.composition.Name;
 		if (colId && !!self.settings.handlers.toggleSelection) {
-			jT.tables.insertRenderer(true, colId, jT.tables.getSelectionRenderer('substance'));
+			jT.tables.insertRenderer(colId, jT.tables.getSelectionRenderer('substance'), { inplace: true });
 			colId.sWidth = "60px";
 		}
 
