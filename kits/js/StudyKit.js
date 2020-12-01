@@ -5,11 +5,12 @@
  **/
 
 (function (a$, $, jT) {
+	var instanceCount = 0;
 
 	// constructor
 	var StudyKit = function (settings) {
 		this.rootElement = settings.target;
-		this.instanceNo = StudyKit.instanceCount++;
+		this.instanceNo = instanceCount++;
 		$(this.rootElement).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
 		this.settings = $.extend(true, {}, StudyKit.defaults, settings); // i.e. defaults from jToxStudy
@@ -593,8 +594,6 @@
 			return type != "display" ? '' + data : jT.ui.shortenedData(data, "Press to copy the UUID in the clipboard");
 		}
 	}];
-
-	StudyKit.instanceCount = 0;
 
 	jT.ui.Study = StudyKit;
 })(asSys, jQuery, jToxKit);

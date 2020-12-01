@@ -259,10 +259,7 @@ jT.ambit = {
 		"http://www.opentox.org/api/dblinks#ToxbankWiki": { title: "Toxbank Wiki", accumulate: true, basic: true },
 		"http://www.opentox.org/api/1.1#Diagram": {
 			title: "Diagram", search: false, visibility: "main", primary: true, data: "compound.URI", 
-			column: {
-				className: "paddingless",
-				width: "125px"
-			},
+			column: { className: "paddingless", width: "125px" },
 			render: function (data, type, full) {
 				dUri = jT.ambit.getDiagramUri(data);
 				return (type != "display") 
@@ -273,19 +270,14 @@ jT.ambit = {
 		},
 		'#IdRow': {
 			used: true, basic: true, data: "number",
-			column: {
-				className: "middle"
-			},
+			column: { className: "middle center" },
 			render: function (data, type, full) { 
 				return (type != "display") ? data : "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;"; 
 			}
 		},
 		"#DetailedInfoRow": {
 			title: "InfoRow", search: false, data: "compound.URI", basic: true, primary: true, visibility: "none",
-			column: {
-				className: "jtox-hidden jtox-ds-details paddingless",
-				width: "0px"
-			},
+			column: { className: "jtox-hidden jtox-ds-details paddingless", width: "0px" },
 			render: function (data, type, full) { return ''; }
 		}
 	}

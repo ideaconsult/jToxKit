@@ -213,23 +213,19 @@ jT.tables = {
 		return table;
 	},
 
-	insertRenderer: function (inplace, colDef, render, pos) {
-		if (typeof inplace !== 'boolean') {
-			pos = render;
-			render = colDef;
-			colDef = inplace;
-			inplace = false;
-		}
-
+	insertRenderer: function (colDef, render, opts) {
+		opts = opts || {};
 		var oldRender = colDef.render,
 			newRender = !oldRender ? render : function (data, type, full) {
 				var oldContent = oldRender(data, type, full),
 					newContent = render(data, type, full);
 
-				return (pos === 'before') ? newContent + oldContent : oldContent + newContent;
+				return (opts.position === 'before') 
+					? newContent + (opts.separator || '') + oldContent 
+					: oldContent + (opts.separator || '') + newContent;
 			};
 
-		if (inplace)
+		if (opts.inplace)
 			colDef.render = newRender;
 		else
 			colDef = $.extend({}, colDef, { render: newRender });

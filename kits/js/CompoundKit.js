@@ -314,7 +314,7 @@
 		// first, some preparation of the first, IdRow column
 		var idFeature = self.settings.baseFeatures['#IdRow'];
 		if (!!this.settings.onDetails)
-			idFeature = jT.tables.insertRenderer(idFeature, jT.tables.getDetailsRenderer('compound'));
+			idFeature = jT.tables.insertRenderer(idFeature, jT.tables.getDetailsRenderer('compound'), { separator: '<br/>' });
 		
 		fixCols.push(
 			self.prepareColumn('#IdRow', idFeature), {
