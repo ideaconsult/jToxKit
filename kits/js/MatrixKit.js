@@ -5,10 +5,6 @@
  **/
 
 (function (_, a$, $, jT) {
-	function getRowData(row) {
-
-	}
-
 	function MatrixKit(settings) {
 		var self = this;
 
@@ -87,10 +83,10 @@
 				var baseUrl = jT.formBaseUrl(this.datasetUri);
 				new jT.ui.Substance($.extend(true, {}, this.settings, {
 					target: substRoot,
-					selectionHandler: null,
 					substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 					showControls: false,
 					onLoaded: null,
+					handlers: jT.tables.commonHandlers,
 					onDetails: function (studyRoot, data) {
 						new jT.ui.Study($.extend({}, this.settings, {
 							target: studyRoot,

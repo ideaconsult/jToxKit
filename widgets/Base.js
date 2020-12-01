@@ -109,14 +109,16 @@
                 this.blur();
         },
 
-        installHandlers: function (kit, root) {
-            if (root == null)
+        installHandlers: function (kit, root, defHandlers) {
+            if (!root)
                 root = kit.rootElement;
+            if (!defHandlers)
+                defHandlers = kit;
     
             $('.jtox-handler', root).each(function () {
                 var thi$ = $(this),
                     name = thi$.data('handler'),
-                    handler = _.get(kit.settings, [ 'handlers', name ], null) || kit[name] || window[name];
+                    handler = _.get(kit.settings, [ 'handlers', name ], null) || defHandlers[name] || window[name];
     
                 if (!handler) {
                     console.warn("jToxQuery: referring unknown handler: '" + name + "'");
@@ -125,12 +127,15 @@
 
                 // Build the proper handler, taking into account if we want debouncing...
                 var eventHnd = _.bind(handler, kit),
-                    eventDelay = thi$.data('handler-delay');
+                    eventDelay = thi$.data('handlerDelay'),
+                    eventName = thi$.data('handlerEvent');
                 if (eventDelay != null)
                     eventHnd = _.debounce(eventHnd, parseInt(eventDelay));
                 
                 // Now, attach the handler, in the proper way
-                if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
+                if (eventName != null)
+                    thi$.on(eventName, eventHnd);
+                else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
                     thi$.on('change', eventHnd).on('keydown', jT.ui.enterBlur);
                 else // all the rest respond on click
                     thi$.on('click', eventHnd);

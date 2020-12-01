@@ -260,20 +260,33 @@ jT.ambit = {
 		"http://www.opentox.org/api/1.1#Diagram": {
 			title: "Diagram", search: false, visibility: "main", primary: true, data: "compound.URI", 
 			column: {
-				'className': "paddingless",
-				'width': "125px"
+				className: "paddingless",
+				width: "125px"
 			},
 			render: function (data, type, full) {
 				dUri = jT.ambit.getDiagramUri(data);
 				return (type != "display") 
 					? dUri 
-					: '<div class="jtox-diagram borderless"><span class="ui-icon ui-icon-zoomin"></span><a target="_blank" href="' + 
-						data + 
-						'"><img src="' + 
-						dUri + 
-						'" class="jtox-smalldiagram"/></a></div>';
+					: '<div class="jtox-diagram borderless"><i class="icon fa fa-search-plus jtox-handler" data-handler="alignTables" data-handler-delay="50"></i>' +
+						'<a target="_blank" href="' +  data + '"><img src="' + dUri + '" class="jtox-smalldiagram"/></a></div>';
 			}
 		},
-
+		'#IdRow': {
+			used: true, basic: true, data: "number",
+			column: {
+				className: "middle"
+			},
+			render: function (data, type, full) { 
+				return (type != "display") ? data : "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;"; 
+			}
+		},
+		"#DetailedInfoRow": {
+			title: "InfoRow", search: false, data: "compound.URI", basic: true, primary: true, visibility: "none",
+			column: {
+				className: "jtox-hidden jtox-ds-details paddingless",
+				width: "0px"
+			},
+			render: function (data, type, full) { return ''; }
+		}
 	}
 };
