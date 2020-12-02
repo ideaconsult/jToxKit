@@ -17,18 +17,18 @@
 			this.queryComposition(this.settings.compositionUri)
 	};
 
-	CompositionKit.prototype.prepareTable = function (json, tab) {
+	CompositionKit.prototype.prepareTable = function (json, tab, subId) {
 		var self = this;
 
 		// deal if the selection is chosen
-		var colId = self.settings.columns.composition && self.settings.columns.composition.Name;
-		if (colId && !!self.settings.handlers.toggleSelection) {
+		var colId = this.settings.columns.composition && this.settings.columns.composition.Name;
+		if (colId && !!this.settings.handlers.toggleSelection) {
 			jT.tables.insertRenderer(colId, jT.tables.getSelectionRenderer('substance'), { inplace: true });
 			colId.sWidth = "60px";
 		}
 
 		// we need that processing to remove the title of "Also contained in..." column...
-		var cols = jT.tables.processColumns(self, 'composition');
+		var cols = jT.tables.processColumns(this, 'composition');
 		for (var i = 0, cl = cols.length; i < cl; ++i)
 			if (cols[i].title == 'Also') {
 				cols[i].title = '';
@@ -51,21 +51,21 @@
 				}
 			}));
 		}
-		// READYY! Go and prepare THE table.
-		self.table = jT.tables.putTable(self, 
-			$('table.composition-table', tab).attr('id', 'jtox-comp-info' + self.instanceNo)[0], 
+		// READYY! Go and prepare THIS table - we may have several!
+		var theTable = jT.tables.putTable(self, 
+			$('table.composition-table', tab).attr('id', 'jtox-comp-info-' + self.instanceNo + "-" + subId)[0], 
 			'composition', 
 			{ "columns": cols }
 		);
 
-		$(self.table).DataTable().rows.add(json).draw();
+		$(theTable).DataTable().rows.add(json).draw();
 		
 		// now make a few fixing for multi-column title
-		var colSpan = $('th.colspan-2', self.table);
+		var colSpan = $('th.colspan-2', theTable);
 		$(colSpan).attr('colspan', 2);
 		$($(colSpan).next()).remove();
 		
-		return self.table;
+		return theTable;
 	};
 
 	CompositionKit.prototype.queryComposition = function (uri) {
@@ -122,7 +122,7 @@
 						if (!self.settings.showBanner) // we need to remove it
 							$('.composition-info', panel).remove();
 						// we need to prepare tables, abyways.
-						self.prepareTable(substances[i].composition, panel[0]);
+						self.prepareTable(substances[i].composition, panel[0], i);
 					}
 				}
 			} else

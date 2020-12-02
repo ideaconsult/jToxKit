@@ -54,7 +54,7 @@
 
         putTemplate: function (id, info, root) {
             var html = jT.ui.bakeTemplate(jT.ui.templates[id], info);
-            return !root ? html : $(root).append(html);
+            return !root ? html : $(html).appendTo(root);
         },
 
         updateTree: function (root, info, formatters) {

@@ -83,22 +83,52 @@
 		return this;
 	};
 
+	MatrixKit.prototype.pollAmbit = function (service, method, data, el, cb) {
+		el && $(el).addClass('loading');
+
+		console.warn("Calling ambit: " + method + " " + service + " with: " + JSON.stringify(data));
+		jT.ambit.call(this, this.bundleUri + service, {
+			method: method,
+			data: data
+		}, jT.ambit.taskPoller(this, function (result) {
+			el && $(el).removeClass('loading');
+			if (typeof cb === 'function')
+				return cb(result);
+		}));
+	},
+
+	MatrixKit.prototype.validateBundleForm = function (e) {
+
+	},
+
+	MatrixKit.prototype.updateTaggedEntry = function (row, data, index) {
+		var tag$ = $('td button.jt-toggle', row),
+			note$ = $('td textarea.remark', row),
+			bInfo = data.bundles[this.bundleUri];
+
+		tag$.removeClass('active');
+		if (bInfo && bInfo.tag) {
+			tag$.filter('.' + bInfo.tag).addClass('active');
+			note$.prop('disabled', false).val(bInfo.remarks);
+		} else
+			note$.prop('disabled', true).val(' ');
+	},
+
 	MatrixKit.prototype.initStructures = function () {
 		var self = this,
-			selectedQuery = false,
-			ambitCall = function (rowInfo) {
-
-			};
+			selectedQuery = false;
 
 		this.browserKit = jT.ui.initKit($('#struct-browser'), {
 			baseUrl: this.settings.baseUrl,
 			baseFeatures: _.defaults({
-				'#SelectionRow': this.getSelectionCol('structure', ['T', 'S', 'CM'], true)
+				'#SelectionRow': this.getSelectionCol('structure', ['T', 'S', 'CM'])
 				}, this.settings.baseFeatures),
 			groups: this.settings.groups.structure,
-			handlers: this.settings.handlers,
+			handlers: _.mapValues(this.settings.handlers, function (hnd) {  return _.bind(hnd, self); }),
+			onRow: _.bind(this.updateTaggedEntry, this),
 			onLoaded: function (dataset) {
 				if (selectedQuery) {
+					// TODO: ??
 					self.bundleSummary.compounds = dataset.dataEntry.length;
 					self.progressTabs();
 				}
@@ -110,6 +140,7 @@
 					substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 					showControls: false,
 					onLoaded: null,
+					onRow: null,
 					handlers: jT.tables.commonHandlers,
 					onDetails: function (studyRoot, data) {
 						new jT.ui.Study($.extend({}, this.settings, {
@@ -118,37 +149,7 @@
 						}));
 					}
 				}));
-			},
-			// onRow: function (row, data) {
-			// 	if (!data.bundles) return;
-	
-			// 	var bundleInfo = data.bundles[self.bundleUri] || {};
-			// 	// we need to setup remarks field regardless of bundleInfo presence
-			// 	var noteEl = $('textarea.remark', row).on('change', function (e) {
-			// 		var data = jT.ui.rowData(this),
-			// 			el = this,
-			// 			bInfo = data.bundles[self.bundleUri] || {};
-			// 		$(el).addClass('loading');
-			// 		jT.ambit.call(self, self.bundleUri + '/compound', {
-			// 			'method': 'PUT',
-			// 			'data': {
-			// 				compound_uri: data.compound.URI,
-			// 				command: 'add',
-			// 				tag: bInfo.tag,
-			// 				remarks: $(el).val()
-			// 			}
-			// 		}, function (result) {
-			// 			$(el).removeClass('loading');
-			// 		});
-			// 	});
-	
-			// 	if (!!bundleInfo.tag) {
-			// 		$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
-			// 		noteEl.val(bundleInfo.remarks);
-			// 	}
-			// 	else
-			// 		noteEl.prop('disabled', true).val(' ');
-			// }
+			}
 		});
 
 		this.queryKit = jT.ui.initKit($('#struct-query'), {
@@ -168,11 +169,8 @@
 	};
 
 	MatrixKit.prototype.getSelectionCol = function (subject, buttons, arrows) {
-		var self = this,
-			colDef = this.settings.baseFeatures['#SelectionRow'],
+		var colDef = this.settings.baseFeatures['#SelectionRow'],
 			newRenderer = function (data, type, full) {
-				data = ((data[self.bundleUri] || {}).tag || '').toLowerCase();
-
 				if (type !== 'display')
 					return data;
 
@@ -185,15 +183,15 @@
 				for (var i = 0;i < buttons.length; ++i) {
 					var bDef = defTagButtons[buttons[i]];
 
-					html += jT.ui.fillHtml('matrix-tag-button', $.extend({
+					html += '<br/>' + jT.ui.fillHtml('matrix-tag-button', $.extend({
 						code: buttons[i],
 						subject: subject,
-						status: bDef.tag == data ? 'active' : ''
+						status: ''
 					}, bDef));
 				}
 				// TODO: How to tell if everything?
 				if (arrows )
-					html += jT.ui.fillHtml('matrix-sel-arrow', {
+					html += '<br/>' + jT.ui.fillHtml('matrix-sel-arrow', {
 						direction: 'down',
 						subject: subject
 					});
@@ -1739,37 +1737,6 @@
 			$('#xfinal').button('disable');
 	};
 
-	MatrixKit.prototype.selectStructure = function (uri, what, el) {
-		var self = this;
-		var activate = !$(el).hasClass('active');
-		$(el).addClass('loading');
-		var noteEl = $('textarea.remark', self.queryKit.kit().getVarRow(el))[0];
-		jT.ambit.call(self, self.bundleUri + '/compound', {
-			method: 'PUT',
-			data: {
-				compound_uri: uri,
-				command: activate ? 'add': 'delete',
-				tag: what,
-				remarks: $(noteEl).val()
-			}
-		}, function (result) {
-			$(el).removeClass('loading');
-			if (!!result) {
-				$(el).toggleClass('active');
-				if (activate) {
-					self.bundleSummary.compounds++;
-					$('button', el.parentNode).removeClass('active');
-					$(el).addClass('active');
-				}
-				else
-					self.bundleSummary.compounds--;
-
-				$(noteEl).prop('disabled', !activate).val(activate ? "" : " ");
-				self.progressTabs();
-			}
-		});
-	};
-
 	MatrixKit.prototype.selectSubstance = function (uri, el) {
 		var self = this;
 		$(el).addClass('loading');
@@ -1828,24 +1795,6 @@
 				//console.log("Endpoint [" + endpoint + "] selected");
 			}
 		});
-	};
-
-	// Now some handlers - they should be outside, because they are called within windows' context.
-	function onSelectStructure(e) {
-		MatrixKit.selectStructure($(this).data('data'), $(this).data('tag'), this);
-	};
-
-	function onSelectSubstance(e) {
-		MatrixKit.selectSubstance(this.value, this);
-	};
-
-	function onTagSubstance(e) {
-		MatrixKit.tagSubstance($(this).data('uri'), this);
-	};
-
-	function onSelectEndpoint(e) {
-		var rowData = jT.ui.rowData(this);
-		MatrixKit.selectEndpoint(rowData.subcategory, rowData.endpoint, this);
 	};
 
 	function preDetailedRow(index, cell) {
@@ -1921,14 +1870,89 @@
 		rootElement: null,
 		maxStars: 10,
 		studyTypeList: {},
-		structuresGroups: {
-
-		},
 		handlers: {
-			substanceMove: function (e) { },
-			structureTag: function (e) { },
-			substanceTag: function(e) { },
-			structureReason: function (e) { }
+			// TODO: Link it from the HTML !!!
+			fieldUpdate: function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!this.bundleUri)
+					return;
+	
+				var el = e.target,
+					data = {},
+					self = this;
+				if (!this.validateBundleForm(e))
+					return;
+
+				data[el.name] = el.value;
+				this.pollAmbit('', 'PUT', data, el, function (result) {
+					// on error - request the old data
+					if (!result) self.load(self.bundleUri);
+				});
+			},
+			structureTag: function (e) {				
+				var el$ = $(e.target),
+					tag = el$.data('tag'),
+					row$ = el$.closest('tr'),
+					full = jT.tables.getRowData(row$),
+					note$ = $('td textarea.remark', row$),
+					toAdd = !el$.hasClass('active'),
+					self = this;
+
+				this.pollAmbit('/compound', 'PUT', {
+					compound_uri: full.compound.URI,
+					command: toAdd ? 'add' : 'delete',
+					tag: tag,
+					remarks: toAdd ? note$.val() : ''
+				}, el$, function (result) {
+					if (result) {
+						if (!toAdd)
+							delete full.bundles[self.bundleUri];
+						else if (self.bundleUri in full.bundles)
+							full.bundles[self.bundleUri].tag = tag;
+						else
+							full.bundles[self.bundleUri] = { tag: tag, }
+							
+						self.updateTaggedEntry(row$[0], full, full.index);
+					}
+				});
+			},
+			structureReason: function (e) {
+				var el$ = $(e.target),
+					full = jT.tables.getRowData(el$),
+					bInfo = full.bundles[this.bundleUri],
+					self = this;
+
+				if (!bInfo)
+					console.warn('Empty bundle info came for: ' + JSON.stringify(full));
+				else
+					this.pollAmbit('/compound', 'PUT', {
+						compound_uri: full.compound.URI,
+						command: 'add',
+						tag: bInfo.tag,
+						remarks: el$.val()
+					}, el$, function (result) {
+						if (result) {
+							full.bundles[self.bundleUri].remarks = el$.val();
+							self.updateTaggedEntry(el$.closest('tr')[0], full, full.index);	
+						}
+					});
+			},
+			// TODO: Move all these to member functions
+			substanceMove: function (e) {
+				var el$ = $(e.target),
+					dir = el$.data('direction'),
+					data = jT.tables.getCellData(el$);
+
+				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
+			},
+			substanceTag: function(e) {
+				var el$ = $(e.target),
+					tag = el$.data('tag'),
+					data = jT.tables.getCellData(el$);
+
+				console.log("Substance tagged [" + tag + "] for data: " + JSON.stringify(data));
+			}
 		},
 		groups: {
 			structure: {
@@ -1937,16 +1961,11 @@
 					"http://www.opentox.org/api/1.1#Diagram",
 					"#DetailedInfoRow",
 					"http://www.opentox.org/api/1.1#CASRN",
-					"http://www.opentox.org/api/1.1#EINECS",
-					"http://www.opentox.org/api/1.1#IUCLID5_UUID"
+					"http://www.opentox.org/api/1.1#EINECS"
 				],
 				Names: [
 					"http://www.opentox.org/api/1.1#ChemicalName",
-					"http://www.opentox.org/api/1.1#TradeName",
-					"http://www.opentox.org/api/1.1#IUPACName",
 					"http://www.opentox.org/api/1.1#SMILES",
-					"http://www.opentox.org/api/1.1#InChIKey",
-					"http://www.opentox.org/api/1.1#InChI",
 					"http://www.opentox.org/api/1.1#REACHRegistrationDate"
 				],
 				Other: [
@@ -1989,7 +2008,7 @@
 		baseFeatures: {
 			"#SelectionRow" : {
 				data: "bundles",
-				column: { className: "center" },
+				column: { className: "center", width: "60px" },
 				search: true,
 				primary: true
 			},
@@ -1997,12 +2016,13 @@
 				title: "Rationale",
 				data: "compound.URI",
 				search: true,
+				primary: true,
 				column: { width: "300px", className: "paddingless" },
 				render : function(data, type, full) {
 					// This `this` is available due to rebinding in the initialization step.
 					var bundleInfo = full.bundles[this.bundleUri] || {};
 					data = bundleInfo.tag && bundleInfo.remarks || '';
-					return (type != 'display') ? data : '<textarea class="remark jtox-handler" data-handler="structureReason" placeholder="Reason for selection_">' + data + '</textarea>';
+					return (type != 'display') ? data : '<textarea class="remark jtox-handler" data-handler="structureReason" placeholder="Reason for selection_" disabled="true">' + data + '</textarea>';
 				}
 			}
 		}

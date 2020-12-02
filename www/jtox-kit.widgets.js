@@ -54,7 +54,7 @@
 
         putTemplate: function (id, info, root) {
             var html = jT.ui.bakeTemplate(jT.ui.templates[id], info);
-            return !root ? html : $(root).append(html);
+            return !root ? html : $(html).appendTo(root);
         },
 
         updateTree: function (root, info, formatters) {
@@ -1178,6 +1178,12 @@ jT.tables = {
 		return table && table.row(row).data();
 	},
 
+	getCellData: function (el) {
+		var table = $(el).closest('table').DataTable(),
+			cell = $(el).closest('td')[0];
+		return table && table.cell(cell).data();
+	},
+
 	queryInfo: function (data) {
 		var info = {};
 		for (var i = 0, dl = data.length; i < dl; ++i)
@@ -1262,7 +1268,7 @@ jT.tables = {
 		return function (data, type, full) {
 			return type !== 'display' 
 				? data 
-				: '<input type="checkbox" value="' + data + '" class="jt-selection jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
+				: '<input type="checkbox" value="' + data + '" class="jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
 				'" title="Add this ' + (subject || 'entry') + ' to the selection"' + '/>';
 		}
 	},
@@ -1559,6 +1565,43 @@ jT.ambit = {
 
 		// now make the actual call
 		$.ajax(settings);
+	},
+
+	taskPoller: function(kit, callback, delay, timeout) {
+		var taskStart = null,
+			handler = null;
+
+		if (timeout == null)
+			timeout = 5 * 1000;
+		if (delay == null)
+			delay = 250;
+
+		handler = function (task, jhr) {
+			if (task == null || task.task == null || task.task.length < 1) {
+				callback(task, jhr);
+				return;
+			}
+			task = task.task[0];
+			// i.e. - we're ready or we're in trouble.
+			if (task.completed > -1 || !!task.error) {
+				callback(task, jhr);
+				return;
+			}
+			// first round				
+			else if (taskStart == null)
+				taskStart = Date.now();
+			// timedout
+			else if (Date.now() - taskStart > timeout) {
+				callback(task, jhr);
+				return;
+			}
+			// time for another call
+			setTimeout(function() { 
+				jT.ambit.call(kit, task.result, { method: 'GET' }, handler);
+			},delay);
+		};
+
+		return handler;
 	},
 
 	/* define the standard features-synonymes, working with 'sameAs' property. Beside the title we define the 'data' property

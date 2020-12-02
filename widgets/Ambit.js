@@ -232,6 +232,43 @@ jT.ambit = {
 		$.ajax(settings);
 	},
 
+	taskPoller: function(kit, callback, delay, timeout) {
+		var taskStart = null,
+			handler = null;
+
+		if (timeout == null)
+			timeout = 5 * 1000;
+		if (delay == null)
+			delay = 250;
+
+		handler = function (task, jhr) {
+			if (task == null || task.task == null || task.task.length < 1) {
+				callback(task, jhr);
+				return;
+			}
+			task = task.task[0];
+			// i.e. - we're ready or we're in trouble.
+			if (task.completed > -1 || !!task.error) {
+				callback(task, jhr);
+				return;
+			}
+			// first round				
+			else if (taskStart == null)
+				taskStart = Date.now();
+			// timedout
+			else if (Date.now() - taskStart > timeout) {
+				callback(task, jhr);
+				return;
+			}
+			// time for another call
+			setTimeout(function() { 
+				jT.ambit.call(kit, task.result, { method: 'GET' }, handler);
+			},delay);
+		};
+
+		return handler;
+	},
+
 	/* define the standard features-synonymes, working with 'sameAs' property. Beside the title we define the 'data' property
 	as well which is used in processEntry() to location value(s) from given (synonym) properties into specific property of the compound entry itself.
 	'data' can be an array, which results in adding value to several places.

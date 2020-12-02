@@ -158,6 +158,12 @@ jT.tables = {
 		return table && table.row(row).data();
 	},
 
+	getCellData: function (el) {
+		var table = $(el).closest('table').DataTable(),
+			cell = $(el).closest('td')[0];
+		return table && table.cell(cell).data();
+	},
+
 	queryInfo: function (data) {
 		var info = {};
 		for (var i = 0, dl = data.length; i < dl; ++i)
@@ -242,7 +248,7 @@ jT.tables = {
 		return function (data, type, full) {
 			return type !== 'display' 
 				? data 
-				: '<input type="checkbox" value="' + data + '" class="jt-selection jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
+				: '<input type="checkbox" value="' + data + '" class="jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
 				'" title="Add this ' + (subject || 'entry') + ' to the selection"' + '/>';
 		}
 	},
