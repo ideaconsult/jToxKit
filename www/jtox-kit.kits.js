@@ -4121,6 +4121,12 @@
 
 	MatrixKit.prototype.progressTabs = function () {
 		// This routine ensures the wizard-like advacement through the tabs
+		var theSummary = this.bundleSummary;
+		$('li>a.jtox-summary-entry', this.rootElement).each(function () {
+			var cnt = theSummary[$(this).data('summary')],
+				html = this.innerHTML;
+			$(this).html(jT.ui.updateCounter(html, cnt));
+		});
 		$(this.rootElement).tabs(this.bundleSummary.compound > 0 ? 'enable' : 'disable', 2);
 		$(this.rootElement).tabs(this.bundleSummary.substance > 0 ? 'enable' : 'disable', 3);
 		$(this.rootElement).tabs(this.bundleSummary.property > 0 ? 'enable' : 'disable', 4);
@@ -4172,15 +4178,6 @@
 				//console.log("Endpoint [" + endpoint + "] selected");
 			}
 		});
-	};
-
-	function onReportSubstancesLoaded(dataset) {
-		// Use setTimeout so that this is called after the UI is generated.
-		setTimeout(function(){
-			$('#jtox-report-substance-query .jtox-details-open').each(function(){
-				this.click();
-			});
-		}, 16);
 	};
 
 	MatrixKit.defaults = {
@@ -6523,10 +6520,10 @@ jT.ui.templates['all-matrix']  =
 "<div class=\"jtox-matrix-kit\">" +
 "<ul>" +
 "<li><a href=\"#jtox-identifiers\">Assessment identifier</a></li>" +
-"<li><a href=\"#jtox-structures\">Collect structures</a></li>" +
-"<li><a href=\"#jtox-substances\">Search substance(s)</a></li>" +
-"<li><a href=\"#jtox-endpoints\">Select endpoints</a></li>" +
-"<li><a href=\"#jtox-matrix\">Assessment details</a></li>" +
+"<li><a class=\"jtox-summary-entry\" data-summary=\"compound\" href=\"#jtox-structures\">Collect structures</a></li>" +
+"<li><a class=\"jtox-summary-entry\" data-summary=\"substance\" href=\"#jtox-substances\">Search substances</a></li>" +
+"<li><a class=\"jtox-summary-entry\" data-summary=\"property\" href=\"#jtox-endpoints\">Select endpoints</a></li>" +
+"<li><a class=\"jtox-summary-entry\" data-summary=\"matrix\" href=\"#jtox-matrix\">Assessment details</a></li>" +
 "<li><a href=\"#jtox-report\">Report</a></li>" +
 "</ul>" +
 "<div id=\"jtox-identifiers\" data-loader=\"onIdentifiers\">" +
