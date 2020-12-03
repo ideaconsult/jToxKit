@@ -57,7 +57,6 @@
 		this.entriesCount = null;
 		this.suspendEqualization = false;
 		this.orderList = [];
-		this.usedFeatures = [];
 		this.pageStart = this.settings.pageStart;
 		this.pageSize = this.settings.pageSize;
 
@@ -70,15 +69,9 @@
 		}
 	};
 
-	CompoundKit.prototype.clearDataset = function () {
-		if (this.usedFeatures !== undefined) {
-			if (!this.settings.noInterface)
-				$(this.rootElement).empty();
-			for (var i = 0, fl = this.usedFeatures.length; i < fl; ++i) {
-				var fid = this.usedFeatures[i];
-				this.feature[fid].used = false;
-			}
-		}
+	CompoundKit.prototype.clear = function () {
+		if (!this.settings.noInterface)
+			$(this.rootElement).empty();
 	};
 
 	/* make a tab-based widget with features and grouped on tabs. It relies on filled and processed 'self.feature' as well
@@ -549,7 +542,8 @@
 	/* Prepare the groups and the features.
 	 */
 	CompoundKit.prototype.prepareGroups = function (miniset) {
-		var self = this;
+		var self = this,
+			usedFeatures = {};
 
 		var grps = self.settings.groups;
 		if (typeof grps == 'function')
@@ -561,18 +555,16 @@
 			if (grp == null)
 				continue;
 
-			var grpArr = (typeof grp == "function" || typeof grp == "string") ? jT.fireCallback(grp, self, i, miniset) : grp;
+			var grpArr = (typeof grp == "function" || typeof grp == "string") ? jT.fireCallback(grp, self, i, miniset, usedFeatures) : grp;
 			self.groups[i] = [];
 			_.each(grpArr, function (fid, idx) {
 				var isUsed = false;
-				CompoundKit.enumSameAs(fid, self.feature, function (feature) {
-					isUsed |= feature.used;
+				CompoundKit.enumSameAs(fid, self.feature, function (f, fId) {
+					isUsed |= fId in usedFeatures;
 				});
 				if (idx != "name" && !isUsed) {
 					self.groups[i].push(fid);
-					// these we need to be able to return back to original state.
-					self.usedFeatures.push(fid);
-					self.feature[fid].used = true;
+					usedFeatures[fid] = true;
 				}
 			});
 		}
@@ -790,7 +782,7 @@
 	CompoundKit.prototype.queryDataset = function (datasetUri, featureUri) {
 		var self = this;
 		// if some oldies exist...
-		this.clearDataset();
+		this.clear();
 		this.init();
 
 		datasetUri = jT.ambit.grabPaging(self, datasetUri);
@@ -1007,7 +999,7 @@
 			"Other": function (name, miniset) {
 				var arr = [];
 				for (var f in miniset.feature) {
-					if (!miniset.feature[f].used && !miniset.feature[f].basic)
+					if (!(f in usedFeatures) && !miniset.feature[f].basic)
 						arr.push(f);
 				}
 				return arr;

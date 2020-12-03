@@ -50,10 +50,10 @@
     <div class="jtox-matrix-kit">
       <ul>
         <li><a href="#jtox-identifiers">Assessment identifier</a></li>
-        <li><a href="#jtox-structures">Collect structures</a></li>
-        <li><a href="#jtox-substances">Search substance(s)</a></li>
-        <li><a href="#jtox-endpoints">Select endpoints</a></li>
-        <li><a href="#jtox-matrix">Assessment details</a></li>
+        <li><a class="jtox-summary-entry" data-summary="compound" href="#jtox-structures">Collect structures</a></li>
+        <li><a class="jtox-summary-entry" data-summary="substance" href="#jtox-substances">Search substance(s)</a></li>
+        <li><a class="jtox-summary-entry" data-summary="property" href="#jtox-endpoints">Select endpoints</a></li>
+        <li><a class="jtox-summary-entry" data-summary="matrix" href="#jtox-matrix">Assessment details</a></li>
         <li><a href="#jtox-report">Report</a></li>
       </ul>
       <div id="jtox-identifiers" data-loader="onIdentifiers">
@@ -156,19 +156,14 @@
       <div id="jtox-substances" data-loader="onSubstances">
         <div class="jtox-inline tab-substance">
           <div class="float-right">
-            <button type="button" id="structures-expand-all">Expand all</button>
-            <button type="button" id="structures-collapse-all">Collapse all</button>
+            <button type="button" class="details-expand-all">Expand all</button>
+            <button type="button" class="details-collapse-all">Collapse all</button>
           </div>
         </div>
-        <!-- <div id="jtox-substance-query" class="jtox-kit" 
-          data-kit="Query" 
-          data-initial-query="false">
-        </div> -->
-        <div id="substance-browser" class="jtox-kit" 
+        <div id="substance-selector" class="jtox-kit" 
           data-kit="Compound" 
           data-show-tabs="false"
           data-hide-empty="true"
-          data-pre-details="preDetailedRow"
           data-show-diagrams="true">
         </div>
       </div>
@@ -241,6 +236,9 @@
 <!--[[ jT.ui.templates['matrix-tag-button'] -->
     <button class="jt-toggle jtox-handler {{tag}} {{status}}" data-handler="{{subject}}Tag" data-tag="{{tag}}" title="Select the {{subject}} as {{name}}">{{code}}</button>
 <!-- // end of matrix-tag-button ]]-->
+<!--[[ jT.ui.templates['matrix-tag-indicator'] -->
+<button class="jt-toggle {{tag}} active" data-tag="{{tag}}" title="Select the {{subject}} as {{name}}">{{code}}</button>
+<!-- // end of matrix-tag-indicator ]]-->
 <!--[[ jT.ui.templates['matrix-sel-arrow'] -->
     <i class="jt-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
 <!-- // end of matrix-sel-arrow ]]-->

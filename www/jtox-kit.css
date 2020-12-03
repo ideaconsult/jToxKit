@@ -1247,7 +1247,7 @@ input.widget-filter {
   margin-bottom: 5px;
 }
 
-#jtox-structures td textarea, #jtox-endpoints td textarea {
+div.jtox-compound td textarea, #jtox-endpoints td textarea {
   min-width: 150px;
   height: 150px;
   overflow-x: none;
@@ -1256,10 +1256,10 @@ input.widget-filter {
   color: #3333CC;
 }
 
-#structures-expand-all, #structures-collapse-all {
+button.details-expand-all, button.details-collapse-all {
   font-size: 0.8em;
   padding: .25em .8em;
-  margin: 0;
+  /* margin: 0; */
 }
 
 #jtox-matrix td .breakable {
