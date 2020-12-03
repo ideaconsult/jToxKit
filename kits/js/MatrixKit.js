@@ -1716,10 +1716,10 @@
 	MatrixKit.prototype.progressTabs = function () {
 		// This routine ensures the wizard-like advacement through the tabs
 		var theSummary = this.bundleSummary;
-		$('li>a.jtox-summary-entry', this.rootElement).each(function (el) {
-			var cnt = theSummary[$(el).data('summary')],
-				html = el.innerHTML;
-			$(el).html(jT.ui.updateCounter(html, cnt));
+		$('li>a.jtox-summary-entry', this.rootElement).each(function () {
+			var cnt = theSummary[$(this).data('summary')],
+				html = this.innerHTML;
+			$(this).html(jT.ui.updateCounter(html, cnt));
 		});
 		$(this.rootElement).tabs(this.bundleSummary.compound > 0 ? 'enable' : 'disable', 2);
 		$(this.rootElement).tabs(this.bundleSummary.substance > 0 ? 'enable' : 'disable', 3);
