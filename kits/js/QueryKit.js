@@ -221,6 +221,10 @@
 		return this.mainKit;
 	};
 
+	QueryKit.prototype.getQueryType = function () {
+		return this.search.queryType;
+	},
+
 	// required from jToxQuery - this is how we add what we've collected
 	QueryKit.prototype.query = function (needle) {
 		if (!!needle)
@@ -230,6 +234,15 @@
 			form = $('form', this.rootElement)[0],
 			params = { type: this.search.type },
 			type = this.search.queryType;
+
+		if (!(type in queries)) {
+			if (type in this.settings.customSearches)
+				jT.fireCallback(this.settings.customSearches[type].onSelected, null, this, $('form', this.rootElement)[0]);
+			else
+				console.warn("QueryKit: Unknown query type selected: " + type);
+			return;
+		}
+
 
 		if (type === "auto" && params.type === 'auto' && form.searchbox.value.indexOf('http') == 0)
 			type = "uri";

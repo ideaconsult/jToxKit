@@ -5,12 +5,13 @@
  **/
 
 (function (a$, $, jT) {
+	var instancesCount = 0;
 
 	function CompositionKit(settings) {
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
 
 		this.settings = $.extend(true, {}, CompositionKit.defaults, settings);
-		this.instanceNo = CompositionKit.instancesCount++;
+		this.instanceNo = instancesCount++;
 
 		// finally, if provided - make the query
 		if (!!this.settings.compositionUri)
@@ -135,13 +136,11 @@
 		this.queryComposition(uri);
 	};
 
-
-	CompositionKit.instancesCount = 0;
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
 		showDiagrams: false, // whether to show diagram for each compound in the composition
 		noInterface: false, // run in interface-less mode - just data retrieval and callback calling.
-		sDom: "rt<Ffp>", // compounds (ingredients) table sDom
+		dom: "rt<Ffp>", // compounds (ingredients) table's dom
 		onLoaded: null,
 		handlers: { },
 

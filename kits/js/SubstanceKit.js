@@ -20,9 +20,10 @@
 
 			if (this.settings.embedComposition && this.settings.onDetails == null) {
 				this.settings.onDetails = function (root, data) {
-					new jT.ui.Composition(root, $.extend({},
+					new jT.ui.Composition($.extend({},
 						self.settings,
 						(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
+							target: root,
 							compositionUri: data.URI + '/composition'
 						}
 					));
@@ -145,6 +146,7 @@
 					title: 'Id',
 					data: 'URI',
 					defaultContent: "-",
+					className: "center",
 					width: "60px",
 					render: function (data, type, full) {
 						return (type != 'display') ? full.index : '&nbsp;-&nbsp;' + full.index + '&nbsp;-&nbsp;';

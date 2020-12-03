@@ -307,7 +307,7 @@ jT.ambit = {
 		},
 		'#IdRow': {
 			used: true, basic: true, data: "number",
-			column: { className: "middle center" },
+			column: { className: "center" },
 			render: function (data, type, full) { 
 				return (type != "display") ? data : "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;"; 
 			}
