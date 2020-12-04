@@ -272,15 +272,13 @@
 
 				jT.fireCallback(self.settings.onLoaded, self, json.composition);
 				// now make the actual filling
-				if (!self.settings.noInterface) {
-					for (var i in substances) {
-						var panel = jT.ui.putTemplate('all-composition', substances[i], self.rootElement);
+				for (var i in substances) {
+					var panel = jT.ui.putTemplate('all-composition', substances[i], self.rootElement);
 
-						if (!self.settings.showBanner) // we need to remove it
-							$('.composition-info', panel).remove();
-						// we need to prepare tables, abyways.
-						self.prepareTable(substances[i].composition, panel[0], i);
-					}
+					if (!self.settings.showBanner) // we need to remove it
+						$('.composition-info', panel).remove();
+					// we need to prepare tables, abyways.
+					self.prepareTable(substances[i].composition, panel[0], i);
 				}
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, json.composition);
@@ -295,7 +293,6 @@
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
 		showDiagrams: false, // whether to show diagram for each compound in the composition
-		noInterface: false, // run in interface-less mode - just data retrieval and callback calling.
 		dom: "rt<Ffp>", // compounds (ingredients) table's dom
 		onLoaded: null,
 		handlers: { },
@@ -440,18 +437,15 @@
 		this.pageStart = this.settings.pageStart;
 		this.pageSize = this.settings.pageSize;
 
-		if (!this.settings.noInterface) {
-			jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
-			jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
-			jT.tables.updateControls.call(this);
+		jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
+		jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
+		jT.tables.updateControls.call(this);
 
-			this.$errDiv = $('.jt-error', this.rootElement);
-		}
+		this.$errDiv = $('.jt-error', this.rootElement);
 	};
 
 	CompoundKit.prototype.clear = function () {
-		if (!this.settings.noInterface)
-			$(this.rootElement).empty();
+		$(this.rootElement).empty();
 	};
 
 	/* make a tab-based widget with features and grouped on tabs. It relies on filled and processed 'self.feature' as well
@@ -1058,15 +1052,15 @@
 
 				// then process the dataset
 				self.dataset = CompoundKit.processDataset(dataset, $.extend(true, {}, dataset.feature, self.feature), self.settings.fnAccumulate, self.pageStart);
+				
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
-				if (!self.settings.noInterface) {
-					// ok - go and update the table, filtering the entries, if needed
-					self.updateTables();
-					if (self.settings.showControls) {
-						// finally - go and update controls if they are visible
-						jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
-					}
+
+				// ok - go and update the table, filtering the entries, if needed
+				self.updateTables();
+				if (self.settings.showControls) {
+					// finally - go and update controls if they are visible
+					jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
 				}
 			} else {
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
@@ -1107,48 +1101,45 @@
 					dataEntry: [],
 					feature: self.feature
 				};
-				if (!self.settings.noInterface) {
-					self.prepareGroups(miniset);
-					if (self.settings.showTabs) {
-						// tabs feature building
-						var nodeFn = function (id, name, parent) {
-							var fEl = jT.ui.getTemplate('compound-one-feature', {
-								title: name.replace(/_/g, ' '),
-								uri: self.featureUri(id)
-							});
-							$(parent).append(fEl);
 
-							var checkEl = $('input[type="checkbox"]', fEl)[0];
-							if (!checkEl)
-								return;
-							checkEl.value = id;
-							if (self.settings.rememberChecks)
-								checkEl.checked = (self.featureStates[id] === undefined || self.featureStates[id]);
-
-							return fEl;
-						};
-
-						self.prepareTabs($('.jtox-ds-features', self.rootElement)[0], true, function (divEl, gr) {
-							var empty = true;
-							_.each(self.groups[gr], function (fId) {
-								var vis = (self.feature[fId] || {})['visibility'];
-								if (!!vis && vis != 'main') return;
-
-								empty = false;
-								var title = self.feature[fId].title;
-								title && nodeFn(fId, title, divEl);
-							});
-
-							return empty;
+				self.prepareGroups(miniset);
+				if (self.settings.showTabs) {
+					// tabs feature building
+					var nodeFn = function (id, name, parent) {
+						var fEl = jT.ui.getTemplate('compound-one-feature', {
+							title: name.replace(/_/g, ' '),
+							uri: self.featureUri(id)
 						});
-					}
+						$(parent).append(fEl);
 
-					jT.fireCallback(self.settings.onPrepared, self, miniset, self);
-					self.prepareTables(); // prepare the tables - we need features to build them - we have them!
-					self.equalizeTables(); // to make them nicer, while waiting...
-				} else {
-					jT.fireCallback(self.settings.onPrepared, self, miniset, self);
+						var checkEl = $('input[type="checkbox"]', fEl)[0];
+						if (!checkEl)
+							return;
+						checkEl.value = id;
+						if (self.settings.rememberChecks)
+							checkEl.checked = (self.featureStates[id] === undefined || self.featureStates[id]);
+
+						return fEl;
+					};
+
+					self.prepareTabs($('.jtox-ds-features', self.rootElement)[0], true, function (divEl, gr) {
+						var empty = true;
+						_.each(self.groups[gr], function (fId) {
+							var vis = (self.feature[fId] || {})['visibility'];
+							if (!!vis && vis != 'main') return;
+
+							empty = false;
+							var title = self.feature[fId].title;
+							title && nodeFn(fId, title, divEl);
+						});
+
+						return empty;
+					});
 				}
+
+				jT.fireCallback(self.settings.onPrepared, self, miniset, self);
+				self.prepareTables(); // prepare the tables - we need features to build them - we have them!
+				self.equalizeTables(); // to make them nicer, while waiting...
 
 				// finally make the callback for
 				callback(dataset);
@@ -1297,7 +1288,6 @@
 	};
 
 	CompoundKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-		"noInterface": false, // runs in interface-less mode, so that it can be used only for information retrieval.
 		"showTabs": true, // should we show tabs with groups, or not
 		"tabsFolded": false, // should present the feature-selection tabs folded initially
 		"showExport": true, // should we add export tab up there
@@ -1468,6 +1458,438 @@
 	jT.ui.Compound = CompoundKit;
 
 })(_, jQuery, jToxKit);
+/* EndpointKit.js - An endpoint listing and selection toolkit. Migrated one
+ *
+ * Copyright 2012-2020, IDEAconsult Ltd. http://www.ideaconsult.net/
+ * Created by Ivan Georgiev
+ **/
+
+(function (_, a$, $, jT) {
+
+	function EndpointKit(settings) {
+		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
+		jT.ui.putTemplate('all-endpoint', ' ? ', this.rootElement);
+
+		this.settings = $.extend(true, {}, EndpointKit.defaults, settings);
+		this.reboundHandlers = _.defaults(
+			_.mapValues(this.settings.handlers, function (hnd) {  return _.bind(hnd, self); }), 
+			jT.tables.commonHandlers);
+
+		var self = this;
+
+		// we can redefine onDetails only if there is not one passed and we're asked to show editors at ll
+		if (!!self.settings.showEditors && !self.settings.onDetails) {
+			self.edittedValues = {};
+			self.settings.onDetails = function (root, data, element) {
+				self.edittedValues[data.endpoint] = {};
+				EndpointKit.linkEditors(self, root.appendChild(jT.ui.getTemplate('endpoint-one-editor', {})), {
+					category: data.endpoint,
+					top: data.subcategory,
+					conditions: self.settings.showConditions,
+					onchange: function (e, field, value) {
+						_.set(self.edittedValues[data.endpoint], field, value);
+					}
+				});
+			};
+		}
+
+		// again , so that changed defaults can be taken into account.
+		var cols = jT.tables.processColumns(self, 'endpoint');
+
+		// make the accordition now...
+		$('.jtox-categories', self.rootElement).accordion({
+			heightStyle: self.settings.heightStyle
+		});
+
+		self.tables = {};
+		// and now - initialize all the tables...
+		$('table', self.rootElement).each(function () {
+			var name = this.className;
+			self.tables[name] = jT.tables.putTable(self, this, "endpoint", {
+				columns: cols,
+				infoCallback: self.updateStats(name),
+				orderFixed: [
+					[1, 'asc']
+				],
+				onRow: function (nRow, aData, iDataIndex) {
+					$(nRow).addClass(aData.endpoint);
+				}
+			});
+		});
+
+		if (!!self.settings.hideFilter)
+			$('.filter-box', self.rootElement).remove();
+		else {
+			var filterTimeout = null;
+			var fFilter = function (ev) {
+				if (!!filterTimeout)
+					clearTimeout(filterTimeout);
+
+				var field = ev.currentTarget;
+
+				filterTimeout = setTimeout(function () {
+					$('table', self.rootElement).each(function () {
+						$(this).dataTable().fnFilter(field.value);
+					});
+				}, 300);
+			};
+
+			$('.filter-box input', self.rootElement).on('keydown', fFilter);
+		}
+
+		if (!self.settings.showMultiselect || !self.settings.selectionHandler)
+			$('h3 a', self.rootElement).remove();
+		else
+			jT.ui.installMultiSelect(self.rootElement, null, function (el) {
+				return el.parentNode.parentNode.nextElementSibling;
+			});
+
+		// finally, wait a bit for everyone to get initialized and make a call, if asked to
+		if (!!this.settings.endpointUri != undefined && this.settings.loadOnInit)
+			this.loadEndpoints(this.settings.endpointUri)
+	};
+
+	EndpointKit.prototype.getValues = function (needle) {
+		var self = this,
+			filter = null;
+
+		if (!needle)
+			filter = function (end) { return true; };
+		else if (typeof needle != 'function')
+			filter = function (end) { return end.indexOf(needle) >= 0; };
+		else
+			filter = needle;
+
+		for (var endpoint in self.edittedValues)
+			if (filter(endpoint))
+				return self.edittedValues[endpoint];
+
+		return null;
+	};
+
+	EndpointKit.prototype.updateStats = function (name) {
+		var self = this;
+		return function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
+			var head = $('h3.' + name, self.rootElement)[0],
+				html = '';
+
+			// now make the summary...
+			if (iTotal > 0) {
+				var count = 0;
+				var data = this.fnGetData();
+				for (var i = iStart; i <= iEnd && i < iMax; ++i)
+					count += data[i].count;
+				html = "[" + count + "]";
+			} else
+				html = '';
+
+			$('div.jtox-details span', head).html(html);
+			return sPre;
+		}
+	};
+
+	EndpointKit.prototype.fillEntries = function (facet) {
+		var self = this,
+			ends = {};
+
+		// first we need to group them and extract some summaries
+		for (var i = 0, fl = facet.length; i < fl; ++i) {
+			var entry = facet[i];
+			var cat = ends[entry.subcategory];
+			if (cat == null)
+				ends[entry.subcategory] = cat = [];
+
+			cat.push(entry);
+		}
+
+		// now, as we're ready - go and fill everything
+		$('h3', self.rootElement).each(function () {
+			var name = $(this).data('cat');
+			var table = self.tables[name];
+			table.fnClearTable();
+
+			var cat = ends[name.replace("_", " ")];
+			if (cat != null)
+				table.fnAddData(cat);
+		});
+	};
+
+	EndpointKit.prototype.loadEndpoints = function (uri) {
+		var self = this;
+		if (uri == null)
+			uri = self.settings.baseUrl + '/query/study';
+		else if (!self.settings.baseUrl)
+			self.settings.baseUrl = jT.formBaseUrl(uri, "query");
+
+		// make the call...
+		jT.ambit.call(self, uri, function (result, jhr) {
+			if (!result && jhr.status != 200)
+				result = {
+					facet: []
+				}; // empty one
+			if (!!result) {
+				self.summary = result.facet;
+				jT.fireCallback(self.settings.onLoaded, self, result);
+				self.fillEntries(result.facet);
+			} else {
+				self.facet = null;
+				jT.fireCallback(self.settings.onLoaded, self, result);
+			}
+		});
+	};
+
+	EndpointKit.prototype.query = function (uri) {
+		this.loadEndpoints(uri);
+	};
+
+	EndpointKit.prototype.modifyUri = function (uri) {
+		$('input[type="checkbox"]', this.rootElement).each(function () {
+			if (this.checked)
+				uri = jT.addParameter(uri, 'feature_uris[]=' + encodeURIComponent(this.value + '/feature'));
+		})
+
+		return uri;
+	};
+
+	// now the editors...
+	EndpointKit.linkEditors = function (kit, root, settings) { // category, top, onchange, conditions
+		// get the configuration so we can setup the fields and their titles according to it
+		var config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[settings.category]);
+
+		var putAutocomplete = function (box, service, configEntry, options) {
+			// if we're not supposed to be visible - hide us.
+			var field = box.data('field');
+			if (!configEntry || configEntry.bVisible === false) {
+				box.hide();
+				return null;
+			}
+
+			// now deal with the title...
+			var t = !!configEntry ? configEntry.title : null;
+			if (!!t)
+				$('div', box[0]).html(t);
+
+			// prepare the options
+			if (!options)
+				options = {};
+
+			// finally - configure the autocomplete options themselves to initialize the component itself
+			if (!options.source) options.source = function (request, response) {
+				jT.ambit.call(kit, service, {
+					method: "GET",
+					data: {
+						'category': settings.category,
+						'top': settings.top,
+						'max': kit.settings.maxHits || defaultSettings.maxHits,
+						'search': request.term
+					}
+				}, function (data) {
+					response(!data ? [] : $.map(data.facet, function (item) {
+						var val = item[field] || '';
+						return {
+							label: val + (!item.count ? '' : " [" + item.count + "]"),
+							value: val
+						}
+					}));
+				});
+			};
+
+			// and the change functon
+			if (!options.change) options.change = function (e, ui) {
+				settings.onchange.call(this, e, field, !ui.item ? _.trim(this.value) : ui.item.value);
+			};
+
+			// and the final parameter
+			if (!options.minLength) options.minLength = 0;
+
+			return $('input', box[0]).autocomplete(options);
+		};
+
+		var putValueComplete = function (root, configEntry) {
+			var field = root.data('field');
+			var extractLast = function (val) {
+				return !!val ? val.split(/[,\(\)\s]*/).pop() : val;
+			};
+			var parseValue = function (text) {
+				var obj = {};
+				var parsers = [{
+						regex: /^[\s=]*([\(\[])\s*(\-?\d*[\.eE]?\-?\d*)\s*,\s*(\-?\d*[\.eE]?\-?\d*)\s*([\)\]])\s*([^\d,]*)\s*$/,
+						fields: ['', 'loQualifier', 'loValue', 'upValue', 'upQualifier', 'unit'],
+						// adjust the parsed value, if needed
+						adjust: function (obj, parse) {
+							if (!obj.upValue) delete obj.upQualifier;
+							else obj.upQualifier = parse[4] == ']' ? '<=' : '<';
+
+							if (!obj.loValue) delete obj.loQualifier;
+							else obj.loQualifier = parse[1] == '[' ? '>=' : '>';
+						}
+					},
+					{
+						regex: /^\s*(>|>=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)[,\s]+(<|<=)?\s*(\-?\d*[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+						fields: ['', 'loQualifier', 'loValue', 'unit', 'upQualifier', 'upValue', 'unit'],
+					},
+					{
+						regex: /^\s*(>|>=|=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+						fields: ['', 'loQualifier', 'loValue', 'unit'],
+						adjust: function (obj, parse) {
+							if (!obj.loQualifier) obj.loQualifier = '=';
+						}
+					},
+					{
+						regex: /^\s*(<|<=)\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+						fields: ['', 'upQualifier', 'upValue', 'unit'],
+					},
+					{
+						regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(<|<=)\s*([^\d,<=>]*)\s*$/,
+						fields: ['', 'upValue', 'upQualifier', 'unit'],
+					},
+					{
+						regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(>|>=)\s*([^\d,<=>]*)\s*$/,
+						fields: ['', 'loValue', 'loQualifier', 'unit'],
+					}
+				];
+
+				for (var pi = 0; pi < parsers.length; ++pi) {
+					var parse = text.match(parsers[pi].regex);
+					if (!parse)
+						continue;
+					for (var i = 1; i < parse.length; ++i)
+						if (!!parse[i]) {
+							var f = parsers[pi].fields[i];
+							obj[f] = parse[i];
+						}
+
+					if (parsers[pi].adjust)
+						parsers[pi].adjust(obj, parse);
+					if (!!obj.unit) obj.unit = obj.unit.trim();
+					break;
+				}
+
+				if (pi >= parsers.length)
+					obj.textValue = _.trim(text);
+
+				return obj;
+			};
+
+			var allTags = [].concat(kit.settings.loTags || defaultSettings.loTags, kit.settings.hiTags || defaultSettings.hiTags, kit.settings.units || defaultSettings.units);
+
+			var autoEl = putAutocomplete(root, null, configEntry, {
+				change: function (e, ui) {
+					settings.onchange.call(this, e, field, parseValue(this.value));
+				},
+				source: function (request, response) {
+					// extract the last term
+					var result = $.ui.autocomplete.filter(allTags, extractLast(request.term));
+					if (request.term == '') {
+						// if term is empty don't show results
+						// avoids IE opening all results after initialization.
+						result = '';
+					}
+					// delegate back to autocomplete
+					response(result);
+				},
+				focus: function () { // prevent value inserted on focus
+					return false;
+				},
+				select: function (event, ui) {
+					var theVal = this.value,
+						last = extractLast(theVal);
+
+					this.value = theVal.substr(0, theVal.length - last.length) + ui.item.value + ' ';
+					return false;
+				}
+			});
+
+			// it might be a hidden one - so, take care for this
+			if (!!autoEl) autoEl.bind('keydown', function (event) {
+				if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
+					event.preventDefault();
+			});
+		};
+
+		// deal with endpoint name itself
+		putAutocomplete($('div.box-endpoint', root), '/query/experiment_endpoints', _.get(config, 'effects.endpoint'));
+		putAutocomplete($('div.box-interpretation', root), '/query/interpretation_result', _.get(config, 'interpretation.result'));
+
+		$('.box-conditions', root).hide(); // to optimize process with adding children
+		if (!!settings.conditions) {
+			// now put some conditions...
+			var any = false;
+			var condRoot = $('div.box-conditions .jtox-border-box', root)[0];
+			for (var cond in config.conditions) {
+				any = true;
+				var div = jT.ui.getTemplate('endpoint-one-condition', {
+					title: config.conditions[cond].title || cond,
+					codition: cond
+				}).appendTo(condRoot);
+
+				$('input', div).attr('placeholder', "Enter value or range");
+				putValueComplete($(div), config.conditions[cond]);
+			}
+			if (any)
+				$('.box-conditions', root).show();
+		}
+
+		// now comes the value editing mechanism
+		var confRange = _.get(config, 'effects.result') || {};
+		var confText = _.get(config, 'effects.text') || {};
+		putValueComplete($('.box-value', root), confRange.bVisible === false ? confText : confRange);
+
+		// now initialize other fields, marked with box-field
+		$('.box-field', root).each(function () {
+			var name = $(this).data('name');
+			$('input, textarea, select', this).on('change', function (e) {
+				settings.onchange.call(this, e, name, $(this).val());
+			});
+		});
+	};
+
+	EndpointKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
+		heightStyle: "content", // the accordition heightStyle
+		hideFilter: false, // if you don't want to have filter box - just hide it
+		maxHits: 10, // max hits in autocomplete
+		showMultiselect: true, // whether to hide select all / unselect all buttons
+		showEditors: false, // whether to show endpoint value editing fields as details
+		showConditions: true, // whether to show conditions in endpoint field editing
+		onLoaded: null, // callback called when the is available
+		loadOnInit: false, // whether to make an (empty) call when initialized.
+		units: ['uSv', 'kg', 'mg/l', 'mg/kg bw', '°C', 'mg/kg bw/day', 'ppm', '%', 'h', 'd'],
+		loTags: ['>', '>=', '='],
+		hiTags: ['<', '<='],
+		dom: "<i>rt", // passed with dataTable settings upon creation
+		language: {
+			loadingRecords: "No endpoints found.",
+			zeroRecords: "No endpoints found.",
+			emptyTable: "No endpoints available.",
+			info: "Showing _TOTAL_ endpoint(s) (_START_ to _END_)"
+		},
+		/* endpointUri */
+		columns: {
+			endpoint: {
+				'Id': {
+					title: "",
+					data: "uri",
+					orderable: false,
+					width: "30px",
+					render: function (data, type, full) {
+						return '';
+					}
+				},
+				'Name': {
+					title: "Name",
+					data: "value",
+					defaultContent: "-",
+					render: function (data, type, full) {
+						return data + '<span class="float-right jtox-details">[<span title="Number of values">' + full.count + '</span>]' + jT.ui.putInfo(full.uri) + '</span>';
+					}
+				},
+			}
+		}
+	};
+
+	jT.ui.Endpoint = EndpointKit;
+
+})(_, asSys, jQuery, jToxKit);
 /** jToxKit - chem-informatics multi-tool-kit.
  * The combined, begamoth kit providing full faceted search capabilites.
  *
@@ -2440,6 +2862,7 @@
 		this.reboundHandlers = _.defaults(
 			_.mapValues(this.settings.handlers, function (hnd) {  return _.bind(hnd, self); }), 
 			jT.tables.commonHandlers);
+		jT.ui.installHandlers(this, this.rootElement, this.reboundHandlers);
 
 		this.bundleSummary = {
 			compound: 0,
@@ -2456,21 +2879,9 @@
 			this.settings.studyTypeList = _.get(window, this.settings.studyTypeList, {});
 
 		// the (sub)action in the panel
-		var loadAction = function () {
-			if (!this.checked)
-				return;
-			document.body.className = this.id;
-			jT.fireCallback(self[$(this).parent().data('loader')], self, this.id, $(this).closest('.ui-tabs-panel')[0], false);
-		};
-
 		var loadPanel = function(panel) {
-			if (panel) {
-				var subs = $('.jq-buttonset.action input:checked', panel);
-				if (subs.length > 0)
-					subs.each(loadAction);
-				else
-					jT.fireCallback(self[$(panel).data('loader')], self, panel.id, panel, true);
-			}
+			panel && jT.fireCallback(self[$(panel).data('loader')], self, panel.id, panel, true);
+			$('.jq-buttonset.auto-setup input:checked', panel).trigger('change');
 		};
 
 		// initialize the tab structure for several versions of dataTables.
@@ -2483,14 +2894,16 @@
 		});
 
 		$('.jq-buttonset', this.rootElement).buttonset();
-		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
 		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
 		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
 		
 		// finally, if provided - load the given bundleUri
-		this.settings.bundleUri && this.loadBundle(this.settings.bundleUri);
+		if (this.settings.bundleUri) {
+			this.settings.baseUrl = jT.formBaseUrl(this.settings.bundleUri);
+			this.loadBundle(this.settings.bundleUri);
+		}
 
 		return this;
 	};
@@ -2527,43 +2940,10 @@
 			note$.prop('disabled', true).val(' ');
 	};
 
-	MatrixKit.prototype.getSelectionCol = function (subject, buttons, arrows) {
-		if (!buttons)
-			buttons = _.keys(defTagButtons);
-
-		var colDef = this.settings.baseFeatures['#SelectionRow'],
-			newRenderer = function (data, type, full) {
-				if (type !== 'display')
-					return data;
-
-				var html = '';
-				if (arrows && full.index > 0)
-					html += jT.ui.fillHtml('matrix-sel-arrow', {
-						direction: 'up',
-						subject: subject
-					});
-				for (var i = 0;i < buttons.length; ++i) {
-					var bDef = defTagButtons[buttons[i]];
-
-					html += '<br/>' + jT.ui.fillHtml('matrix-tag-button', $.extend({
-						subject: subject,
-					}, bDef));
-				}
-				// TODO: How to tell if everything?
-				if (arrows )
-					html += '<br/>' + jT.ui.fillHtml('matrix-sel-arrow', {
-						direction: 'down',
-						subject: subject
-					});
-
-				return html;
-			};
-
-		return jT.tables.insertRenderer(
-			colDef, 
-			newRenderer,  
-			{ separator: '<br/>' }
-		);
+	MatrixKit.prototype.getTagButtonsRenderer = function (subject, buttons, arrows) {
+		return function (data, type, full) {
+			return (type !== 'display') ? data : jT.ui.fillHtml('matrix-tag-buttons', { subject: subject });
+		};
 	};
 
 	MatrixKit.prototype.starHighlight = function (root, stars) {
@@ -2747,20 +3127,22 @@
 	// called when a sub-action in structures selection tab is called
 	MatrixKit.prototype.onStructures = function (id, panel) {
 		if (!this.queryKit) {
-			var self = this;
+			var self = this,
+				selColDef = jT.tables.insertRenderer(
+					this.settings.baseFeatures['#SelectionRow'],
+					this.getTagButtonsRenderer('structure'),
+					{ separator: '<br/>' });
 
 			this.browserKit = jT.ui.initKit($('#struct-browser'), {
 				baseUrl: this.settings.baseUrl,
-				baseFeatures: _.defaults({
-					'#SelectionRow': this.getSelectionCol('structure')
-					}, this.settings.baseFeatures),
+				baseFeatures: _.defaults({ '#SelectionRow': selColDef }, this.settings.baseFeatures),
 				groups: this.settings.groups.structure,
 				handlers: this.reboundHandlers,
 				onRow: _.bind(this.updateTaggedEntry, this),
 				onLoaded: function (dataset) {
 					if (self.queryKit.getQueryType() === 'selected') {
 						self.bundleSummary.compound = dataset.dataEntry.length;
-						self.progressTabs();
+						self.updateTabs();
 					}
 				},
 				onDetails: function (substRoot, data) {
@@ -2831,7 +3213,7 @@
 						columns: { substance: { 'Id': idCol } },
 						onLoaded: function () { 
 							// The actual counting happens in the onRow, because it is conditional.
-							self.progressTabs(); 
+							self.updateTabs(); 
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -2859,33 +3241,26 @@
 	};
 
 	MatrixKit.prototype.onEndpoints = function (id, panel) {
-		var self = this;
-		var sub = $(".tab-" + id.substr(3), panel)[0];
-		sub.parentNode.style.left = (-sub.offsetLeft) + 'px';
-		var bUri = encodeURIComponent(self.bundleUri);
+		if (!this.endpointKit) {
+			var self = this,
+				idCol = jT.tables.insertRenderer(
+					jT.ui.Endpoint.defaults.columns.endpoint.Id,
+					_.bind(jT.tables.getSelectionRenderer('endpoint', 'endpointSelect'), this), 
+					{ separator: '<br/>', position: 'before' });
 
-		var checkAll = $('input', sub)[0];
-		if (sub.childElementCount == 1) {
-			var root = document.createElement('div');
-			sub.appendChild(root);
-			self.endpointKit = new jToxEndpoint(root, {
-				selectionHandler: "onSelectEndpoint",
+			this.endpointKit = jT.ui.initKit($('#endpoint-selector'), {
+				baseUrl: this.settings.baseUrl,
+				handlers: this.reboundHandlers,
+				columns: { endpoint: { 'Id': idCol } },
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
 					var bundleInfo = data.bundles[self.bundleUri];
-					if (!!bundleInfo && bundleInfo.tag == "selected")
-						$('input.jtox-handler', row).attr('checked', 'checked');
+					$('input.jtox-handler', row).prop('checked', !!bundleInfo && bundleInfo.tag == "selected");
 				}
 			});
-			$(checkAll).on('change', function (e) {
-				var qUri = self.settings.baseUrl + "/query/study?mergeDatasets=true&bundleUri=" + bUri;
-				if (!this.checked)
-					qUri += "&selected=substances&filterbybundle=" + bUri;
-				self.endpointKit.loadEndpoints(qUri);
-			});
 		}
-		$(checkAll).trigger('change'); // i.e. initiating a proper reload
+		// The auto-init has taken care to have a query initiated.
 	};
 
 	// called when a sub-action in bundle details tab is called
@@ -4104,7 +4479,7 @@
 							self.bundleSummary[facet.value] = facet.count;
 						}
 					}
-					self.progressTabs();
+					self.updateTabs();
 				});
 
 				// self.initUsers();
@@ -4119,7 +4494,7 @@
 		});
 	};
 
-	MatrixKit.prototype.progressTabs = function () {
+	MatrixKit.prototype.updateTabs = function () {
 		// This routine ensures the wizard-like advacement through the tabs
 		var theSummary = this.bundleSummary;
 		$('li>a.jtox-summary-entry', this.rootElement).each(function () {
@@ -4138,45 +4513,96 @@
 			$('#xfinal').button('disable');
 	};
 
-	MatrixKit.prototype.tagSubstance = function (uri, el) {
-		var self = this;
-		var activate = !$(el).hasClass('active');
-		if (activate) {
-			$(el).addClass('loading');
-			jT.ambit.call(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: 'add', tag : $(el).data('tag')} }, function (result) {
-				$(el.parentNode).find('button.jt-toggle').removeClass('active');
-				$(el).removeClass('loading').addClass('active');
-				if (!result)
-					el.checked = !el.checked; // i.e. revert
-				else {
-					//console.log("Substance [" + uri + "] tagged " + $(el).data('tag'));
+	/********************** Some check/tag/etc. handlers */
+	MatrixKit.prototype.tagStructure = function (el$) {
+		var tag = el$.data('tag'),
+			row$ = el$.closest('tr'),
+			full = jT.tables.getRowData(row$),
+			note$ = $('td textarea.remark', row$),
+			toAdd = !el$.hasClass('active'),
+			self = this;
+
+		this.pollAmbit('/compound', 'PUT', {
+			compound_uri: full.compound.URI,
+			command: toAdd ? 'add' : 'delete',
+			tag: tag,
+			remarks: toAdd ? note$.val() : ''
+		}, el$, function (result) {
+			if (result) {
+				if (!toAdd) {
+					delete full.bundles[self.bundleUri];
+					self.bundleSummary.compound--;
 				}
-			});
-		}
+				else if (self.bundleUri in full.bundles) {
+					full.bundles[self.bundleUri].tag = tag;
+					self.bundleSummary.compound++;
+				}
+				else {
+					full.bundles[self.bundleUri] = { tag: tag, }
+					self.bundleSummary.compound++;
+				}
+					
+				self.updateTaggedEntry(row$[0], full, full.index);
+				self.updateTabs();
+			}
+		});
 	};
 
-	MatrixKit.prototype.selectEndpoint = function (topcategory, endpoint, el) {
-		var self = this;
-		$(el).addClass('loading');
-		jT.ambit.call(self, self.bundleUri + '/property', {
-			method: 'PUT',
-			data: {
-				'topcategory': topcategory,
-				'endpointcategory': endpoint,
-				'command': el.checked ? 'add' : 'delete'
-			}
-		}, function (result) {
-			$(el).removeClass('loading');
-			if (!result)
-				el.checked = !el.checked; // i.e. revert
-			else {
-				if (el.checked)
-					self.bundleSummary.property++;
-				else
-					self.bundleSummary.property--;
-				self.progressTabs();
-				//console.log("Endpoint [" + endpoint + "] selected");
-			}
+	MatrixKit.prototype.reasonStructure = function (el$) {
+		var full = jT.tables.getRowData(el$),
+			bInfo = full.bundles[this.bundleUri],
+			self = this;
+
+		if (!bInfo)
+			console.warn('Empty bundle info came for: ' + JSON.stringify(full));
+		else
+			this.pollAmbit('/compound', 'PUT', {
+				compound_uri: full.compound.URI,
+				command: 'add',
+				tag: bInfo.tag,
+				remarks: el$.val()
+			}, el$, function (result) {
+				if (result) {
+					full.bundles[self.bundleUri].remarks = el$.val();
+					self.updateTaggedEntry(el$.closest('tr')[0], full, full.index);	
+				}
+			});
+	};
+
+
+	MatrixKit.prototype.selectSubstance = function (el$) {
+		var uri = jT.tables.getCellData(el$),
+			self = this,
+			toAdd = el$.prop('checked');
+
+		this.pollAmbit('/substance', 'PUT', { substance_uri: uri, command: toAdd ? 'add' : 'delete' }, el$, function (result) {
+			if (!result) // i.e. need to revert on failure
+				el$.prop('checked', !toAdd);
+			if (toAdd)
+				self.bundleSummary.substance++;
+			else
+				self.bundleSummary.substance--;
+			self.updateTabs();
+		});
+	};
+
+	MatrixKit.prototype.selectEndpoint = function (el$) {
+		var full = jT.tables.getRowData(el$),
+			toAdd = el$.prop('checked'),
+			self = this;
+
+		this.pollAmbit('/property', 'PUT', {
+			topcategory: full.subcategory,
+			endpointcategory: full.endpoint,
+			command: toAdd ? 'add' : 'delete'
+		}, el$, function (result) {
+			if (!result)  // i.e. need to revert on failure
+				el$.prop('checked', toAdd);
+			else if (toAdd)
+				self.bundleSummary.property++;
+			else
+				self.bundleSummary.property--;
+			self.updateTabs();
 		});
 	};
 
@@ -4204,55 +4630,10 @@
 					if (!result) self.load(self.bundleUri);
 				});
 			},
-			structureTag: function (e) {				
-				var el$ = $(e.target),
-					tag = el$.data('tag'),
-					row$ = el$.closest('tr'),
-					full = jT.tables.getRowData(row$),
-					note$ = $('td textarea.remark', row$),
-					toAdd = !el$.hasClass('active'),
-					self = this;
-
-				this.pollAmbit('/compound', 'PUT', {
-					compound_uri: full.compound.URI,
-					command: toAdd ? 'add' : 'delete',
-					tag: tag,
-					remarks: toAdd ? note$.val() : ''
-				}, el$, function (result) {
-					if (result) {
-						if (!toAdd)
-							delete full.bundles[self.bundleUri];
-						else if (self.bundleUri in full.bundles)
-							full.bundles[self.bundleUri].tag = tag;
-						else
-							full.bundles[self.bundleUri] = { tag: tag, }
-							
-						self.updateTaggedEntry(row$[0], full, full.index);
-					}
-				});
-			},
-			structureReason: function (e) {
-				var el$ = $(e.target),
-					full = jT.tables.getRowData(el$),
-					bInfo = full.bundles[this.bundleUri],
-					self = this;
-
-				if (!bInfo)
-					console.warn('Empty bundle info came for: ' + JSON.stringify(full));
-				else
-					this.pollAmbit('/compound', 'PUT', {
-						compound_uri: full.compound.URI,
-						command: 'add',
-						tag: bInfo.tag,
-						remarks: el$.val()
-					}, el$, function (result) {
-						if (result) {
-							full.bundles[self.bundleUri].remarks = el$.val();
-							self.updateTaggedEntry(el$.closest('tr')[0], full, full.index);	
-						}
-					});
-			},
-			// TODO: Move all these to member functions
+			structureTag: function (e) { return this.tagStructure($(e.target)); },
+			structureReason: function (e) { return this.reasonStructure(el$ = $(e.target)); },
+			substanceSelect: function(e) { this.selectSubstance($(e.target)); },
+			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
 			substanceMove: function (e) {
 				var el$ = $(e.target),
 					dir = el$.data('direction'),
@@ -4260,19 +4641,21 @@
 
 				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
 			},
-			substanceSelect: function(e) {
-				var el$ = $(e.target),
-					uri = jT.tables.getCellData(el$),
-					self = this;
-
-				this.pollAmbit('/substance', 'PUT', { substance_uri: uri, command: el$.prop('checked') ? 'add' : 'delete' }, el$, function (result) {
-					if (el$.prop('checked'))
-						self.bundleSummary.substance++;
-					else
-						self.bundleSummary.substance--;
-					self.progressTabs();
-					console.log("Substance selected: " + JSON.stringify(uri));
-				});
+			expandAll: function (e) {
+				var panel = $(target).closest('.ui-tabs-panel');
+				$('.jtox-details-open.fa-folder', panel).trigger('click')				
+			},
+			collapseAll: function (e) { 
+				var panel = $(target).closest('.ui-tabs-panel');
+				$('.jtox-details-open.fa-folder-open', panel).trigger('click');
+			},
+			endpointMode: function (e) {
+				var bUri = encodeURIComponent(this.bundleUri),
+					qUri = this.settings.baseUrl + "query/study?mergeDatasets=true&bundle_uri=" + bUri;
+				if ($(e.target).attr('id') == 'erelevant')
+					qUri += "&selected=substances&filterbybundle=" + bUri;
+				
+				this.endpointKit.query(qUri);
 			}
 		},
 		groups: {
@@ -6034,24 +6417,22 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		this.pageStart = this.settings.pageStart;
 		this.pageSize = this.settings.pageSize;
 
-		if (!this.settings.noInterface) {
-			var self = this;
+		var self = this;
 
-			if (this.settings.embedComposition && this.settings.onDetails == null) {
-				this.settings.onDetails = function (root, data) {
-					new jT.ui.Composition($.extend({},
-						self.settings,
-						(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
-							target: root,
-							compositionUri: data.URI + '/composition'
-						}
-					));
-				};
-			}
-
-			jT.ui.putTemplate('all-substance', ' ? ', this.rootElement);
-			this.init(settings);
+		if (this.settings.embedComposition && this.settings.onDetails == null) {
+			this.settings.onDetails = function (root, data) {
+				new jT.ui.Composition($.extend({},
+					self.settings,
+					(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
+						target: root,
+						compositionUri: data.URI + '/composition'
+					}
+				));
+			};
 		}
+
+		jT.ui.putTemplate('all-substance', ' ? ', this.rootElement);
+		this.init(settings);
 
 		// finally, if provided - make the query
 		if (!!this.settings.substanceUri)
@@ -6117,12 +6498,10 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, result);
-				if (!self.settings.noInterface) {
-					$(self.table).dataTable().fnClearTable();
-					$(self.table).dataTable().fnAddData(result.substance);
+				$(self.table).dataTable().fnClearTable();
+				$(self.table).dataTable().fnAddData(result.substance);
 
-					jT.tables.updateControls.call(self, from, result.substance.length);
-				}
+				jT.tables.updateControls.call(self, from, result.substance.length);
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
 		});
@@ -6141,7 +6520,6 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	SubstanceKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showControls: true, // show navigation controls or not
 		embedComposition: null, // embed composition listing as details for each substance - it valid only if onDetails is not given.
-		noInterface: false, // run in interface-less mode - only data retrieval and callback calling.
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
 		onLoaded: null, // called when the set of substances (for this page) is loaded.
 		language: {
@@ -6364,6 +6742,71 @@ jT.ui.templates['compound-export']  =
 "</div>" +
 ""; // end of #compound-export 
 
+jT.ui.templates['all-endpoint']  = 
+"<div class=\"jtox-endpoint\">" +
+"<div class=\"size-full filter-box\" style=\"height: 35px\"><input type=\"text\" class=\"float-right ui-input\"" +
+"placeholder=\"Filter...\" /></div>" +
+"<div class=\"jtox-categories\">" +
+"<h3 class=\"P-CHEM\" data-cat=\"P-CHEM\">P-Chem <div class=\"float-right jtox-inline jtox-details\"><a" +
+"href=\"#\" class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
+"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"</h3>" +
+"<div>" +
+"<table class=\"P-CHEM\"></table>" +
+"</div>" +
+"<h3 class=\"ENV_FATE\" data-cat=\"ENV_FATE\">Env Fate <div class=\"float-right jtox-inline jtox-details\"><a" +
+"href=\"#\" class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
+"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"</h3>" +
+"<div>" +
+"<table class=\"ENV_FATE\"></table>" +
+"</div>" +
+"<h3 class=\"ECOTOX\" data-cat=\"ECOTOX\">Eco Tox <div class=\"float-right jtox-inline jtox-details\"><a" +
+"href=\"#\" class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
+"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"</h3>" +
+"<div>" +
+"<table class=\"ECOTOX\"></table>" +
+"</div>" +
+"<h3 class=\"TOX\" data-cat=\"TOX\">Tox <div class=\"float-right jtox-inline jtox-details\"><a href=\"#\"" +
+"class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
+"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"</h3>" +
+"<div>" +
+"<table class=\"TOX\"></table>" +
+"</div>" +
+"</div>" +
+"</div>" +
+""; // end of all-endpoint 
+
+jT.ui.templates['endpoint-one-editor']  = 
+"<div class=\"jt-endeditor\">" +
+"<div class=\"jtox-medium-box box-endpoint\" data-field=\"endpoint\">" +
+"<div class=\"jtox-details font-heavy\">Endpoint name</div>" +
+"<input type=\"text\" placeholder=\"Endpoint_\" />" +
+"</div>" +
+"<div class=\"jtox-medium-box box-value\" data-field=\"value\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Value range</div>" +
+"<input type=\"text\" />" +
+"</div>" +
+"<div class=\"jtox-medium-box box-interpretation\" data-field=\"interpretation_result\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Intepretation of the results</div>" +
+"<input type=\"text\" placeholder=\"Intepretation\" />" +
+"</div>" +
+"<div class=\"size-full box-conditions\">" +
+"<div class=\"jtox-details font-heavy\">Conditions</div>" +
+"<div class=\"jtox-border-box\"></div>" +
+"</div>" +
+"</div>" +
+""; // end of endpoint-one-editor 
+
+jT.ui.templates['endpoint-one-condition']  = 
+"<div class=\"jtox-medium-box\" data-condition=\"{{condition}}\">" +
+"<div class=\"jtox-details font-heavy\">{{title}}</div>" +
+"<input type=\"text\" placeholder=\"Intepretation\" />" +
+"</div>" +
+""; // end of endpoint-one-condition 
+
 jT.ui.templates['faceted-search-kit']  = 
 "<div class=\"query-container\">" +
 "<!-- left -->" +
@@ -6521,7 +6964,7 @@ jT.ui.templates['all-matrix']  =
 "<ul>" +
 "<li><a href=\"#jtox-identifiers\">Assessment identifier</a></li>" +
 "<li><a class=\"jtox-summary-entry\" data-summary=\"compound\" href=\"#jtox-structures\">Collect structures</a></li>" +
-"<li><a class=\"jtox-summary-entry\" data-summary=\"substance\" href=\"#jtox-substances\">Search substances</a></li>" +
+"<li><a class=\"jtox-summary-entry\" data-summary=\"substance\" href=\"#jtox-substances\">Select substances</a></li>" +
 "<li><a class=\"jtox-summary-entry\" data-summary=\"property\" href=\"#jtox-endpoints\">Select endpoints</a></li>" +
 "<li><a class=\"jtox-summary-entry\" data-summary=\"matrix\" href=\"#jtox-matrix\">Assessment details</a></li>" +
 "<li><a href=\"#jtox-report\">Report</a></li>" +
@@ -6626,8 +7069,8 @@ jT.ui.templates['all-matrix']  =
 "<div id=\"jtox-substances\" data-loader=\"onSubstances\">" +
 "<div class=\"jtox-inline tab-substance\">" +
 "<div class=\"float-right\">" +
-"<button type=\"button\" class=\"details-expand-all\">Expand all</button>" +
-"<button type=\"button\" class=\"details-collapse-all\">Collapse all</button>" +
+"<button type=\"button\" class=\"details-expand-all jtox-handler\" data-handler=\"expandAll\">Expand all</button>" +
+"<button type=\"button\" class=\"details-collapse-all jtox-handler\" data-handler=\"collapseAll\">Collapse all</button>" +
 "</div>" +
 "</div>" +
 "<div id=\"substance-selector\" class=\"jtox-kit\"" +
@@ -6637,15 +7080,18 @@ jT.ui.templates['all-matrix']  =
 "data-show-diagrams=\"true\">" +
 "</div>" +
 "</div>" +
-"<div id=\"jtox-endpoints\" data-loader=\"onEndpoint\">" +
-"<div class=\"jtox-inline tab-points\">" +
-"<div class=\"check-all\">" +
-"<label for=\"endpointAll\"><input type=\"checkbox\" name=\"endpointAll\" id=\"endpointAll\" /> Show all endpoints</label>" +
+"<div id=\"jtox-endpoints\" data-loader=\"onEndpoints\">" +
+"<div class=\"jq-buttonset center auto-setup\">" +
+"<input type=\"radio\" id=\"erelevant\" name=\"eaction\" checked=\"true\" class=\"jtox-handler\" data-handler=\"endpointMode\"><label for=\"erelevant\">Relevant endpoints</label></input>" +
+"<input type=\"radio\" id=\"eall\" name=\"eaction\" class=\"jtox-handler\" data-handler=\"endpointMode\"><label for=\"eall\">All endpoints</label></input>" +
 "</div>" +
+"<div id=\"endpoint-selector\" class=\"jtox-kit\"" +
+"data-kit=\"Endpoint\"" +
+"data-hide-filter=\"false\">" +
 "</div>" +
 "</div>" +
 "<div id=\"jtox-matrix\" data-loader=\"onMatrix\">" +
-"<div class=\"jq-buttonset center\">" +
+"<div class=\"jq-buttonset center auto-setup\">" +
 "<input type=\"radio\" id=\"xinitial\" name=\"xaction\" checked=\"checked\"><label for=\"xinitial\">Initial matrix</label></input>" +
 "<input type=\"radio\" id=\"xworking\" name=\"xaction\"><label for=\"xworking\">Working matrix</label></input>" +
 "<input type=\"radio\" id=\"xfinal\" name=\"xaction\"><label for=\"xfinal\">Final matrix</label></input>" +
@@ -6705,9 +7151,11 @@ jT.ui.templates['info-box']  =
 "</div>" +
 ""; // end of info-box 
 
-jT.ui.templates['matrix-tag-button']  = 
-"<button class=\"jt-toggle jtox-handler {{tag}} {{status}}\" data-handler=\"{{subject}}Tag\" data-tag=\"{{tag}}\" title=\"Select the {{subject}} as {{name}}\">{{code}}</button>" +
-""; // end of matrix-tag-button 
+jT.ui.templates['matrix-tag-buttons']  = 
+"<button class=\"jt-toggle jtox-handler target\" data-handler=\"{{subject}}Tag\" data-tag=\"target\" title=\"Select the {{subject}} as Target\">T</button><br/>" +
+"<button class=\"jt-toggle jtox-handler source\" data-handler=\"{{subject}}Tag\" data-tag=\"source\" title=\"Select the {{subject}} as Source\">S</button><br/>" +
+"<button class=\"jt-toggle jtox-handler cm\" data-handler=\"{{subject}}Tag\" data-tag=\"cm\" title=\"Select the {{subject}} as Category Member\">CM</button><br/>" +
+""; // end of matrix-tag-buttons 
 
 jT.ui.templates['matrix-tag-indicator']  = 
 "<button class=\"jt-toggle {{tag}} active\" data-tag=\"{{tag}}\" title=\"Select the {{subject}} as {{name}}\">{{code}}</button>" +

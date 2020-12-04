@@ -116,15 +116,13 @@
 
 				jT.fireCallback(self.settings.onLoaded, self, json.composition);
 				// now make the actual filling
-				if (!self.settings.noInterface) {
-					for (var i in substances) {
-						var panel = jT.ui.putTemplate('all-composition', substances[i], self.rootElement);
+				for (var i in substances) {
+					var panel = jT.ui.putTemplate('all-composition', substances[i], self.rootElement);
 
-						if (!self.settings.showBanner) // we need to remove it
-							$('.composition-info', panel).remove();
-						// we need to prepare tables, abyways.
-						self.prepareTable(substances[i].composition, panel[0], i);
-					}
+					if (!self.settings.showBanner) // we need to remove it
+						$('.composition-info', panel).remove();
+					// we need to prepare tables, abyways.
+					self.prepareTable(substances[i].composition, panel[0], i);
 				}
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, json.composition);
@@ -139,7 +137,6 @@
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showBanner: true, // whether to show a banner of composition info before each compounds-table
 		showDiagrams: false, // whether to show diagram for each compound in the composition
-		noInterface: false, // run in interface-less mode - just data retrieval and callback calling.
 		dom: "rt<Ffp>", // compounds (ingredients) table's dom
 		onLoaded: null,
 		handlers: { },

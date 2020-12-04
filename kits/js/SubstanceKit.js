@@ -15,24 +15,22 @@
 		this.pageStart = this.settings.pageStart;
 		this.pageSize = this.settings.pageSize;
 
-		if (!this.settings.noInterface) {
-			var self = this;
+		var self = this;
 
-			if (this.settings.embedComposition && this.settings.onDetails == null) {
-				this.settings.onDetails = function (root, data) {
-					new jT.ui.Composition($.extend({},
-						self.settings,
-						(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
-							target: root,
-							compositionUri: data.URI + '/composition'
-						}
-					));
-				};
-			}
-
-			jT.ui.putTemplate('all-substance', ' ? ', this.rootElement);
-			this.init(settings);
+		if (this.settings.embedComposition && this.settings.onDetails == null) {
+			this.settings.onDetails = function (root, data) {
+				new jT.ui.Composition($.extend({},
+					self.settings,
+					(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
+						target: root,
+						compositionUri: data.URI + '/composition'
+					}
+				));
+			};
 		}
+
+		jT.ui.putTemplate('all-substance', ' ? ', this.rootElement);
+		this.init(settings);
 
 		// finally, if provided - make the query
 		if (!!this.settings.substanceUri)
@@ -98,12 +96,10 @@
 
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, result);
-				if (!self.settings.noInterface) {
-					$(self.table).dataTable().fnClearTable();
-					$(self.table).dataTable().fnAddData(result.substance);
+				$(self.table).dataTable().fnClearTable();
+				$(self.table).dataTable().fnAddData(result.substance);
 
-					jT.tables.updateControls.call(self, from, result.substance.length);
-				}
+				jT.tables.updateControls.call(self, from, result.substance.length);
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
 		});
@@ -122,7 +118,6 @@
 	SubstanceKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		showControls: true, // show navigation controls or not
 		embedComposition: null, // embed composition listing as details for each substance - it valid only if onDetails is not given.
-		noInterface: false, // run in interface-less mode - only data retrieval and callback calling.
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
 		onLoaded: null, // called when the set of substances (for this page) is loaded.
 		language: {
