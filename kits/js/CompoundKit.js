@@ -60,18 +60,15 @@
 		this.pageStart = this.settings.pageStart;
 		this.pageSize = this.settings.pageSize;
 
-		if (!this.settings.noInterface) {
-			jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
-			jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
-			jT.tables.updateControls.call(this);
+		jT.ui.putTemplate('all-compound', { instanceNo: this.instanceNo }, this.rootElement);
+		jT.ui.installHandlers(this, this.rootElement, jT.tables.commonHandlers);
+		jT.tables.updateControls.call(this);
 
-			this.$errDiv = $('.jt-error', this.rootElement);
-		}
+		this.$errDiv = $('.jt-error', this.rootElement);
 	};
 
 	CompoundKit.prototype.clear = function () {
-		if (!this.settings.noInterface)
-			$(this.rootElement).empty();
+		$(this.rootElement).empty();
 	};
 
 	/* make a tab-based widget with features and grouped on tabs. It relies on filled and processed 'self.feature' as well
@@ -678,15 +675,15 @@
 
 				// then process the dataset
 				self.dataset = CompoundKit.processDataset(dataset, $.extend(true, {}, dataset.feature, self.feature), self.settings.fnAccumulate, self.pageStart);
+				
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
-				if (!self.settings.noInterface) {
-					// ok - go and update the table, filtering the entries, if needed
-					self.updateTables();
-					if (self.settings.showControls) {
-						// finally - go and update controls if they are visible
-						jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
-					}
+
+				// ok - go and update the table, filtering the entries, if needed
+				self.updateTables();
+				if (self.settings.showControls) {
+					// finally - go and update controls if they are visible
+					jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
 				}
 			} else {
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
@@ -727,48 +724,45 @@
 					dataEntry: [],
 					feature: self.feature
 				};
-				if (!self.settings.noInterface) {
-					self.prepareGroups(miniset);
-					if (self.settings.showTabs) {
-						// tabs feature building
-						var nodeFn = function (id, name, parent) {
-							var fEl = jT.ui.getTemplate('compound-one-feature', {
-								title: name.replace(/_/g, ' '),
-								uri: self.featureUri(id)
-							});
-							$(parent).append(fEl);
 
-							var checkEl = $('input[type="checkbox"]', fEl)[0];
-							if (!checkEl)
-								return;
-							checkEl.value = id;
-							if (self.settings.rememberChecks)
-								checkEl.checked = (self.featureStates[id] === undefined || self.featureStates[id]);
-
-							return fEl;
-						};
-
-						self.prepareTabs($('.jtox-ds-features', self.rootElement)[0], true, function (divEl, gr) {
-							var empty = true;
-							_.each(self.groups[gr], function (fId) {
-								var vis = (self.feature[fId] || {})['visibility'];
-								if (!!vis && vis != 'main') return;
-
-								empty = false;
-								var title = self.feature[fId].title;
-								title && nodeFn(fId, title, divEl);
-							});
-
-							return empty;
+				self.prepareGroups(miniset);
+				if (self.settings.showTabs) {
+					// tabs feature building
+					var nodeFn = function (id, name, parent) {
+						var fEl = jT.ui.getTemplate('compound-one-feature', {
+							title: name.replace(/_/g, ' '),
+							uri: self.featureUri(id)
 						});
-					}
+						$(parent).append(fEl);
 
-					jT.fireCallback(self.settings.onPrepared, self, miniset, self);
-					self.prepareTables(); // prepare the tables - we need features to build them - we have them!
-					self.equalizeTables(); // to make them nicer, while waiting...
-				} else {
-					jT.fireCallback(self.settings.onPrepared, self, miniset, self);
+						var checkEl = $('input[type="checkbox"]', fEl)[0];
+						if (!checkEl)
+							return;
+						checkEl.value = id;
+						if (self.settings.rememberChecks)
+							checkEl.checked = (self.featureStates[id] === undefined || self.featureStates[id]);
+
+						return fEl;
+					};
+
+					self.prepareTabs($('.jtox-ds-features', self.rootElement)[0], true, function (divEl, gr) {
+						var empty = true;
+						_.each(self.groups[gr], function (fId) {
+							var vis = (self.feature[fId] || {})['visibility'];
+							if (!!vis && vis != 'main') return;
+
+							empty = false;
+							var title = self.feature[fId].title;
+							title && nodeFn(fId, title, divEl);
+						});
+
+						return empty;
+					});
 				}
+
+				jT.fireCallback(self.settings.onPrepared, self, miniset, self);
+				self.prepareTables(); // prepare the tables - we need features to build them - we have them!
+				self.equalizeTables(); // to make them nicer, while waiting...
 
 				// finally make the callback for
 				callback(dataset);
@@ -917,7 +911,6 @@
 	};
 
 	CompoundKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-		"noInterface": false, // runs in interface-less mode, so that it can be used only for information retrieval.
 		"showTabs": true, // should we show tabs with groups, or not
 		"tabsFolded": false, // should present the feature-selection tabs folded initially
 		"showExport": true, // should we add export tab up there

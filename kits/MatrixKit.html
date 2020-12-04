@@ -51,7 +51,7 @@
       <ul>
         <li><a href="#jtox-identifiers">Assessment identifier</a></li>
         <li><a class="jtox-summary-entry" data-summary="compound" href="#jtox-structures">Collect structures</a></li>
-        <li><a class="jtox-summary-entry" data-summary="substance" href="#jtox-substances">Search substances</a></li>
+        <li><a class="jtox-summary-entry" data-summary="substance" href="#jtox-substances">Select substances</a></li>
         <li><a class="jtox-summary-entry" data-summary="property" href="#jtox-endpoints">Select endpoints</a></li>
         <li><a class="jtox-summary-entry" data-summary="matrix" href="#jtox-matrix">Assessment details</a></li>
         <li><a href="#jtox-report">Report</a></li>
@@ -156,8 +156,8 @@
       <div id="jtox-substances" data-loader="onSubstances">
         <div class="jtox-inline tab-substance">
           <div class="float-right">
-            <button type="button" class="details-expand-all">Expand all</button>
-            <button type="button" class="details-collapse-all">Collapse all</button>
+            <button type="button" class="details-expand-all jtox-handler" data-handler="expandAll">Expand all</button>
+            <button type="button" class="details-collapse-all jtox-handler" data-handler="collapseAll">Collapse all</button>
           </div>
         </div>
         <div id="substance-selector" class="jtox-kit" 
@@ -167,15 +167,18 @@
           data-show-diagrams="true">
         </div>
       </div>
-      <div id="jtox-endpoints" data-loader="onEndpoint">
-        <div class="jtox-inline tab-points">
-          <div class="check-all">
-            <label for="endpointAll"><input type="checkbox" name="endpointAll" id="endpointAll" /> Show all endpoints</label>
-          </div>
+      <div id="jtox-endpoints" data-loader="onEndpoints">
+        <div class="jq-buttonset center auto-setup">
+          <input type="radio" id="erelevant" name="eaction" checked="true" class="jtox-handler" data-handler="endpointMode"><label for="erelevant">Relevant endpoints</label></input>
+          <input type="radio" id="eall" name="eaction" class="jtox-handler" data-handler="endpointMode"><label for="eall">All endpoints</label></input>
+        </div>
+        <div id="endpoint-selector" class="jtox-kit" 
+          data-kit="Endpoint"
+          data-hide-filter="false">
         </div>
       </div>
       <div id="jtox-matrix" data-loader="onMatrix">
-        <div class="jq-buttonset center">
+        <div class="jq-buttonset center auto-setup">
           <input type="radio" id="xinitial" name="xaction" checked="checked"><label for="xinitial">Initial matrix</label></input>
           <input type="radio" id="xworking" name="xaction"><label for="xworking">Working matrix</label></input>
           <input type="radio" id="xfinal" name="xaction"><label for="xfinal">Final matrix</label></input>
@@ -233,9 +236,11 @@
       </table>
     </div>
 <!-- // end of info-box ]]-->
-<!--[[ jT.ui.templates['matrix-tag-button'] -->
-    <button class="jt-toggle jtox-handler {{tag}} {{status}}" data-handler="{{subject}}Tag" data-tag="{{tag}}" title="Select the {{subject}} as {{name}}">{{code}}</button>
-<!-- // end of matrix-tag-button ]]-->
+<!--[[ jT.ui.templates['matrix-tag-buttons'] -->
+    <button class="jt-toggle jtox-handler target" data-handler="{{subject}}Tag" data-tag="target" title="Select the {{subject}} as Target">T</button><br/>
+    <button class="jt-toggle jtox-handler source" data-handler="{{subject}}Tag" data-tag="source" title="Select the {{subject}} as Source">S</button><br/>
+    <button class="jt-toggle jtox-handler cm" data-handler="{{subject}}Tag" data-tag="cm" title="Select the {{subject}} as Category Member">CM</button><br/>
+<!-- // end of matrix-tag-buttons ]]-->
 <!--[[ jT.ui.templates['matrix-tag-indicator'] -->
 <button class="jt-toggle {{tag}} active" data-tag="{{tag}}" title="Select the {{subject}} as {{name}}">{{code}}</button>
 <!-- // end of matrix-tag-indicator ]]-->

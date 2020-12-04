@@ -34,6 +34,7 @@
 		this.reboundHandlers = _.defaults(
 			_.mapValues(this.settings.handlers, function (hnd) {  return _.bind(hnd, self); }), 
 			jT.tables.commonHandlers);
+		jT.ui.installHandlers(this, this.rootElement, this.reboundHandlers);
 
 		this.bundleSummary = {
 			compound: 0,
@@ -50,21 +51,9 @@
 			this.settings.studyTypeList = _.get(window, this.settings.studyTypeList, {});
 
 		// the (sub)action in the panel
-		var loadAction = function () {
-			if (!this.checked)
-				return;
-			document.body.className = this.id;
-			jT.fireCallback(self[$(this).parent().data('loader')], self, this.id, $(this).closest('.ui-tabs-panel')[0], false);
-		};
-
 		var loadPanel = function(panel) {
-			if (panel) {
-				var subs = $('.jq-buttonset.action input:checked', panel);
-				if (subs.length > 0)
-					subs.each(loadAction);
-				else
-					jT.fireCallback(self[$(panel).data('loader')], self, panel.id, panel, true);
-			}
+			panel && jT.fireCallback(self[$(panel).data('loader')], self, panel.id, panel, true);
+			$('.jq-buttonset.auto-setup input:checked', panel).trigger('change');
 		};
 
 		// initialize the tab structure for several versions of dataTables.
@@ -77,14 +66,16 @@
 		});
 
 		$('.jq-buttonset', this.rootElement).buttonset();
-		$('.jq-buttonset.action input', this.rootElement).on('change', loadAction);
 
 		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
 
 		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
 		
 		// finally, if provided - load the given bundleUri
-		this.settings.bundleUri && this.loadBundle(this.settings.bundleUri);
+		if (this.settings.bundleUri) {
+			this.settings.baseUrl = jT.formBaseUrl(this.settings.bundleUri);
+			this.loadBundle(this.settings.bundleUri);
+		}
 
 		return this;
 	};
@@ -121,43 +112,10 @@
 			note$.prop('disabled', true).val(' ');
 	};
 
-	MatrixKit.prototype.getSelectionCol = function (subject, buttons, arrows) {
-		if (!buttons)
-			buttons = _.keys(defTagButtons);
-
-		var colDef = this.settings.baseFeatures['#SelectionRow'],
-			newRenderer = function (data, type, full) {
-				if (type !== 'display')
-					return data;
-
-				var html = '';
-				if (arrows && full.index > 0)
-					html += jT.ui.fillHtml('matrix-sel-arrow', {
-						direction: 'up',
-						subject: subject
-					});
-				for (var i = 0;i < buttons.length; ++i) {
-					var bDef = defTagButtons[buttons[i]];
-
-					html += '<br/>' + jT.ui.fillHtml('matrix-tag-button', $.extend({
-						subject: subject,
-					}, bDef));
-				}
-				// TODO: How to tell if everything?
-				if (arrows )
-					html += '<br/>' + jT.ui.fillHtml('matrix-sel-arrow', {
-						direction: 'down',
-						subject: subject
-					});
-
-				return html;
-			};
-
-		return jT.tables.insertRenderer(
-			colDef, 
-			newRenderer,  
-			{ separator: '<br/>' }
-		);
+	MatrixKit.prototype.getTagButtonsRenderer = function (subject, buttons, arrows) {
+		return function (data, type, full) {
+			return (type !== 'display') ? data : jT.ui.fillHtml('matrix-tag-buttons', { subject: subject });
+		};
 	};
 
 	MatrixKit.prototype.starHighlight = function (root, stars) {
@@ -341,20 +299,22 @@
 	// called when a sub-action in structures selection tab is called
 	MatrixKit.prototype.onStructures = function (id, panel) {
 		if (!this.queryKit) {
-			var self = this;
+			var self = this,
+				selColDef = jT.tables.insertRenderer(
+					this.settings.baseFeatures['#SelectionRow'],
+					this.getTagButtonsRenderer('structure'),
+					{ separator: '<br/>' });
 
 			this.browserKit = jT.ui.initKit($('#struct-browser'), {
 				baseUrl: this.settings.baseUrl,
-				baseFeatures: _.defaults({
-					'#SelectionRow': this.getSelectionCol('structure')
-					}, this.settings.baseFeatures),
+				baseFeatures: _.defaults({ '#SelectionRow': selColDef }, this.settings.baseFeatures),
 				groups: this.settings.groups.structure,
 				handlers: this.reboundHandlers,
 				onRow: _.bind(this.updateTaggedEntry, this),
 				onLoaded: function (dataset) {
 					if (self.queryKit.getQueryType() === 'selected') {
 						self.bundleSummary.compound = dataset.dataEntry.length;
-						self.progressTabs();
+						self.updateTabs();
 					}
 				},
 				onDetails: function (substRoot, data) {
@@ -425,7 +385,7 @@
 						columns: { substance: { 'Id': idCol } },
 						onLoaded: function () { 
 							// The actual counting happens in the onRow, because it is conditional.
-							self.progressTabs(); 
+							self.updateTabs(); 
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -453,33 +413,26 @@
 	};
 
 	MatrixKit.prototype.onEndpoints = function (id, panel) {
-		var self = this;
-		var sub = $(".tab-" + id.substr(3), panel)[0];
-		sub.parentNode.style.left = (-sub.offsetLeft) + 'px';
-		var bUri = encodeURIComponent(self.bundleUri);
+		if (!this.endpointKit) {
+			var self = this,
+				idCol = jT.tables.insertRenderer(
+					jT.ui.Endpoint.defaults.columns.endpoint.Id,
+					_.bind(jT.tables.getSelectionRenderer('endpoint', 'endpointSelect'), this), 
+					{ separator: '<br/>', position: 'before' });
 
-		var checkAll = $('input', sub)[0];
-		if (sub.childElementCount == 1) {
-			var root = document.createElement('div');
-			sub.appendChild(root);
-			self.endpointKit = new jToxEndpoint(root, {
-				selectionHandler: "onSelectEndpoint",
+			this.endpointKit = jT.ui.initKit($('#endpoint-selector'), {
+				baseUrl: this.settings.baseUrl,
+				handlers: this.reboundHandlers,
+				columns: { endpoint: { 'Id': idCol } },
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
 					var bundleInfo = data.bundles[self.bundleUri];
-					if (!!bundleInfo && bundleInfo.tag == "selected")
-						$('input.jtox-handler', row).attr('checked', 'checked');
+					$('input.jtox-handler', row).prop('checked', !!bundleInfo && bundleInfo.tag == "selected");
 				}
 			});
-			$(checkAll).on('change', function (e) {
-				var qUri = self.settings.baseUrl + "/query/study?mergeDatasets=true&bundleUri=" + bUri;
-				if (!this.checked)
-					qUri += "&selected=substances&filterbybundle=" + bUri;
-				self.endpointKit.loadEndpoints(qUri);
-			});
 		}
-		$(checkAll).trigger('change'); // i.e. initiating a proper reload
+		// The auto-init has taken care to have a query initiated.
 	};
 
 	// called when a sub-action in bundle details tab is called
@@ -1698,7 +1651,7 @@
 							self.bundleSummary[facet.value] = facet.count;
 						}
 					}
-					self.progressTabs();
+					self.updateTabs();
 				});
 
 				// self.initUsers();
@@ -1713,7 +1666,7 @@
 		});
 	};
 
-	MatrixKit.prototype.progressTabs = function () {
+	MatrixKit.prototype.updateTabs = function () {
 		// This routine ensures the wizard-like advacement through the tabs
 		var theSummary = this.bundleSummary;
 		$('li>a.jtox-summary-entry', this.rootElement).each(function () {
@@ -1732,45 +1685,96 @@
 			$('#xfinal').button('disable');
 	};
 
-	MatrixKit.prototype.tagSubstance = function (uri, el) {
-		var self = this;
-		var activate = !$(el).hasClass('active');
-		if (activate) {
-			$(el).addClass('loading');
-			jT.ambit.call(self, self.bundleUri + '/substance', { method: 'PUT', data: { substance_uri: uri, command: 'add', tag : $(el).data('tag')} }, function (result) {
-				$(el.parentNode).find('button.jt-toggle').removeClass('active');
-				$(el).removeClass('loading').addClass('active');
-				if (!result)
-					el.checked = !el.checked; // i.e. revert
-				else {
-					//console.log("Substance [" + uri + "] tagged " + $(el).data('tag'));
+	/********************** Some check/tag/etc. handlers */
+	MatrixKit.prototype.tagStructure = function (el$) {
+		var tag = el$.data('tag'),
+			row$ = el$.closest('tr'),
+			full = jT.tables.getRowData(row$),
+			note$ = $('td textarea.remark', row$),
+			toAdd = !el$.hasClass('active'),
+			self = this;
+
+		this.pollAmbit('/compound', 'PUT', {
+			compound_uri: full.compound.URI,
+			command: toAdd ? 'add' : 'delete',
+			tag: tag,
+			remarks: toAdd ? note$.val() : ''
+		}, el$, function (result) {
+			if (result) {
+				if (!toAdd) {
+					delete full.bundles[self.bundleUri];
+					self.bundleSummary.compound--;
 				}
-			});
-		}
+				else if (self.bundleUri in full.bundles) {
+					full.bundles[self.bundleUri].tag = tag;
+					self.bundleSummary.compound++;
+				}
+				else {
+					full.bundles[self.bundleUri] = { tag: tag, }
+					self.bundleSummary.compound++;
+				}
+					
+				self.updateTaggedEntry(row$[0], full, full.index);
+				self.updateTabs();
+			}
+		});
 	};
 
-	MatrixKit.prototype.selectEndpoint = function (topcategory, endpoint, el) {
-		var self = this;
-		$(el).addClass('loading');
-		jT.ambit.call(self, self.bundleUri + '/property', {
-			method: 'PUT',
-			data: {
-				'topcategory': topcategory,
-				'endpointcategory': endpoint,
-				'command': el.checked ? 'add' : 'delete'
-			}
-		}, function (result) {
-			$(el).removeClass('loading');
-			if (!result)
-				el.checked = !el.checked; // i.e. revert
-			else {
-				if (el.checked)
-					self.bundleSummary.property++;
-				else
-					self.bundleSummary.property--;
-				self.progressTabs();
-				//console.log("Endpoint [" + endpoint + "] selected");
-			}
+	MatrixKit.prototype.reasonStructure = function (el$) {
+		var full = jT.tables.getRowData(el$),
+			bInfo = full.bundles[this.bundleUri],
+			self = this;
+
+		if (!bInfo)
+			console.warn('Empty bundle info came for: ' + JSON.stringify(full));
+		else
+			this.pollAmbit('/compound', 'PUT', {
+				compound_uri: full.compound.URI,
+				command: 'add',
+				tag: bInfo.tag,
+				remarks: el$.val()
+			}, el$, function (result) {
+				if (result) {
+					full.bundles[self.bundleUri].remarks = el$.val();
+					self.updateTaggedEntry(el$.closest('tr')[0], full, full.index);	
+				}
+			});
+	};
+
+
+	MatrixKit.prototype.selectSubstance = function (el$) {
+		var uri = jT.tables.getCellData(el$),
+			self = this,
+			toAdd = el$.prop('checked');
+
+		this.pollAmbit('/substance', 'PUT', { substance_uri: uri, command: toAdd ? 'add' : 'delete' }, el$, function (result) {
+			if (!result) // i.e. need to revert on failure
+				el$.prop('checked', !toAdd);
+			if (toAdd)
+				self.bundleSummary.substance++;
+			else
+				self.bundleSummary.substance--;
+			self.updateTabs();
+		});
+	};
+
+	MatrixKit.prototype.selectEndpoint = function (el$) {
+		var full = jT.tables.getRowData(el$),
+			toAdd = el$.prop('checked'),
+			self = this;
+
+		this.pollAmbit('/property', 'PUT', {
+			topcategory: full.subcategory,
+			endpointcategory: full.endpoint,
+			command: toAdd ? 'add' : 'delete'
+		}, el$, function (result) {
+			if (!result)  // i.e. need to revert on failure
+				el$.prop('checked', toAdd);
+			else if (toAdd)
+				self.bundleSummary.property++;
+			else
+				self.bundleSummary.property--;
+			self.updateTabs();
 		});
 	};
 
@@ -1798,55 +1802,10 @@
 					if (!result) self.load(self.bundleUri);
 				});
 			},
-			structureTag: function (e) {				
-				var el$ = $(e.target),
-					tag = el$.data('tag'),
-					row$ = el$.closest('tr'),
-					full = jT.tables.getRowData(row$),
-					note$ = $('td textarea.remark', row$),
-					toAdd = !el$.hasClass('active'),
-					self = this;
-
-				this.pollAmbit('/compound', 'PUT', {
-					compound_uri: full.compound.URI,
-					command: toAdd ? 'add' : 'delete',
-					tag: tag,
-					remarks: toAdd ? note$.val() : ''
-				}, el$, function (result) {
-					if (result) {
-						if (!toAdd)
-							delete full.bundles[self.bundleUri];
-						else if (self.bundleUri in full.bundles)
-							full.bundles[self.bundleUri].tag = tag;
-						else
-							full.bundles[self.bundleUri] = { tag: tag, }
-							
-						self.updateTaggedEntry(row$[0], full, full.index);
-					}
-				});
-			},
-			structureReason: function (e) {
-				var el$ = $(e.target),
-					full = jT.tables.getRowData(el$),
-					bInfo = full.bundles[this.bundleUri],
-					self = this;
-
-				if (!bInfo)
-					console.warn('Empty bundle info came for: ' + JSON.stringify(full));
-				else
-					this.pollAmbit('/compound', 'PUT', {
-						compound_uri: full.compound.URI,
-						command: 'add',
-						tag: bInfo.tag,
-						remarks: el$.val()
-					}, el$, function (result) {
-						if (result) {
-							full.bundles[self.bundleUri].remarks = el$.val();
-							self.updateTaggedEntry(el$.closest('tr')[0], full, full.index);	
-						}
-					});
-			},
-			// TODO: Move all these to member functions
+			structureTag: function (e) { return this.tagStructure($(e.target)); },
+			structureReason: function (e) { return this.reasonStructure(el$ = $(e.target)); },
+			substanceSelect: function(e) { this.selectSubstance($(e.target)); },
+			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
 			substanceMove: function (e) {
 				var el$ = $(e.target),
 					dir = el$.data('direction'),
@@ -1854,19 +1813,21 @@
 
 				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
 			},
-			substanceSelect: function(e) {
-				var el$ = $(e.target),
-					uri = jT.tables.getCellData(el$),
-					self = this;
-
-				this.pollAmbit('/substance', 'PUT', { substance_uri: uri, command: el$.prop('checked') ? 'add' : 'delete' }, el$, function (result) {
-					if (el$.prop('checked'))
-						self.bundleSummary.substance++;
-					else
-						self.bundleSummary.substance--;
-					self.progressTabs();
-					console.log("Substance selected: " + JSON.stringify(uri));
-				});
+			expandAll: function (e) {
+				var panel = $(target).closest('.ui-tabs-panel');
+				$('.jtox-details-open.fa-folder', panel).trigger('click')				
+			},
+			collapseAll: function (e) { 
+				var panel = $(target).closest('.ui-tabs-panel');
+				$('.jtox-details-open.fa-folder-open', panel).trigger('click');
+			},
+			endpointMode: function (e) {
+				var bUri = encodeURIComponent(this.bundleUri),
+					qUri = this.settings.baseUrl + "query/study?mergeDatasets=true&bundle_uri=" + bUri;
+				if ($(e.target).attr('id') == 'erelevant')
+					qUri += "&selected=substances&filterbybundle=" + bUri;
+				
+				this.endpointKit.query(qUri);
 			}
 		},
 		groups: {
