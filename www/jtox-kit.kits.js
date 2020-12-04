@@ -4642,11 +4642,11 @@
 				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
 			},
 			expandAll: function (e) {
-				var panel = $(target).closest('.ui-tabs-panel');
+				var panel = $(e.target).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder', panel).trigger('click')				
 			},
 			collapseAll: function (e) { 
-				var panel = $(target).closest('.ui-tabs-panel');
+				var panel = $(e.target).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder-open', panel).trigger('click');
 			},
 			endpointMode: function (e) {
