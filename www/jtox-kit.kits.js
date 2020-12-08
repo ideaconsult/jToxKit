@@ -1471,9 +1471,7 @@
 		jT.ui.putTemplate('all-endpoint', ' ? ', this.rootElement);
 
 		this.settings = $.extend(true, {}, EndpointKit.defaults, settings);
-		this.reboundHandlers = _.defaults(
-			_.mapValues(this.settings.handlers, function (hnd) {  return _.bind(hnd, self); }), 
-			jT.tables.commonHandlers);
+		jT.ui.installHandlers(this, this.rootElement, _.defaults(this.settings.handlers, jT.tables.commonHandlers));
 
 		var self = this;
 
@@ -1537,12 +1535,8 @@
 			$('.filter-box input', self.rootElement).on('keydown', fFilter);
 		}
 
-		if (!self.settings.showMultiselect || !self.settings.selectionHandler)
+		if (!self.settings.showMultiselect)
 			$('h3 a', self.rootElement).remove();
-		else
-			jT.ui.installMultiSelect(self.rootElement, null, function (el) {
-				return el.parentNode.parentNode.nextElementSibling;
-			});
 
 		// finally, wait a bit for everyone to get initialized and make a call, if asked to
 		if (!!this.settings.endpointUri != undefined && this.settings.loadOnInit)
@@ -1844,24 +1838,36 @@
 		});
 	};
 
-	EndpointKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
+	EndpointKit.defaults = { 	// all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
 		heightStyle: "content", // the accordition heightStyle
-		hideFilter: false, // if you don't want to have filter box - just hide it
-		maxHits: 10, // max hits in autocomplete
-		showMultiselect: true, // whether to hide select all / unselect all buttons
-		showEditors: false, // whether to show endpoint value editing fields as details
-		showConditions: true, // whether to show conditions in endpoint field editing
-		onLoaded: null, // callback called when the is available
-		loadOnInit: false, // whether to make an (empty) call when initialized.
+		hideFilter: false, 		// if you don't want to have filter box - just hide it
+		maxHits: 10, 			// max hits in autocomplete
+		showMultiselect: true, 	// whether to hide select all / unselect all buttons
+		showEditors: false, 	// whether to show endpoint value editing fields as details
+		showConditions: true, 	// whether to show conditions in endpoint field editing
+		onLoaded: null, 		// callback called when the is available
+		loadOnInit: false, 		// whether to make an (empty) call when initialized.
 		units: ['uSv', 'kg', 'mg/l', 'mg/kg bw', '°C', 'mg/kg bw/day', 'ppm', '%', 'h', 'd'],
 		loTags: ['>', '>=', '='],
 		hiTags: ['<', '<='],
-		dom: "<i>rt", // passed with dataTable settings upon creation
+		dom: "<i>rt", 			// passed with dataTable settings upon creation
 		language: {
 			loadingRecords: "No endpoints found.",
 			zeroRecords: "No endpoints found.",
 			emptyTable: "No endpoints available.",
 			info: "Showing _TOTAL_ endpoint(s) (_START_ to _END_)"
+		},
+		handlers: {
+			multipleSelect: function (e) {
+				var el$ = $(e.target),
+					cat = el$.closest('h3').data('cat'),
+					root = $('.' + cat, el$.closest('div.jtox-categories')),
+					action = el$.data('action') || 'on';
+
+				root && $(action !== 'on' ? 'input.jtox-selection:checked' : 'input.jtox-selection:not(:checked)', root)
+					.prop('checked', action === 'on')
+					.trigger('change');
+			}
 		},
 		/* endpointUri */
 		columns: {
@@ -3251,6 +3257,7 @@
 			this.endpointKit = jT.ui.initKit($('#endpoint-selector'), {
 				baseUrl: this.settings.baseUrl,
 				handlers: this.reboundHandlers,
+				showMultiselect: true,
 				columns: { endpoint: { 'Id': idCol } },
 				onRow: function (row, data, index) {
 					if (!data.bundles)
@@ -4611,7 +4618,7 @@
 		maxStars: 10,
 		studyTypeList: {},
 		handlers: {
-			// TODO: Link it from the HTML !!!
+			// TODO: This is form validation handler - link it from the HTML !!!
 			fieldUpdate: function (e) {
 				e.preventDefault();
 				e.stopPropagation();
@@ -6747,30 +6754,34 @@ jT.ui.templates['all-endpoint']  =
 "<div class=\"size-full filter-box\" style=\"height: 35px\"><input type=\"text\" class=\"float-right ui-input\"" +
 "placeholder=\"Filter...\" /></div>" +
 "<div class=\"jtox-categories\">" +
-"<h3 class=\"P-CHEM\" data-cat=\"P-CHEM\">P-Chem <div class=\"float-right jtox-inline jtox-details\"><a" +
-"href=\"#\" class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
-"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"<h3 data-cat=\"P-CHEM\">P-Chem" +
+"<div class=\"float-right jtox-inline jtox-details\"><a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\">select all</a>&nbsp;<a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\" data-action=\"off\">unselect all</a><span style=\"margin-left: 10px\"></span></div>" +
 "</h3>" +
 "<div>" +
 "<table class=\"P-CHEM\"></table>" +
 "</div>" +
-"<h3 class=\"ENV_FATE\" data-cat=\"ENV_FATE\">Env Fate <div class=\"float-right jtox-inline jtox-details\"><a" +
-"href=\"#\" class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
-"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"<h3 data-cat=\"ENV_FATE\">Env Fate" +
+"<div class=\"float-right jtox-inline jtox-details\"><a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\">select all</a>&nbsp;<a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\" data-action=\"off\">unselect all</a><span style=\"margin-left: 10px\"></span></div>" +
 "</h3>" +
 "<div>" +
 "<table class=\"ENV_FATE\"></table>" +
 "</div>" +
-"<h3 class=\"ECOTOX\" data-cat=\"ECOTOX\">Eco Tox <div class=\"float-right jtox-inline jtox-details\"><a" +
-"href=\"#\" class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
-"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"<h3 data-cat=\"ECOTOX\">Eco Tox" +
+"<div class=\"float-right jtox-inline jtox-details\"><a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\">select all</a>&nbsp;<a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\" data-action=\"off\">unselect all</a><span style=\"margin-left: 10px\"></span></div>" +
 "</h3>" +
 "<div>" +
 "<table class=\"ECOTOX\"></table>" +
 "</div>" +
-"<h3 class=\"TOX\" data-cat=\"TOX\">Tox <div class=\"float-right jtox-inline jtox-details\"><a href=\"#\"" +
-"class=\"select-all\">select all</a>&nbsp;<a href=\"#\" class=\"unselect-all\">unselect" +
-"all</a><span style=\"margin-left: 10px\"></span></div>" +
+"<h3 data-cat=\"TOX\">Tox" +
+"<div class=\"float-right jtox-inline jtox-details\"><a href=\"#\"" +
+"class=\"jtox-handler\" data-handler=\"multipleSelect\">select all</a>&nbsp;<a" +
+"href=\"#\" class=\"jtox-handler\" data-handler=\"multipleSelect\" data-action=\"off\">unselect all</a><span style=\"margin-left: 10px\"></span></div>" +
 "</h3>" +
 "<div>" +
 "<table class=\"TOX\"></table>" +

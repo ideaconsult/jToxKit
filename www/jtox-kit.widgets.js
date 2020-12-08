@@ -1130,29 +1130,6 @@ jT.tables = {
 		return df;
 	},
 
-	installMultiSelect: function (root, callback, parenter) {
-		if (parenter == null)
-			parenter = function (el) {
-				return el.parentNode;
-			};
-		$('a.select-all', root).on('click', function (e) {
-			$('input[type="checkbox"]', parenter(this)).each(function () {
-				this.checked = true;
-				if (callback == null) $(this).trigger('change');
-			});
-			if (callback != null)
-				callback.call(this, e);
-		});
-		$('a.unselect-all', root).on('click', function (e) {
-			$('input[type="checkbox"]', parenter(this)).each(function () {
-				this.checked = false;
-				if (callback == null) $(this).trigger('change');
-			});
-			if (callback != null)
-				callback.call(this, e);
-		});
-	},
-
 	columnData: function (cols, data, type) {
 		var out = new Array(data.length);
 		if (type == null)
@@ -1268,7 +1245,7 @@ jT.tables = {
 		return function (data, type, full) {
 			return type !== 'display' 
 				? data 
-				: '<input type="checkbox" value="' + data + '" class="jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
+				: '<input type="checkbox" value="' + data + '" class="jtox-selection jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
 				'" title="Add this ' + (subject || 'entry') + ' to the selection"' + '/>';
 		}
 	},

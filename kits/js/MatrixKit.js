@@ -423,6 +423,7 @@
 			this.endpointKit = jT.ui.initKit($('#endpoint-selector'), {
 				baseUrl: this.settings.baseUrl,
 				handlers: this.reboundHandlers,
+				showMultiselect: true,
 				columns: { endpoint: { 'Id': idCol } },
 				onRow: function (row, data, index) {
 					if (!data.bundles)
@@ -1783,7 +1784,7 @@
 		maxStars: 10,
 		studyTypeList: {},
 		handlers: {
-			// TODO: Link it from the HTML !!!
+			// TODO: This is form validation handler - link it from the HTML !!!
 			fieldUpdate: function (e) {
 				e.preventDefault();
 				e.stopPropagation();
