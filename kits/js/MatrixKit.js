@@ -424,6 +424,7 @@
 				baseUrl: this.settings.baseUrl,
 				handlers: this.reboundHandlers,
 				showMultiselect: true,
+				showEditors: true,
 				columns: { endpoint: { 'Id': idCol } },
 				onRow: function (row, data, index) {
 					if (!data.bundles)

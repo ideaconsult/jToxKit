@@ -97,7 +97,7 @@
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, result);
 				$(self.table).dataTable().fnClearTable();
-				$(self.table).dataTable().fnAddData(result.substance);
+				result.substance.length && $(self.table).dataTable().fnAddData(result.substance);
 
 				jT.tables.updateControls.call(self, from, result.substance.length);
 			} else
@@ -191,7 +191,7 @@
 					title: "Info",
 					data: "externalIdentifiers",
 					render: function (data, type, full) {
-						return jT.ambit.formatExtIdentifiers(data, type, full);
+						return data && jT.ambit.formatExtIdentifiers(data, type, full) && '';
 					}
 				}
 			}

@@ -22,18 +22,6 @@
 			this.start();
 	};
 
-	AnnotationKit.defaults = {
-		context: null,
-		ajaxSettings: null,
-		connector: null,
-		inputSize: 30,
-		matchers: [{
-			selector: "*",		// String - CSS selector
-			processor: null,	// String | Function 
-			exclusive: false	// Boolean - terminate matching
-		}]
-	};
-
 	AnnotationKit.prototype.start = function () {
 		this.annoTip.attach(this.selector);
 
@@ -197,6 +185,26 @@
 		});
 
 		return obj;
+	};
+
+	AnnotationKit.getAnnoRenderer = function (className) {
+		// TODO: Return this function which renders the annotation-aware element
+		// in a table.
+		return function (data, type, full) {
+
+		}
+	},
+
+	AnnotationKit.defaults = {
+		context: null,
+		ajaxSettings: null,
+		connector: null,
+		inputSize: 30,
+		matchers: [{
+			selector: "*",		// String - CSS selector
+			processor: null,	// String | Function 
+			exclusive: false	// Boolean - terminate matching
+		}]
 	};
 
 	jT.ui.Annotation = AnnotationKit;

@@ -203,13 +203,20 @@ jT.tables = {
 		var oldRender = colDef.render,
 			newRender = !oldRender ? render : function (data, type, full) {
 				var oldContent = oldRender(data, type, full),
-					newContent = render(data, type, full);
+					newContent = render(data, type, full),
+					separator = opts.separator || '';
+
+				// In case we're given an array of renders, we'll receive an array of values.
+				if (Array.isArray(newContent))
+					newContent = newContent.join(separator);
 
 				return (opts.position === 'before') 
-					? newContent + (opts.separator || '') + oldContent 
-					: oldContent + (opts.separator || '') + newContent;
+					? newContent + separator + oldContent 
+					: oldContent + separator + newContent;
 			};
 
+		if (Array.isArray(render))
+			render = _.over(render);
 		if (opts.inplace)
 			colDef.render = newRender;
 		else

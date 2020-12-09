@@ -16,11 +16,11 @@
 		var self = this;
 
 		// we can redefine onDetails only if there is not one passed and we're asked to show editors at ll
-		if (!!self.settings.showEditors && !self.settings.onDetails) {
+		if (self.settings.showEditors && !self.settings.onDetails) {
 			self.edittedValues = {};
 			self.settings.onDetails = function (root, data, element) {
 				self.edittedValues[data.endpoint] = {};
-				EndpointKit.linkEditors(self, root.appendChild(jT.ui.getTemplate('endpoint-one-editor', {})), {
+				EndpointKit.linkEditors(self, jT.ui.getTemplate('endpoint-one-editor', {}).appendTo(root), {
 					category: data.endpoint,
 					top: data.subcategory,
 					conditions: self.settings.showConditions,

@@ -211,35 +211,6 @@
       </div>
     </div>
 <!-- // end of all-matrix ]]-->
-<!--[[ jT.ui.templates['info-box'] -->
-    <div class="info-box">
-      <table>
-        <thead>
-          <tr>
-            <th rowspan="2">Endpoint</th>
-            <th rowspan="2">Value</th>
-            <th class="conditions center">Conditions</th>
-            <th rowspan="2">Guideline or Justification</th>
-          </tr>
-          <tr class="conditions">
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="the-endpoint">{{ endpoint }}</td>
-            <td class="the-value non-breakable">{{ value }}</td>
-            <td class="postconditions">{{ guidance }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="delete-box">
-        <tr>
-          <td><textarea placeholder="Reason for deleting_"></textarea></td>
-          <td><button class="jt-alert">Delete</button></td>
-        </tr>
-      </table>
-    </div>
-<!-- // end of info-box ]]-->
 <!--[[ jT.ui.templates['matrix-tag-buttons'] -->
     <button class="jt-toggle jtox-handler target" data-handler="{{subject}}Tag" data-tag="target" title="Select the {{subject}} as Target">T</button><br/>
     <button class="jt-toggle jtox-handler source" data-handler="{{subject}}Tag" data-tag="source" title="Select the {{subject}} as Source">S</button><br/>
@@ -251,32 +222,6 @@
 <!--[[ jT.ui.templates['matrix-sel-arrow'] -->
     <i class="jt-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
 <!-- // end of matrix-sel-arrow ]]-->
-<!--[[ jT.ui.templates['edit-box'] -->
-    <div class="edit-box">
-      <div class="jtox-medium-box box-field" data-name="type">
-        <div class="jtox-details font-heavy jtox-required">Study type</div>
-        <select class="type-list" value="{{type}}">
-          <option value="-1"> - Select type - </option>
-        </select>
-      </div>
-      <div class="jtox-medium-box box-field" data-name="reference">
-        <div class="jtox-details font-heavy jtox-required">Reference</div>
-        <input type="text" value="{{reference}}" placeholder="Reference_" />
-      </div>
-      <div class="jtox-medium-box box-field size-full" data-name="justification">
-        <div class="jtox-details font-heavy jtox-required">Guideline or Justification</div>
-        <textarea placeholder="Justification_">{{justification}}</textarea>
-      </div>
-      <div class="jtox-medium-box box-field size-full" data-name="remarks">
-        <div class="jtox-details font-heavy">Remarks</div>
-        <textarea placeholder="Remarks_">{{remarks}}</textarea>
-      </div>
-      <div class="size-full the-send">
-        <span class="the-endpoint">{{endpoint}}</span>
-        <input value="Apply" type="button" />
-      </div>
-    </div>
-<!-- // end of edit-box ]]-->
   </div>
 </body>
 

@@ -13,8 +13,6 @@
 		this.selector = settings.selector;
 		
 		this.annoTip = new AnnoTip({
-			context: this.context,
-			// Handlers. All accept @see {Anno} as an argument.
 			onSelection: function (anno) { return self.analyzeAnno(anno); },
 			onAction: function (action, anno) { return self.onAction(action, anno); },
 			onClose: null
@@ -24,56 +22,54 @@
 			this.start();
 	};
 
-	AnnotationKit.defaults = {
-		context: null,
-		ajaxSettings: null,
-		connector: null,
-		inputSize: 30,
-		matchers: [{
-			selector: "*",		// String - CSS selector
-			extractor: null,	// String | Function 
-			presenter: null,	// String - HTML | Function
-			exclusive: false	// Boolean - terminate matching
-		}]
-	};
-
 	AnnotationKit.prototype.start = function () {
 		this.annoTip.attach(this.selector);
+
+		// TODO: Load annos from the server and call this:
+		// this.annoTip.applyAnnos(rootElement, annoList, function (anno) { self.applyAnno(anno); });
 	};
 
 	AnnotationKit.prototype.onAction = function (action, anno) {
 		if (action === 'edit') {			
-			if (typeof this.controlsPrepack === 'function')
-				anno = this.controlsPrepack(data, anno);
-
-			anno.content = this.controlsPacker(anno);
+			anno.content = jT.formatString(jT.ui.templates['anno-form'], this);
 			this.annoTip.update(anno);
-			this.beautify(anno.element);
-			$(anno.element).addClass('openned');
-			return;
+			
+			if (typeof this.controlsSetup === 'function')
+				anno = this.controlsSetup(data, anno);
+
+			// Nothing meaningful, but it's nicer this way...
+			return this.beautify();
 		}
 		if (action === 'ok') {
 			var data = this.dataPacker(anno);
+			
+			data.suggestion = _.set({}, data.operation.scope, data.suggestion);
+			data.timestamp = new Date().toUTCString();
 
 			if (typeof this.dataPostprocess === 'function')
 				data = this.dataPostprocess(data, anno);
 
 			if (data)
 				$.ajax($.extend(true, this.ajaxSettings, { data:  data }));
+
+			// TODO: Potentially make this to be the success handler of the above!
+			this.applyAnno(anno);
 		}
 		
-		$(".annotip-severity", anno.element).buttonset('destroy');
+		$(".annotip-buttonset", this.annoTip.getFrame()).buttonset('destroy');
 		this.annoTip.discard();
 	};
 
 	AnnotationKit.prototype.analyzeAnno = function (anno) {
-		var dataInfo = this.dataExtractor(anno.element),
+		var dataInfo = this.dataExtractor(anno),
 			data = dataInfo.data,
 			elChain = $(anno.element).parentsUntil(dataInfo.target).addBack().add(dataInfo.target),
-			matchers = this.matchers;
-			
-		anno.reference = {};
-		anno.controls = [];
+			matchers = this.matchers,
+			kit = jT.ui.kit(anno.root),
+			self = this;
+
+		anno.context = kit && typeof kit.getContext === 'function' && kit.getContext();
+		anno.reference = null;
 		for (var i = 0;i < matchers.length; ++i) {
 			var m = matchers[i],
 				found = false;
@@ -82,22 +78,16 @@
 				var v = null;
 
 				// First, deal with value extraction...
-				if (typeof m.extractor === 'function')
-					v = m.extractor(data, anno, el);
-				else if (typeof m.extractor === 'string' || Array.isArray(m.extractor))
-					v = _.set({}, m.extractor, _.get(data, m.extractor));
-				else if (m.extractor != null)
-					v = m.extractor;
+				if (typeof m.processor === 'function')
+					v = m.processor.call(self, data, anno, el);
+				else if (typeof m.processor === 'string' || Array.isArray(m.processor))
+					v = _.set({}, m.processor, _.get(data, m.processor));
+				else if (m.processor != null)
+					v = m.processor;
 				
 				// ... and merge it to the main data inside the anno object.
 				if (v != null)
-					anno.reference = $.extend(true, anno.reference, v);
-
-				// The, proceed with ui building.
-				if (typeof m.presenter === 'string')
-					anno.controls.push(jT.ui.formatString(m.presenter, anno));
-				else if (typeof m.presenter === 'function')
-					anno.controls.push(m.presenter(data, anno, el));
+					anno.reference = $.extend(true, anno.reference || {}, v);
 
 				found = true;
 			});
@@ -105,26 +95,26 @@
 			if (found && m.exclusive) break;
 		}
 
-		return anno.controls.length > 0;
+		return anno.reference !== null;
 	};
 
-	AnnotationKit.prototype.controlsPacker = function (anno) {
-		anno.controls.push(
-			jT.formatString(jT.ui.templates['anno-description'], this),
-			jT.formatString(jT.ui.templates['anno-severity'], this)
-		);
+	AnnotationKit.prototype.applyAnno = function (anno) {
+		// TODO: Make this real!
+		$(anno.element).css({ "background-color": "yellow" });
+	};
 
-		return '<form><div>' + anno.controls.join('</div>\n<div>') + '</div></form>';
-  	};
+	AnnotationKit.prototype.beautify = function () {
+		var annoFrame = this.annoTip.getFrame();
 
-	AnnotationKit.prototype.beautify = function (element) {
-		$(".annotip-severity", element).buttonset();
-		$("input", element).attr('size', this.inputSize - 1);
-		$("textarea", element).attr('cols', this.inputSize);
+		$(".annotip-buttonset", annoFrame).buttonset();
+		$("input", annoFrame).attr('size', this.inputSize - 1);
+		$("textarea", annoFrame).attr('cols', this.inputSize);
+
+		$(annoFrame).addClass('openned');
 	};
 
 	AnnotationKit.prototype.dataPreprocess = function (data, anno) {
-		$('form', anno.element).serializeArray().forEach(function (el) {
+		$('form', this.annoTip.getFrame()).serializeArray().forEach(function (el) {
 			_.set(data, el.name, el.value);
 		});
 		
@@ -135,22 +125,87 @@
 		return this.dataPreprocess({
 			context: anno.context,
 			reference: anno.reference,
-			operation: anno.operation,
-			suggestion: anno.suggestion
+			suggestion: anno.suggestion,
+			operation: {
+				selected: anno.selection,
+				reverseSelector: anno.reverseSelector
+			}
 		}, anno);
 	};
 
-	AnnotationKit.prototype.dataExtractor = function (el) {
-		var target = $(el).closest('table.dataTable>tbody>tr')[0],
-			table = jT.tables.getTable(target);
+	AnnotationKit.prototype.controlsSetup = function (data, anno) {
+		var self = this,
+			annoFrame = this.annoTip.getFrame(),
+			scopes = _.map(anno.scopes, function (s) { 
+				var title = (self.pathHandlers[s] && self.pathHandlers[s].title) || lookup[s] || s;
+				return { value: s, title: title };
+			});
 		
-		return {
-			target: target,
-			data: table.row(target).data()		
-		};
+		$(".annotip-scope select", annoFrame)
+			.html(_.map(scopes, function (s) { return jT.formatString(jT.ui.templates['anno-select-option'], s); }))
+			.on('change', function (e) {
+				var newScope = $(this).val(),
+					pathHnd = self.pathHandlers[newScope],
+					newControl = pathHnd && pathHnd.control,
+					target$ = $('.annotip-suggestion', annoFrame).empty();
+
+				if (typeof newControl === 'string')
+					target$.append(jT.formatString(newControl, { name: newScope, value: pathHnd.title}));
+				else if (typeof newControl === 'function')
+					newControl.call(self, target$, data, anno);
+				else
+					return;
+
+				// nicify what was just added!
+				target$.children('input, select, textarea').addClass('ui-widget ui-corner-all padded-control');
+			});
+		return anno;
 	};
 
-	AnnotationKit.prototype.dataInserter = function (el, data) { };
+	
+	AnnotationKit.prototype.buildScopes = function (rootPath, pathList, data, anno) {
+		var idFields = this.pathHandlers[rootPath] && this.pathHandlers[rootPath].idFields,
+			obj = {};
+
+		pathList = !pathList ? [''] : pathList.split(/\s+/);
+		if (!!idFields)
+			idFields = _.difference(idFields, pathList); // We leave only pure id fields.
+
+		anno.scopes.push(rootPath);
+		_.each(pathList.concat(idFields), function (path) {
+			if (path != '') {
+				// We only add to scope non-pure id fields.
+				if (_.indexOf(idFields, path) == -1)
+					anno.scopes.push(rootPath + '.' + path);
+
+				path = path.split('.');
+				_.set(obj, path, _.get(data, path, null));
+			} else
+				obj = $.extend(obj, data);
+		});
+
+		return obj;
+	};
+
+	AnnotationKit.getAnnoRenderer = function (className) {
+		// TODO: Return this function which renders the annotation-aware element
+		// in a table.
+		return function (data, type, full) {
+
+		}
+	},
+
+	AnnotationKit.defaults = {
+		context: null,
+		ajaxSettings: null,
+		connector: null,
+		inputSize: 30,
+		matchers: [{
+			selector: "*",		// String - CSS selector
+			processor: null,	// String | Function 
+			exclusive: false	// Boolean - terminate matching
+		}]
+	};
 
 	jT.ui.Annotation = AnnotationKit;
 })(asSys, jQuery, jToxKit);
@@ -288,6 +343,13 @@
 	CompositionKit.prototype.query = function (uri) {
 		$(self.rootElement).empty();
 		this.queryComposition(uri);
+	};
+
+	CompositionKit.prototype.getContext = function () {
+		return {
+			subject: 'composition',
+			compositionUri: this.compositionUri
+		}
 	};
 
 	CompositionKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
@@ -1476,11 +1538,11 @@
 		var self = this;
 
 		// we can redefine onDetails only if there is not one passed and we're asked to show editors at ll
-		if (!!self.settings.showEditors && !self.settings.onDetails) {
+		if (self.settings.showEditors && !self.settings.onDetails) {
 			self.edittedValues = {};
 			self.settings.onDetails = function (root, data, element) {
 				self.edittedValues[data.endpoint] = {};
-				EndpointKit.linkEditors(self, root.appendChild(jT.ui.getTemplate('endpoint-one-editor', {})), {
+				EndpointKit.linkEditors(self, jT.ui.getTemplate('endpoint-one-editor', {}).appendTo(root), {
 					category: data.endpoint,
 					top: data.subcategory,
 					conditions: self.settings.showConditions,
@@ -2171,13 +2233,15 @@
         initComm: function () {
             var Manager, Basket, Persister,
                 PivotWidget = a$(Solr.Requesting, Solr.Spying, Solr.Pivoting, jT.PivotWidgeting, jT.RangeWidgeting),
-                TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running);
+                TagWidget = a$(Solr.Requesting, Solr.Faceting, jT.AccordionExpansion, jT.TagWidget, jT.Running),
+                resultTarget = $('#docs'), 
+                self = this;
 
             this.manager = Manager = new(a$(Solr.Management, Solr.Configuring, Solr.QueryingJson, jT.Translation, jT.NestedSolrTranslation))(this);
 
             Manager.addListeners(new jT.ResultWidget($.extend(true, {}, this, {
                 id: 'result',
-                target: $('#docs'),
+                target: resultTarget,
                 itemId: "s_uuid",
                 nestLevel: "composition",
                 onClick: function (e, doc) {
@@ -3258,6 +3322,7 @@
 				baseUrl: this.settings.baseUrl,
 				handlers: this.reboundHandlers,
 				showMultiselect: true,
+				showEditors: true,
 				columns: { endpoint: { 'Id': idCol } },
 				onRow: function (row, data, index) {
 					if (!data.bundles)
@@ -3269,6 +3334,30 @@
 		}
 		// The auto-init has taken care to have a query initiated.
 	};
+
+	MatrixKit.prototype.saveMatrix = function () {
+		if (self.editSummary.study.length > 0) {
+			var toAdd = JSON.stringify({ study: self.editSummary.study });
+
+			// make two nested calls - for adding and for deleting
+			$(saveButton).addClass('loading');
+			jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
+				if (!!result) {
+					jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
+						$(saveButton).removeClass('loading');
+						if (!!result) {
+							self.editSummary.study = [];
+							self.matrixKit.query(self.bundleUri + '/matrix');
+							dressButton();
+						}
+					});
+				}
+				else {
+					$(saveButton).removeClass('loading');
+				}
+			});
+		}
+	},
 
 	// called when a sub-action in bundle details tab is called
 	MatrixKit.prototype.onMatrix = function (panId, panel) {
@@ -3289,30 +3378,6 @@
 					saveButton.innerHTML = "Save";
 				}
 			};
-
-			$(saveButton).on('click', function() {
-				if (self.editSummary.study.length > 0) {
-					var toAdd = JSON.stringify({ study: self.editSummary.study });
-
-					// make two nested calls - for adding and for deleting
-					$(saveButton).addClass('loading');
-					jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
-						if (!!result) {
-							jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
-								$(saveButton).removeClass('loading');
-								if (!!result) {
-									self.editSummary.study = [];
-									self.matrixKit.query(self.bundleUri + '/matrix');
-									dressButton();
-								}
-							});
-						}
-						else {
-							$(saveButton).removeClass('loading');
-						}
-					});
-				}
-			});
 
 			var onEditClick = function (data) {
 				var boxOptions = {
@@ -4637,17 +4702,11 @@
 					if (!result) self.load(self.bundleUri);
 				});
 			},
+			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.target)); },
 			structureReason: function (e) { return this.reasonStructure(el$ = $(e.target)); },
+			// Substance selection related
 			substanceSelect: function(e) { this.selectSubstance($(e.target)); },
-			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
-			substanceMove: function (e) {
-				var el$ = $(e.target),
-					dir = el$.data('direction'),
-					data = jT.tables.getCellData(el$);
-
-				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
-			},
 			expandAll: function (e) {
 				var panel = $(e.target).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder', panel).trigger('click')				
@@ -4656,6 +4715,8 @@
 				var panel = $(e.target).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder-open', panel).trigger('click');
 			},
+			// Endpoint selection related
+			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
 			endpointMode: function (e) {
 				var bUri = encodeURIComponent(this.bundleUri),
 					qUri = this.settings.baseUrl + "query/study?mergeDatasets=true&bundle_uri=" + bUri;
@@ -4663,7 +4724,20 @@
 					qUri += "&selected=substances&filterbybundle=" + bUri;
 				
 				this.endpointKit.query(qUri);
-			}
+			},
+			// Matrix / read across selection related
+			matrixMode: function (e) {
+				this.matrixKit.query(this.matrixModeUris($(e.target).attr('id').substr(1)));
+			},
+			saveMatrix: function (e) { this.saveMatrix(); },
+			createWorkingCopy: function (e) { this.createWorkingCopy(); },
+			substanceMove: function (e) {
+				var el$ = $(e.target),
+					dir = el$.data('direction'),
+					data = jT.tables.getCellData(el$);
+
+				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
+			},
 		},
 		groups: {
 			structure: {
@@ -5981,7 +6055,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				col["render"] = function (data, type, full) {
 					return jT.tables.renderMulti(data, type, full, function (data, type) {
 						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					}, { anno: 'effects ' + c});
+					}, { anno: 'conditions.' + c});
 				};
 				return col;
 			});
@@ -6253,7 +6327,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				});
 
 				jT.fireCallback(self.settings.onLoaded, self, substance.substance);
-				
+
 				// query for the summary and the composition too.
 				self.querySummary(substance.URI + "/studysummary");
 				self.insertComposition(substance.URI + "/composition");
@@ -6264,6 +6338,15 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	StudyKit.prototype.query = function (uri) {
 		this.querySubstance(uri);
+	};
+
+	StudyKit.prototype.getContext = function () {
+		return {
+			subject: 'study',
+			substanceUri: this.substance.URI,
+			substanceId: this.substance.i5uuid,
+			owner: this.substance.ownerName
+		}
 	};
 
 	StudyKit.getFormatted = function (data, type, format) {
@@ -6345,9 +6428,9 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			return jT.tables.renderMulti(data, type, full, function (data, type) {
 				var resText = jT.ui.renderRange(data.result, null, type);
 				if (data.result.errorValue != null)
-					resText += " (" + (data.result.errQualifier || StudyKit.defaults.errorDefault) + " " + data.result.errorValue + ")";
-				return resText;
-			}, { anno: "result result.errQualifier result.errValue"});
+					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
+				return resText
+			}, { anno: "result result.unit result.errValue result.errQualifier"});
 		}
 	},
 	{
@@ -6506,7 +6589,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, result);
 				$(self.table).dataTable().fnClearTable();
-				$(self.table).dataTable().fnAddData(result.substance);
+				result.substance.length && $(self.table).dataTable().fnAddData(result.substance);
 
 				jT.tables.updateControls.call(self, from, result.substance.length);
 			} else
@@ -6600,7 +6683,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 					title: "Info",
 					data: "externalIdentifiers",
 					render: function (data, type, full) {
-						return jT.ambit.formatExtIdentifiers(data, type, full);
+						return data && jT.ambit.formatExtIdentifiers(data, type, full) && '';
 					}
 				}
 			}
@@ -6671,6 +6754,104 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 	jT.UserWidget = UserWidget;
 
 })(_, asSys, jQuery, jToxKit);
+jT.ui.templates['anno-input']  = 
+"<input name=\"{{ name }}\" placeholder=\"{{ value }} \" class=\"ui-widget ui-corner-all padded-control\" />" +
+"";// end of anno-input 
+
+jT.ui.templates['anno-select-option']  = 
+"<option value=\"{{ value }}\">{{ title }}</option>" +
+"";// end of anno-select-option 
+
+jT.ui.templates['anno-form']  = 
+"<form>" +
+"<p>Scope:</p>" +
+"<div class=\"annotip-scope\">" +
+"<select name=\"operation.scope\" class=\"ui-widget ui-corner-all padded-control\"></select>" +
+"</div>" +
+"<div class=\"annotip-suggestion\"></div>" +
+"<div class=\"annotip-description\">" +
+"<textarea name=\"description\" rows=\"3\" class=\"ui-widget ui-corner-all padded-control\"></textarea>" +
+"</div>" +
+"<p class=\"go-right\">Operation:</p>" +
+"<div class=\"annotip-buttonset annotip-action go-right\">" +
+"<input type=\"radio\" value=\"add\" name=\"operation.action\" id=\"annotip-action-add\" />" +
+"<label for=\"annotip-action-add\">Add</label>" +
+"<input type=\"radio\" value=\"replace\" name=\"operation.action\" id=\"annotip-action-replace\" />" +
+"<label for=\"annotip-action-replace\">Replace</label>" +
+"<input type=\"radio\" value=\"delete\" name=\"operation.action\" id=\"annotip-action-delete\" />" +
+"<label for=\"annotip-action-delete\">Delete</label>" +
+"<input type=\"radio\" value=\"synonyms\" name=\"operation.action\" id=\"annotip-action-synonyms\" />" +
+"<label for=\"annotip-action-synonyms\">Synonyms</label>" +
+"</div>" +
+"<p class=\"go-right\">Severity:</p>" +
+"<div class=\"annotip-buttonset annotip-severity go-right\">" +
+"<input type=\"radio\" value=\"low\" name=\"operation.severity\" id=\"annotip-severity-low\"/>" +
+"<label for=\"annotip-severity-low\">Low</label>" +
+"<input type=\"radio\" value=\"medium\" name=\"operation.severity\" id=\"annotip-severity-medium\" />" +
+"<label for=\"annotip-severity-medium\">Medium</label>" +
+"<input type=\"radio\" value=\"high\" name=\"operation.severity\" id=\"annotip-severity-high\" />" +
+"<label for=\"annotip-severity-high\">High</label>" +
+"</div>" +
+"</form>" +
+"";// end of anno-form 
+
+jT.ui.templates['anno-endpoint-info']  = 
+"<div class=\"info-box\">" +
+"<table>" +
+"<thead>" +
+"<tr>" +
+"<th rowspan=\"2\">Endpoint</th>" +
+"<th rowspan=\"2\">Value</th>" +
+"<th class=\"conditions center\">Conditions</th>" +
+"<th rowspan=\"2\">Guideline or Justification</th>" +
+"</tr>" +
+"<tr class=\"conditions\">" +
+"</tr>" +
+"</thead>" +
+"<tbody>" +
+"<tr>" +
+"<td class=\"the-endpoint\">{{ endpoint }}</td>" +
+"<td class=\"the-value non-breakable\">{{ value }}</td>" +
+"<td class=\"postconditions\">{{ guidance }}</td>" +
+"</tr>" +
+"</tbody>" +
+"</table>" +
+"<table class=\"delete-box\">" +
+"<tr>" +
+"<td><textarea placeholder=\"Reason for deleting_\"></textarea></td>" +
+"<td><button class=\"jt-alert\">Delete</button></td>" +
+"</tr>" +
+"</table>" +
+"</div>" +
+""; // end of anno-endpoint-info 
+
+jT.ui.templates['anno-endpoint-edit']  = 
+"<div class=\"edit-box\">" +
+"<div class=\"jtox-medium-box box-field\" data-name=\"type\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Study type</div>" +
+"<select class=\"type-list\" value=\"{{type}}\">" +
+"<option value=\"-1\"> - Select type - </option>" +
+"</select>" +
+"</div>" +
+"<div class=\"jtox-medium-box box-field\" data-name=\"reference\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Reference</div>" +
+"<input type=\"text\" value=\"{{reference}}\" placeholder=\"Reference_\" />" +
+"</div>" +
+"<div class=\"jtox-medium-box box-field size-full\" data-name=\"justification\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Guideline or Justification</div>" +
+"<textarea placeholder=\"Justification_\">{{justification}}</textarea>" +
+"</div>" +
+"<div class=\"jtox-medium-box box-field size-full\" data-name=\"remarks\">" +
+"<div class=\"jtox-details font-heavy\">Remarks</div>" +
+"<textarea placeholder=\"Remarks_\">{{remarks}}</textarea>" +
+"</div>" +
+"<div class=\"size-full the-send\">" +
+"<span class=\"the-endpoint\">{{endpoint}}</span>" +
+"<input value=\"Apply\" type=\"button\" />" +
+"</div>" +
+"</div>" +
+""; // end of anno-endpoint-edit 
+
 jT.ui.templates['button-icon']  = 
 "<button title=\"{{ title }}\"><i class=\"fa fa-{{ icon }} {{ className }}\"></i></button>" +
 ""; // end of #button-icon 
@@ -6685,7 +6866,7 @@ jT.ui.templates['info-ball']  =
 
 jT.ui.templates['all-composition']  = 
 "<div class=\"jtox-composition unloaded\">" +
-"<table class=\"dataTable composition-info font-small display\">" +
+"<table class=\"dataTable composition-info font-small display jtox-annotatable\">" +
 "<thead>" +
 "<tr><th>Composition name:</th><td class=\"camelCase\">{{ name }}</td></tr>" +
 "<tr><th>Composition UUID:</th><td>{{ uuid }}</td></tr>" +
@@ -7103,13 +7284,17 @@ jT.ui.templates['all-matrix']  =
 "</div>" +
 "<div id=\"jtox-matrix\" data-loader=\"onMatrix\">" +
 "<div class=\"jq-buttonset center auto-setup\">" +
-"<input type=\"radio\" id=\"xinitial\" name=\"xaction\" checked=\"checked\"><label for=\"xinitial\">Initial matrix</label></input>" +
-"<input type=\"radio\" id=\"xworking\" name=\"xaction\"><label for=\"xworking\">Working matrix</label></input>" +
-"<input type=\"radio\" id=\"xfinal\" name=\"xaction\"><label for=\"xfinal\">Final matrix</label></input>" +
+"<input type=\"radio\" id=\"xinitial\" name=\"xaction\" class=\"jtox-handler\" data-handler=\"matrixMode\" checked=\"true\"><label for=\"xinitial\">Initial matrix</label></input>" +
+"<input type=\"radio\" id=\"xworking\" name=\"xaction\" class=\"jtox-handler\" data-handler=\"matrixMode\"><label for=\"xworking\">Working matrix</label></input>" +
+"<input type=\"radio\" id=\"xfinal\" name=\"xaction\" class=\"jtox-handler\" data-handler=\"matrixMode\"><label for=\"xfinal\">Final matrix</label></input>" +
 "</div>" +
-"<button class=\"save-button jt-disabled\">Saved</button>" +
-"<button class=\"create-button\">Create working copy</button>" +
-"<div class=\"jtox-kit\" data-kit=\"Compound\" data-manual-init=\"true\"></div>" +
+"<button class=\"save-button jt-disabled jtox-handler\" data-handler=\"saveMatrix\">Saved</button>" +
+"<button class=\"create-button jtox-handler\" data-handler=\"createWorkingCopy\">Create working copy</button>" +
+"<div id=\"matrix-table\" class=\"jtox-kit\"" +
+"data-kit=\"Compound\"" +
+"data-show-tabs=\"false\"" +
+"data-hide-empty=\"true\">" +
+"</div>" +
 "</div>" +
 "<div id=\"jtox-report\" class=\"jtox-report\">" +
 "<p>" +
@@ -7132,36 +7317,6 @@ jT.ui.templates['all-matrix']  =
 "</div>" +
 ""; // end of all-matrix 
 
-jT.ui.templates['info-box']  = 
-"<div class=\"info-box\">" +
-"<table>" +
-"<thead>" +
-"<tr>" +
-"<th rowspan=\"2\">Endpoint</th>" +
-"<th rowspan=\"2\">Value</th>" +
-"<th class=\"conditions center\">Conditions</th>" +
-"<th rowspan=\"2\">Guideline or Justification</th>" +
-"</tr>" +
-"<tr class=\"conditions\">" +
-"</tr>" +
-"</thead>" +
-"<tbody>" +
-"<tr>" +
-"<td class=\"the-endpoint\">{{ endpoint }}</td>" +
-"<td class=\"the-value non-breakable\">{{ value }}</td>" +
-"<td class=\"postconditions\">{{ guidance }}</td>" +
-"</tr>" +
-"</tbody>" +
-"</table>" +
-"<table class=\"delete-box\">" +
-"<tr>" +
-"<td><textarea placeholder=\"Reason for deleting_\"></textarea></td>" +
-"<td><button class=\"jt-alert\">Delete</button></td>" +
-"</tr>" +
-"</table>" +
-"</div>" +
-""; // end of info-box 
-
 jT.ui.templates['matrix-tag-buttons']  = 
 "<button class=\"jt-toggle jtox-handler target\" data-handler=\"{{subject}}Tag\" data-tag=\"target\" title=\"Select the {{subject}} as Target\">T</button><br/>" +
 "<button class=\"jt-toggle jtox-handler source\" data-handler=\"{{subject}}Tag\" data-tag=\"source\" title=\"Select the {{subject}} as Source\">S</button><br/>" +
@@ -7175,33 +7330,6 @@ jT.ui.templates['matrix-tag-indicator']  =
 jT.ui.templates['matrix-sel-arrow']  = 
 "<i class=\"jt-{{direction}} fa fa-arrow-{{direction}} jtox-handler\" data-handler=\"substanceMove\" data-direction=\"{{direction}}\" title=\"Move the {{subject}} up in the list\"></i>" +
 ""; // end of matrix-sel-arrow 
-
-jT.ui.templates['edit-box']  = 
-"<div class=\"edit-box\">" +
-"<div class=\"jtox-medium-box box-field\" data-name=\"type\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Study type</div>" +
-"<select class=\"type-list\" value=\"{{type}}\">" +
-"<option value=\"-1\"> - Select type - </option>" +
-"</select>" +
-"</div>" +
-"<div class=\"jtox-medium-box box-field\" data-name=\"reference\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Reference</div>" +
-"<input type=\"text\" value=\"{{reference}}\" placeholder=\"Reference_\" />" +
-"</div>" +
-"<div class=\"jtox-medium-box box-field size-full\" data-name=\"justification\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Guideline or Justification</div>" +
-"<textarea placeholder=\"Justification_\">{{justification}}</textarea>" +
-"</div>" +
-"<div class=\"jtox-medium-box box-field size-full\" data-name=\"remarks\">" +
-"<div class=\"jtox-details font-heavy\">Remarks</div>" +
-"<textarea placeholder=\"Remarks_\">{{remarks}}</textarea>" +
-"</div>" +
-"<div class=\"size-full the-send\">" +
-"<span class=\"the-endpoint\">{{endpoint}}</span>" +
-"<input value=\"Apply\" type=\"button\" />" +
-"</div>" +
-"</div>" +
-""; // end of edit-box 
 
 jT.ui.templates['kit-query-all']  = 
 "<div class=\"jtox-query\">" +

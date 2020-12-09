@@ -364,7 +364,6 @@ jT.ui = a$.extend(jT.ui, {
         if (fn.prototype.__kits === undefined)
           fn.prototype.__kits = [];
         fn.prototype.__kits.push(obj);
-        obj.parentKit = parent;
       }
       else
         console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
@@ -440,23 +439,8 @@ jT.ui = a$.extend(jT.ui, {
 	
 	attachKit: function (element, kit) {
   	return $(element).data('jtKit', kit);
-	},
+	}
 
-	parentKit: function(name, element) {
-	  var self = this;
-    var query = null;
-    if (typeof name == 'string')
-      name = window[name];
-    $(element).parents('.jtox-kit').each(function() {
-      var kit = self.kit(this);
-      if (!kit || !!query)
-        return;
-      if (!name || kit instanceof name)
-        query = kit;
-    });
-
-    return query;
-  }
 });
 /** jToxKit - chem-informatics multi-tool-kit.
   * A generic widget for list management
@@ -1117,12 +1101,14 @@ jT.tables = {
 	},
 
 	renderMulti: function (data, type, full, render, tabInfo) {
-		var dlen = data.length;
-		if (dlen < 2)
-			return render(data[0], type, full);
+		var dlen = data.length,
+			tabInfo = (!tabInfo ? '' : ' class="tab-info-node" ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' '));
 
-		var df = '<table' + (!tabInfo ? '' : ' ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' ')) + '>';
-		for (var i = 0, dlen = data.length; i < dlen; ++i) {
+		if (dlen < 2)
+			return '<div' + tabInfo + '>' + render(data[0], type, full) + '</div>';
+
+		var df = '<table' + tabInfo + '>';
+		for (var i = 0; i < dlen; ++i) {
 			df += '<tr class="' + (i % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(data[i], type, full, i) + '</td></tr>';
 		}
 
@@ -1221,13 +1207,20 @@ jT.tables = {
 		var oldRender = colDef.render,
 			newRender = !oldRender ? render : function (data, type, full) {
 				var oldContent = oldRender(data, type, full),
-					newContent = render(data, type, full);
+					newContent = render(data, type, full),
+					separator = opts.separator || '';
+
+				// In case we're given an array of renders, we'll receive an array of values.
+				if (Array.isArray(newContent))
+					newContent = newContent.join(separator);
 
 				return (opts.position === 'before') 
-					? newContent + (opts.separator || '') + oldContent 
-					: oldContent + (opts.separator || '') + newContent;
+					? newContent + separator + oldContent 
+					: oldContent + separator + newContent;
 			};
 
+		if (Array.isArray(render))
+			render = _.over(render);
 		if (opts.inplace)
 			colDef.render = newRender;
 		else
