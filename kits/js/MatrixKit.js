@@ -408,7 +408,7 @@
 			});
 		}
 
-		// Make the initial call, resetting the counter first
+		// Make the initial call
 		this.substanceKit.query(this.bundleUri + '/compound');
 	};
 
@@ -459,6 +459,10 @@
 				}
 			});
 		}
+	},
+
+	MatrixKit.prototype.queryMatrix = function (mode) {
+		// TODO: Make a call to this.matrixKit.query(), building the proper URI before that, based on the passed mode.
 	},
 
 	// called when a sub-action in bundle details tab is called
@@ -1828,9 +1832,7 @@
 				this.endpointKit.query(qUri);
 			},
 			// Matrix / read across selection related
-			matrixMode: function (e) {
-				this.matrixKit.query(this.matrixModeUris($(e.target).attr('id').substr(1)));
-			},
+			matrixMode: function (e) { this.queryMatrix($(e.target).attr('id').substr(1)); },
 			saveMatrix: function (e) { this.saveMatrix(); },
 			createWorkingCopy: function (e) { this.createWorkingCopy(); },
 			substanceMove: function (e) {

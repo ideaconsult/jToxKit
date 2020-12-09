@@ -989,7 +989,7 @@
 				return arr;
 			},
 
-			"Other": function (name, miniset) {
+			"Other": function (name, miniset, usedFeatures) {
 				var arr = [];
 				for (var f in miniset.feature) {
 					if (!(f in usedFeatures) && !miniset.feature[f].basic)

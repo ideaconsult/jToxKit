@@ -1428,7 +1428,7 @@
 				return arr;
 			},
 
-			"Other": function (name, miniset) {
+			"Other": function (name, miniset, usedFeatures) {
 				var arr = [];
 				for (var f in miniset.feature) {
 					if (!(f in usedFeatures) && !miniset.feature[f].basic)
@@ -3306,7 +3306,7 @@
 			});
 		}
 
-		// Make the initial call, resetting the counter first
+		// Make the initial call
 		this.substanceKit.query(this.bundleUri + '/compound');
 	};
 
@@ -3357,6 +3357,10 @@
 				}
 			});
 		}
+	},
+
+	MatrixKit.prototype.queryMatrix = function (mode) {
+		// TODO: Make a call to this.matrixKit.query(), building the proper URI before that, based on the passed mode.
 	},
 
 	// called when a sub-action in bundle details tab is called
@@ -4726,9 +4730,7 @@
 				this.endpointKit.query(qUri);
 			},
 			// Matrix / read across selection related
-			matrixMode: function (e) {
-				this.matrixKit.query(this.matrixModeUris($(e.target).attr('id').substr(1)));
-			},
+			matrixMode: function (e) { this.queryMatrix($(e.target).attr('id').substr(1)); },
 			saveMatrix: function (e) { this.saveMatrix(); },
 			createWorkingCopy: function (e) { this.createWorkingCopy(); },
 			substanceMove: function (e) {
@@ -6795,63 +6797,6 @@ jT.ui.templates['anno-form']  =
 "</form>" +
 "";// end of anno-form 
 
-jT.ui.templates['anno-endpoint-info']  = 
-"<div class=\"info-box\">" +
-"<table>" +
-"<thead>" +
-"<tr>" +
-"<th rowspan=\"2\">Endpoint</th>" +
-"<th rowspan=\"2\">Value</th>" +
-"<th class=\"conditions center\">Conditions</th>" +
-"<th rowspan=\"2\">Guideline or Justification</th>" +
-"</tr>" +
-"<tr class=\"conditions\">" +
-"</tr>" +
-"</thead>" +
-"<tbody>" +
-"<tr>" +
-"<td class=\"the-endpoint\">{{ endpoint }}</td>" +
-"<td class=\"the-value non-breakable\">{{ value }}</td>" +
-"<td class=\"postconditions\">{{ guidance }}</td>" +
-"</tr>" +
-"</tbody>" +
-"</table>" +
-"<table class=\"delete-box\">" +
-"<tr>" +
-"<td><textarea placeholder=\"Reason for deleting_\"></textarea></td>" +
-"<td><button class=\"jt-alert\">Delete</button></td>" +
-"</tr>" +
-"</table>" +
-"</div>" +
-""; // end of anno-endpoint-info 
-
-jT.ui.templates['anno-endpoint-edit']  = 
-"<div class=\"edit-box\">" +
-"<div class=\"jtox-medium-box box-field\" data-name=\"type\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Study type</div>" +
-"<select class=\"type-list\" value=\"{{type}}\">" +
-"<option value=\"-1\"> - Select type - </option>" +
-"</select>" +
-"</div>" +
-"<div class=\"jtox-medium-box box-field\" data-name=\"reference\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Reference</div>" +
-"<input type=\"text\" value=\"{{reference}}\" placeholder=\"Reference_\" />" +
-"</div>" +
-"<div class=\"jtox-medium-box box-field size-full\" data-name=\"justification\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Guideline or Justification</div>" +
-"<textarea placeholder=\"Justification_\">{{justification}}</textarea>" +
-"</div>" +
-"<div class=\"jtox-medium-box box-field size-full\" data-name=\"remarks\">" +
-"<div class=\"jtox-details font-heavy\">Remarks</div>" +
-"<textarea placeholder=\"Remarks_\">{{remarks}}</textarea>" +
-"</div>" +
-"<div class=\"size-full the-send\">" +
-"<span class=\"the-endpoint\">{{endpoint}}</span>" +
-"<input value=\"Apply\" type=\"button\" />" +
-"</div>" +
-"</div>" +
-""; // end of anno-endpoint-edit 
-
 jT.ui.templates['button-icon']  = 
 "<button title=\"{{ title }}\"><i class=\"fa fa-{{ icon }} {{ className }}\"></i></button>" +
 ""; // end of #button-icon 
@@ -6998,6 +6943,63 @@ jT.ui.templates['endpoint-one-condition']  =
 "<input type=\"text\" placeholder=\"Intepretation\" />" +
 "</div>" +
 ""; // end of endpoint-one-condition 
+
+jT.ui.templates['endpoint-info-panel']  = 
+"<div class=\"info-box\">" +
+"<table>" +
+"<thead>" +
+"<tr>" +
+"<th rowspan=\"2\">Endpoint</th>" +
+"<th rowspan=\"2\">Value</th>" +
+"<th class=\"conditions center\">Conditions</th>" +
+"<th rowspan=\"2\">Guideline or Justification</th>" +
+"</tr>" +
+"<tr class=\"conditions\">" +
+"</tr>" +
+"</thead>" +
+"<tbody>" +
+"<tr>" +
+"<td class=\"the-endpoint\">{{ endpoint }}</td>" +
+"<td class=\"the-value non-breakable\">{{ value }}</td>" +
+"<td class=\"postconditions\">{{ guidance }}</td>" +
+"</tr>" +
+"</tbody>" +
+"</table>" +
+"<table class=\"delete-box\">" +
+"<tr>" +
+"<td><textarea placeholder=\"Reason for deleting_\"></textarea></td>" +
+"<td><button class=\"jt-alert\">Delete</button></td>" +
+"</tr>" +
+"</table>" +
+"</div>" +
+""; // end of endpoint-info-panel 
+
+jT.ui.templates['endpoint-edit-panel']  = 
+"<div class=\"edit-box\">" +
+"<div class=\"jtox-medium-box box-field\" data-name=\"type\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Study type</div>" +
+"<select class=\"type-list\" value=\"{{type}}\">" +
+"<option value=\"-1\"> - Select type - </option>" +
+"</select>" +
+"</div>" +
+"<div class=\"jtox-medium-box box-field\" data-name=\"reference\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Reference</div>" +
+"<input type=\"text\" value=\"{{reference}}\" placeholder=\"Reference_\" />" +
+"</div>" +
+"<div class=\"jtox-medium-box box-field size-full\" data-name=\"justification\">" +
+"<div class=\"jtox-details font-heavy jtox-required\">Guideline or Justification</div>" +
+"<textarea placeholder=\"Justification_\">{{justification}}</textarea>" +
+"</div>" +
+"<div class=\"jtox-medium-box box-field size-full\" data-name=\"remarks\">" +
+"<div class=\"jtox-details font-heavy\">Remarks</div>" +
+"<textarea placeholder=\"Remarks_\">{{remarks}}</textarea>" +
+"</div>" +
+"<div class=\"size-full the-send\">" +
+"<span class=\"the-endpoint\">{{endpoint}}</span>" +
+"<input value=\"Apply\" type=\"button\" />" +
+"</div>" +
+"</div>" +
+""; // end of endpoint-edit-panel 
 
 jT.ui.templates['faceted-search-kit']  = 
 "<div class=\"query-container\">" +

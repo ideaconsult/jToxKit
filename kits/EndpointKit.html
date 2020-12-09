@@ -102,6 +102,61 @@
 			<input type="text" placeholder="Intepretation" />
 		</div>
 <!-- // end of endpoint-one-condition ]]-->
+<!--[[ jT.ui.templates['endpoint-info-panel'] -->
+    <div class="info-box">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Endpoint</th>
+            <th rowspan="2">Value</th>
+            <th class="conditions center">Conditions</th>
+            <th rowspan="2">Guideline or Justification</th>
+          </tr>
+          <tr class="conditions">
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="the-endpoint">{{ endpoint }}</td>
+            <td class="the-value non-breakable">{{ value }}</td>
+            <td class="postconditions">{{ guidance }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="delete-box">
+        <tr>
+          <td><textarea placeholder="Reason for deleting_"></textarea></td>
+          <td><button class="jt-alert">Delete</button></td>
+        </tr>
+      </table>
+    </div>
+<!-- // end of endpoint-info-panel ]]-->
+<!--[[ jT.ui.templates['endpoint-edit-panel'] -->
+    <div class="edit-box">
+      <div class="jtox-medium-box box-field" data-name="type">
+        <div class="jtox-details font-heavy jtox-required">Study type</div>
+        <select class="type-list" value="{{type}}">
+          <option value="-1"> - Select type - </option>
+        </select>
+      </div>
+      <div class="jtox-medium-box box-field" data-name="reference">
+        <div class="jtox-details font-heavy jtox-required">Reference</div>
+        <input type="text" value="{{reference}}" placeholder="Reference_" />
+      </div>
+      <div class="jtox-medium-box box-field size-full" data-name="justification">
+        <div class="jtox-details font-heavy jtox-required">Guideline or Justification</div>
+        <textarea placeholder="Justification_">{{justification}}</textarea>
+      </div>
+      <div class="jtox-medium-box box-field size-full" data-name="remarks">
+        <div class="jtox-details font-heavy">Remarks</div>
+        <textarea placeholder="Remarks_">{{remarks}}</textarea>
+      </div>
+      <div class="size-full the-send">
+        <span class="the-endpoint">{{endpoint}}</span>
+        <input value="Apply" type="button" />
+      </div>
+    </div>
+<!-- // end of endpoint-edit-panel ]]-->
 	</div>
 </body>
 
