@@ -62,7 +62,6 @@ jT.ui = a$.extend(jT.ui, {
         if (fn.prototype.__kits === undefined)
           fn.prototype.__kits = [];
         fn.prototype.__kits.push(obj);
-        obj.parentKit = parent;
       }
       else
         console.log("jToxError: trying to initialize unexistent jTox kit: " + kit);
@@ -138,21 +137,6 @@ jT.ui = a$.extend(jT.ui, {
 	
 	attachKit: function (element, kit) {
   	return $(element).data('jtKit', kit);
-	},
+	}
 
-	parentKit: function(name, element) {
-	  var self = this;
-    var query = null;
-    if (typeof name == 'string')
-      name = window[name];
-    $(element).parents('.jtox-kit').each(function() {
-      var kit = self.kit(this);
-      if (!kit || !!query)
-        return;
-      if (!name || kit instanceof name)
-        query = kit;
-    });
-
-    return query;
-  }
 });
