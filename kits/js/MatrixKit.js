@@ -436,6 +436,30 @@
 		// The auto-init has taken care to have a query initiated.
 	};
 
+	MatrixKit.prototype.saveMatrix = function () {
+		if (self.editSummary.study.length > 0) {
+			var toAdd = JSON.stringify({ study: self.editSummary.study });
+
+			// make two nested calls - for adding and for deleting
+			$(saveButton).addClass('loading');
+			jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
+				if (!!result) {
+					jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
+						$(saveButton).removeClass('loading');
+						if (!!result) {
+							self.editSummary.study = [];
+							self.matrixKit.query(self.bundleUri + '/matrix');
+							dressButton();
+						}
+					});
+				}
+				else {
+					$(saveButton).removeClass('loading');
+				}
+			});
+		}
+	},
+
 	// called when a sub-action in bundle details tab is called
 	MatrixKit.prototype.onMatrix = function (panId, panel) {
 		var self = this;
@@ -455,30 +479,6 @@
 					saveButton.innerHTML = "Save";
 				}
 			};
-
-			$(saveButton).on('click', function() {
-				if (self.editSummary.study.length > 0) {
-					var toAdd = JSON.stringify({ study: self.editSummary.study });
-
-					// make two nested calls - for adding and for deleting
-					$(saveButton).addClass('loading');
-					jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
-						if (!!result) {
-							jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
-								$(saveButton).removeClass('loading');
-								if (!!result) {
-									self.editSummary.study = [];
-									self.matrixKit.query(self.bundleUri + '/matrix');
-									dressButton();
-								}
-							});
-						}
-						else {
-							$(saveButton).removeClass('loading');
-						}
-					});
-				}
-			});
 
 			var onEditClick = function (data) {
 				var boxOptions = {
@@ -1803,17 +1803,11 @@
 					if (!result) self.load(self.bundleUri);
 				});
 			},
+			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.target)); },
 			structureReason: function (e) { return this.reasonStructure(el$ = $(e.target)); },
+			// Substance selection related
 			substanceSelect: function(e) { this.selectSubstance($(e.target)); },
-			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
-			substanceMove: function (e) {
-				var el$ = $(e.target),
-					dir = el$.data('direction'),
-					data = jT.tables.getCellData(el$);
-
-				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
-			},
 			expandAll: function (e) {
 				var panel = $(e.target).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder', panel).trigger('click')				
@@ -1822,6 +1816,8 @@
 				var panel = $(e.target).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder-open', panel).trigger('click');
 			},
+			// Endpoint selection related
+			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
 			endpointMode: function (e) {
 				var bUri = encodeURIComponent(this.bundleUri),
 					qUri = this.settings.baseUrl + "query/study?mergeDatasets=true&bundle_uri=" + bUri;
@@ -1829,7 +1825,20 @@
 					qUri += "&selected=substances&filterbybundle=" + bUri;
 				
 				this.endpointKit.query(qUri);
-			}
+			},
+			// Matrix / read across selection related
+			matrixMode: function (e) {
+				this.matrixKit.query(this.matrixModeUris($(e.target).attr('id').substr(1)));
+			},
+			saveMatrix: function (e) { this.saveMatrix(); },
+			createWorkingCopy: function (e) { this.createWorkingCopy(); },
+			substanceMove: function (e) {
+				var el$ = $(e.target),
+					dir = el$.data('direction'),
+					data = jT.tables.getCellData(el$);
+
+				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
+			},
 		},
 		groups: {
 			structure: {
