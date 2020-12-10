@@ -9,10 +9,12 @@ jT = a$.extend(jT, {
   templateRegExp: /\{\{([^}|]+)(|[^}]+)?\}\}/,
   /* formats a string, replacing {{number | property}} in it with the corresponding value in the arguments
    */
-  formatString: function (str, info, def, formatters) {
+  formatString: function (str, info, formatters) {
     var pieces = str.split(jT.templateRegExp),
       pl = pieces.length,
-      out = "";
+      out = "",
+      // This (and empty string formatter) is the default value provider... if it exists, at all.
+      def = typeof formatters !== 'object' ? formatters : (formatters && formatters['']);
 
     for (var i = 0;; ++i) {
       out += pieces[i++];

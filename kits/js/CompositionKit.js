@@ -104,7 +104,7 @@
 
 					var val = cmp.proportion.typical;
 					if (cmp.relation == 'HAS_CONSTITUENT' && theSubs.name == '') {
-						theSubs.name = cmp.component.compound['name'] + ' (' + jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision) + ')';
+						theSubs.name = cmp.component.compound['name'] + ' (' + jT.ambit.formatters.formatConcentration(val) + ')';
 					}
 
 					if (cmp.relation == 'HAS_CONSTITUENT' && theSubs.maxvalue < val.value) {
@@ -191,7 +191,7 @@
 					"width": "15%",
 					"data": "proportion.typical",
 					"render": function (val, type, full) {
-						return type != 'display' ? '' + val.value : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+						return type != 'display' ? '' + val.value : jT.ambit.formatters.formatConcentration(val);
 					}
 				},
 				'Concentration ranges': {
@@ -200,7 +200,7 @@
 					"width": "20%",
 					"data": "proportion.real",
 					"render": function (val, type, full) {
-						return type != 'display' ? '' + val.lowerValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+						return type != 'display' ? '' + val.lowerValue : jT.ambit.formatters.formatConcentration(val);
 					}
 				},
 				'Upper range': {
@@ -209,7 +209,7 @@
 					"width": "20%",
 					"data": "proportion.real",
 					"render": function (val, type, full) {
-						return type != 'display' ? '' + val.upperValue : jT.valueAndUnits(val.value, val.unit || '%&nbsp;(w/w)', val.precision);
+						return type != 'display' ? '' + val.upperValue : jT.ambit.formatters.formatConcentration(val);
 					}
 				},
 				'Also': {

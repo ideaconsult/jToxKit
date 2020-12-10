@@ -10,7 +10,7 @@
     jT.ui = $.extend(jT.ui, {
         templates: {},
 
-        bakeTemplate: function (html, info, def) {
+        bakeTemplate: function (html, info, formatters) {
             var all$ = $(html);
 
             $('*', all$).each(function (i, el) {
@@ -19,7 +19,7 @@
                 // first, deal with the value field
                 if (el.value && el.value.match(jT.templateRegExp)) {
                     liveData = { 'value': el.value };
-                    el.value = jT.formatString(el.value, info, def);
+                    el.value = jT.formatString(el.value, info, formatters);
                 }
 
                 // then, jump to deal with the attributes
@@ -29,7 +29,7 @@
                         if (liveData == null)
                             liveData = {};
                         liveData[allAttrs[i].name] = allAttrs[i].value;
-                        allAttrs[i].value = jT.formatString(allAttrs[i].value, info, def);
+                        allAttrs[i].value = jT.formatString(allAttrs[i].value, info, formatters);
                     }
                 }
 
@@ -41,7 +41,7 @@
                         if (liveData == null)
                             liveData = {};
                         liveData[''] = subEl.textContent;
-                        subEl.textContent = jT.formatString(subEl.textContent, info, def);
+                        subEl.textContent = jT.formatString(subEl.textContent, info, formatters);
                     }                    
                 }
 
@@ -58,12 +58,9 @@
         },
 
         updateTree: function (root, info, formatters) {
-            // This is the default value provider... if it exists, at all.
-            var def = formatters && formatters[''];
-
             $('.jtox-live-data', root).each(function (i, el) {
                 $.each($(el).data('jtox-live-data'), function (k, v) {
-                    v = jT.formatString(v, info, def, formatters)
+                    v = jT.formatString(v, info, formatters)
                     if (k === '')
                         el.innerHTML = v;
                     else if (k === 'value')
@@ -74,12 +71,12 @@
             });
         },
 
-        fillHtml: function (id, info, def) {
-            return jT.formatString(jT.ui.templates[id], info, def);
+        fillHtml: function (id, info, formatters) {
+            return jT.formatString(jT.ui.templates[id], info, formatters);
         },
 
-        getTemplate: function (id, info, def) {
-            return $(jT.ui.fillHtml(id, info, def));
+        getTemplate: function (id, info, formatters) {
+            return $(jT.ui.fillHtml(id, info, formatters));
         },
 
         updateCounter: function (str, count, total) {
@@ -1100,20 +1097,16 @@ jT.tables = {
 		return colDefs;
 	},
 
-	renderMulti: function (data, type, full, render, tabInfo) {
-		var dlen = data.length,
-			tabInfo = (!tabInfo ? '' : ' class="tab-info-node" ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' '));
-
-		if (dlen < 2)
-			return '<div' + tabInfo + '>' + render(data[0], type, full) + '</div>';
-
-		var df = '<table' + tabInfo + '>';
-		for (var i = 0; i < dlen; ++i) {
-			df += '<tr class="' + (i % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(data[i], type, full, i) + '</td></tr>';
-		}
-
-		df += '</table>';
-		return df;
+	renderMulti: function (data, full, render) {
+		// Make a property getter when passed a string.
+		if (typeof render === 'string')
+			render = _.property(render);
+		if (data.length < 2)
+			return '<div>' + render(data[0], full) + '</div>';
+		else
+			return '<table>' + _.map(data, function (entry, idx) {
+				return '<tr class="' + (idx % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(entry, full, idx) + '</td></tr>';
+			}) + '</table>';
 	},
 
 	columnData: function (cols, data, type) {
@@ -1441,25 +1434,6 @@ jT.ambit = {
 		return dataset;
 	},
 
-	// format the external identifiers column
-	formatExtIdentifiers: function (data, type, full) {
-		if (type != 'display')
-			return _.map(data, 'id').join(', ');
-
-		var html = '';
-		for (var i = 0; i < data.length; ++i) {
-			if (i > 0)
-				html += '<br/>';
-			var id = data[i].id;
-			try {
-				if (id.startsWith("http")) id = "<a href='" + id + "' target=_blank class='qxternal'>" + id + "</a>";
-			} catch (err) {}
-
-			html += data[i].type + '&nbsp;=&nbsp;' + id;
-		}
-		return html;
-	},
-
 	getDatasetValue: function (fid, old, value) {
 		return _.compact(_.union(old, value != null ? value.trim().toLowerCase().split("|") : [value]));
 	},
@@ -1621,6 +1595,34 @@ jT.ambit = {
 			title: "InfoRow", search: false, data: "compound.URI", basic: true, primary: true, visibility: "none",
 			column: { className: "jtox-hidden jtox-ds-details paddingless", width: "0px" },
 			render: function (data, type, full) { return ''; }
+		}
+	},
+	formatters: {
+		extIdentifiers: function (data) {
+			var html = '';
+			for (var i = 0; i < data.length; ++i) {
+				if (i > 0)
+					html += '<br/>';
+				var id = data[i].id;
+				try {
+					if (id.startsWith("http")) id = "<a href='" + id + "' target=_blank class='qxternal'>" + id + "</a>";
+				} catch (err) {}
+	
+				html += data[i].type + '&nbsp;=&nbsp;' + id;
+			}
+			return html;
+		},
+		formatDate: function (timestamp) {
+			var d = new Date(timestamp),
+				day = d.getDate(),
+				month = d.getMonth() + 1;
+
+			return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
+		},
+		formatConcentration: function (data) {
+			return jT.valueAndUnits(
+				data.value || (data.lowewValue + (data.upperValue && ('-' + data.upperValue))) || '?',
+				data.unit || '%&nbsp;(w/w)');
 		}
 	}
 };

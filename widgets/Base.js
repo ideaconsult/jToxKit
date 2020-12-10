@@ -10,7 +10,7 @@
     jT.ui = $.extend(jT.ui, {
         templates: {},
 
-        bakeTemplate: function (html, info, def) {
+        bakeTemplate: function (html, info, formatters) {
             var all$ = $(html);
 
             $('*', all$).each(function (i, el) {
@@ -19,7 +19,7 @@
                 // first, deal with the value field
                 if (el.value && el.value.match(jT.templateRegExp)) {
                     liveData = { 'value': el.value };
-                    el.value = jT.formatString(el.value, info, def);
+                    el.value = jT.formatString(el.value, info, formatters);
                 }
 
                 // then, jump to deal with the attributes
@@ -29,7 +29,7 @@
                         if (liveData == null)
                             liveData = {};
                         liveData[allAttrs[i].name] = allAttrs[i].value;
-                        allAttrs[i].value = jT.formatString(allAttrs[i].value, info, def);
+                        allAttrs[i].value = jT.formatString(allAttrs[i].value, info, formatters);
                     }
                 }
 
@@ -41,7 +41,7 @@
                         if (liveData == null)
                             liveData = {};
                         liveData[''] = subEl.textContent;
-                        subEl.textContent = jT.formatString(subEl.textContent, info, def);
+                        subEl.textContent = jT.formatString(subEl.textContent, info, formatters);
                     }                    
                 }
 
@@ -58,12 +58,9 @@
         },
 
         updateTree: function (root, info, formatters) {
-            // This is the default value provider... if it exists, at all.
-            var def = formatters && formatters[''];
-
             $('.jtox-live-data', root).each(function (i, el) {
                 $.each($(el).data('jtox-live-data'), function (k, v) {
-                    v = jT.formatString(v, info, def, formatters)
+                    v = jT.formatString(v, info, formatters)
                     if (k === '')
                         el.innerHTML = v;
                     else if (k === 'value')
@@ -74,12 +71,12 @@
             });
         },
 
-        fillHtml: function (id, info, def) {
-            return jT.formatString(jT.ui.templates[id], info, def);
+        fillHtml: function (id, info, formatters) {
+            return jT.formatString(jT.ui.templates[id], info, formatters);
         },
 
-        getTemplate: function (id, info, def) {
-            return $(jT.ui.fillHtml(id, info, def));
+        getTemplate: function (id, info, formatters) {
+            return $(jT.ui.fillHtml(id, info, formatters));
         },
 
         updateCounter: function (str, count, total) {

@@ -169,9 +169,11 @@
 					return null;
 
 				col["render"] = function (data, type, full) {
-					return jT.tables.renderMulti(data, type, full, function (data, type) {
-						return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
-					}, { anno: 'conditions.' + c});
+					return type !== 'display'
+						 ? _.map(data, ['conditions', c]).join(',')
+						 :jT.tables.renderMulti(data, full, function (data, full) {
+							return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
+						});
 				};
 				return col;
 			});
@@ -429,7 +431,7 @@
 				substance = substance.substance[0];
 
 				substance["showname"] = substance.publicname || substance.name;
-				substance["IUCFlags"] = jT.ambit.formatExtIdentifiers(substance.externalIdentifiers, 'display', substance);
+				substance["IUCFlags"] = jT.ambit.formatters.extIdentifiers(substance.externalIdentifiers);
 				self.substance = substance;
 
 				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
@@ -527,12 +529,10 @@
 		"width": "10%",
 		"data": "effects",
 		"render": function (data, type, full) {
-			return jT.tables.renderMulti(data, type, full, function (data, type) {
-				var endpointText = StudyKit.getFormatted(data, type, "endpoint");
-				if (data.endpointtype != null)
-					endpointText += " (" + data.endpointtype + ")";
-				return endpointText
-			}, { anno: "endpoint endpointtype"});
+			return jT.tables.renderMulti(data, full, function (data) {
+				return StudyKit.getFormatted(data, type, "endpoint") + 
+					(data.endpointtype && " (" + data.endpointtype + ")" || '');
+			});
 		}
 	}, // Effects columns
 	{
@@ -541,12 +541,10 @@
 		"width": "10%",
 		"data": "effects",
 		"render": function (data, type, full) {
-			return jT.tables.renderMulti(data, type, full, function (data, type) {
-				var resText = jT.ui.renderRange(data.result, null, type);
-				if (data.result.errorValue != null)
-					resText += " (" + data.result.errQualifier + " " + data.result.errorValue + ")";
-				return resText
-			}, { anno: "result result.unit result.errValue result.errQualifier"});
+			return jT.tables.renderMulti(data, full, function (data) {
+				return jT.ui.renderRange(data.result, null, type) + 
+					(data.result.errorValue && " (" + data.result.errQualifier + " " + data.result.errorValue + ")" || '');
+			});
 		}
 	},
 	{
@@ -555,9 +553,9 @@
 		"width": "10%",
 		"data": "effects",
 		"render": function (data, type, full) {
-			return jT.tables.renderMulti(data, type, full, function (data) {
+			return jT.tables.renderMulti(data, full, function (data) {
 				return data.result.textValue || '-';
-			}, { anno: "result result.textValue"});
+			});
 		}
 	},
 	{

@@ -130,25 +130,6 @@ jT.ambit = {
 		return dataset;
 	},
 
-	// format the external identifiers column
-	formatExtIdentifiers: function (data, type, full) {
-		if (type != 'display')
-			return _.map(data, 'id').join(', ');
-
-		var html = '';
-		for (var i = 0; i < data.length; ++i) {
-			if (i > 0)
-				html += '<br/>';
-			var id = data[i].id;
-			try {
-				if (id.startsWith("http")) id = "<a href='" + id + "' target=_blank class='qxternal'>" + id + "</a>";
-			} catch (err) {}
-
-			html += data[i].type + '&nbsp;=&nbsp;' + id;
-		}
-		return html;
-	},
-
 	getDatasetValue: function (fid, old, value) {
 		return _.compact(_.union(old, value != null ? value.trim().toLowerCase().split("|") : [value]));
 	},
@@ -316,6 +297,34 @@ jT.ambit = {
 			title: "InfoRow", search: false, data: "compound.URI", basic: true, primary: true, visibility: "none",
 			column: { className: "jtox-hidden jtox-ds-details paddingless", width: "0px" },
 			render: function (data, type, full) { return ''; }
+		}
+	},
+	formatters: {
+		extIdentifiers: function (data) {
+			var html = '';
+			for (var i = 0; i < data.length; ++i) {
+				if (i > 0)
+					html += '<br/>';
+				var id = data[i].id;
+				try {
+					if (id.startsWith("http")) id = "<a href='" + id + "' target=_blank class='qxternal'>" + id + "</a>";
+				} catch (err) {}
+	
+				html += data[i].type + '&nbsp;=&nbsp;' + id;
+			}
+			return html;
+		},
+		formatDate: function (timestamp) {
+			var d = new Date(timestamp),
+				day = d.getDate(),
+				month = d.getMonth() + 1;
+
+			return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
+		},
+		formatConcentration: function (data) {
+			return jT.valueAndUnits(
+				data.value || (data.lowewValue + (data.upperValue && ('-' + data.upperValue))) || '?',
+				data.unit || '%&nbsp;(w/w)');
 		}
 	}
 };

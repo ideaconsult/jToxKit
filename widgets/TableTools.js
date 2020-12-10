@@ -96,20 +96,16 @@ jT.tables = {
 		return colDefs;
 	},
 
-	renderMulti: function (data, type, full, render, tabInfo) {
-		var dlen = data.length,
-			tabInfo = (!tabInfo ? '' : ' class="tab-info-node" ' + _.map(tabInfo, function (v, k) { return 'data-' + k + '="' + v + '"'; }).join(' '));
-
-		if (dlen < 2)
-			return '<div' + tabInfo + '>' + render(data[0], type, full) + '</div>';
-
-		var df = '<table' + tabInfo + '>';
-		for (var i = 0; i < dlen; ++i) {
-			df += '<tr class="' + (i % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(data[i], type, full, i) + '</td></tr>';
-		}
-
-		df += '</table>';
-		return df;
+	renderMulti: function (data, full, render) {
+		// Make a property getter when passed a string.
+		if (typeof render === 'string')
+			render = _.property(render);
+		if (data.length < 2)
+			return '<div>' + render(data[0], full) + '</div>';
+		else
+			return '<table>' + _.map(data, function (entry, idx) {
+				return '<tr class="' + (idx % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(entry, full, idx) + '</td></tr>';
+			}) + '</table>';
 	},
 
 	columnData: function (cols, data, type) {

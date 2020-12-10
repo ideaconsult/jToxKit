@@ -846,22 +846,24 @@
 	CompoundKit.enumSameAs = function (fid, features, callback) {
 		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
 		// This, final feature should be considered "main" and title and others taken from it.
-		var feature = features[fid];
-		var base = fid.replace(/(http.+\/feature\/).*/g, "$1");
-		var retId = fid;
+		var feature = features[fid],
+			base = fid.replace(/(http.+\/feature\/).*/g, "$1"),
+			retId = fid;
 
 		for (;;) {
 			jT.fireCallback(callback, null, feature, retId);
+			if (feature == null) {
+				console.warn("Reference to a unspecified feature: " + retId);
+				break;
+			}
 			if (feature.sameAs == null || feature.sameAs == fid || fid == base + feature.sameAs)
 				break;
 			if (features[feature.sameAs] !== undefined)
 				retId = feature.sameAs;
-			else {
-				if (features[base + feature.sameAs] !== undefined)
-					retId = base + feature.sameAs;
-				else
-					break;
-			}
+			else if (features[base + feature.sameAs] !== undefined)
+				retId = base + feature.sameAs;
+			else
+				break;
 
 			feature = features[retId];
 		}

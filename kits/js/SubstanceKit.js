@@ -191,7 +191,12 @@
 					title: "Info",
 					data: "externalIdentifiers",
 					render: function (data, type, full) {
-						return data && jT.ambit.formatExtIdentifiers(data, type, full) && '';
+						if (!data)
+							return '';
+						if (type != 'display')
+							return _.map(data, 'id').join(', ');
+						else
+							return jT.ambit.formatters.extIdentifiers(data);
 					}
 				}
 			}
