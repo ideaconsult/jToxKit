@@ -136,7 +136,7 @@ jT.tables = {
 			"processing": true,
 			"lengthChange": false,
 			"autoWidth": false,
-			"dom": kit.settings.dom,
+			"dom": kit.settings.dom || "rt<Fip>",
 			"language": kit.settings.oLanguage,
 			"serverSide": false,
 			"createdRow": function (nRow, aData, iDataIndex) {

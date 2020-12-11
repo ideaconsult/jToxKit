@@ -494,7 +494,7 @@
 	MatrixKit.prototype.queryMatrix = function (mode) {
 		var panel = $('#jtox-matrix'),
 			queryPath = mode == 'initial' ? '/dataset?mergeDatasets=true' : '/matrix/' + mode,
-			editable = mode != 'final';
+			editable = mode == 'working';
 
 		// Make sure the buttons reflect the reality!
 		if (mode == 'initial') {
@@ -717,7 +717,14 @@
 		};
 
 		matrixFeatures['#SelectionCol'] = {
-			render: this.getTagButtonsRenderer('substance')
+			render: function (data, type, full) {
+				if (type !== 'display')
+					return data;
+				if (self.bundleSummary.edits.matrixEditable)
+					return jT.ui.fillHtml('matrix-tag-buttons', { subject: 'substance' });
+				else
+					return self.settings.baseFeatures['#TagCol'].render(data, type, full);
+			}
 		};
 
 		matrixFeatures['#TagCol'] = {
@@ -746,52 +753,6 @@
 					});
 			}
 		};
-
-		// conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "className": "center"}, render: function (data, type, full) {
-		// 	if (type != 'display')
-		// 		return data || 0;
-		// 	var bInfo = full.bundles[self.bundleUri];
-		// 	var tag = 'target'; // the default
-		// 	if (!!bInfo && !!bInfo.tag) {
-		// 		tag = bInfo.tag;
-		// 	}
-		// 	var html = "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>";
-		// 	if (self.bundleSummary.edits.matrixEditable) {
-		// 		html += '<button class="jt-toggle jtox-handler target' + ( (tag == 'target') ? ' active' : '') + '" data-tag="target" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Target">T</button>' +
-		// 				'<button class="jt-toggle jtox-handler source' + ( (tag == 'source') ? ' active' : '') + '" data-tag="source" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Source">S</button>' +
-		// 				'<button class="jt-toggle jtox-handler cm' + ( (tag == 'cm') ? ' active' : '') + '" data-tag="cm" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Category Member">CM</button>';
-		// 	}
-		// 	else {
-		// 		tag = (tag == 'cm') ? 'CM' : tag.substr(0,1).toUpperCase();
-		// 		html += '<button class="jt-toggle active" disabled="true">' + tag + '</button>';
-		// 	}
-		// 	html += '<div><button type="button" class="ui-button ui-button-icon-only jtox-up"><span class="ui-icon ui-icon-triangle-1-n">up</span></button><br />' +
-		// 					'<button type="button" class="ui-button ui-button-icon-only jtox-down"><span class="ui-icon ui-icon-triangle-1-s">down</span></button><br /></div>'
-		// 	return html;
-		// } };
-
-		// conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "className": "center"}, render: function (data, type, full) {
-
-		// 	if (type != 'display')
-		// 		return data || 0;
-
-		// 	var html = "";
-		// 	var bInfo = full.bundles[self.bundleUri];
-		// 	if (!bInfo) {
-		// 		return html;
-		// 	}
-		// 	if (!!bInfo.tag) {
-		// 		var tag = (bInfo.tag == 'cm') ? 'CM' : bInfo.tag.substr(0,1).toUpperCase();
-		// 		html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
-		// 	}
-		// 	if (!!bInfo.remarks && bInfo.remarks != '') {
-		// 		html += jT.ui.fillHtml('info-ball', { href: '$', title: bInfo.remarks});
-		// 	}
-
-		// 	return html;
-		// } };
-
-		//conf.baseFeatures['http://www.opentox.org/api/1.1#CASRN'].primary = true;
 
 		return _.defaultsDeep(matrixFeatures, this.settings.baseFeatures);
 	};
@@ -1770,11 +1731,12 @@
 				primary: false,
 				render: function (data, type, full) {
 					var bInfo = data[this.bundleUri],
-						bDef = defTagButtons[bInfo && bInfo.tag];
+						bTag = bInfo && bInfo.tag || "target",
+						bDef = defTagButtons[bTag];
 
 					return !bDef || type !== 'display'
-						? bInfo && bInfo.tag || '?'
-						: jT.ui.fillHtml('matrix-tag-indicator', $.extend({ subject: "substance" },  bDef));
+						? bTag
+						: jT.ui.fillHtml('matrix-tag-indicator', _.defaults({ subject: "substance" }, bDef));
 				}
 			},
 			"http://www.opentox.org/api/1.1#Reasoning" : {
