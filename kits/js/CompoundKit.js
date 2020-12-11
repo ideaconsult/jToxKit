@@ -25,10 +25,9 @@
 	function CompoundKit(settings) {
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
-		this.settings = $.extend(true, 
-			{ baseFeatures: jT.ambit.baseFeatures }, 
-			CompoundKit.defaults, 
-			settings);
+		this.settings = _.defaultsDeep(settings,
+			CompoundKit.defaults,
+			{ baseFeatures: jT.ambit.baseFeatures });
 
 		// make a dull copy here, because, otherwise groups are merged... which we DON'T want
 		if (settings != null && settings.groups != null)
@@ -907,6 +906,7 @@
 			CompoundKit.processEntry(dataset.dataEntry[i], features, fnValue);
 			dataset.dataEntry[i].number = i + 1 + startIdx;
 			dataset.dataEntry[i].index = i;
+			dataset.dataEntry[i].total = dl;
 		}
 
 		return dataset;

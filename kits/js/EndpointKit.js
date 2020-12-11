@@ -426,7 +426,9 @@
 					data: "value",
 					defaultContent: "-",
 					render: function (data, type, full) {
-						return data + '<span class="float-right jtox-details">[<span title="Number of values">' + full.count + '</span>]' + jT.ui.putInfo(full.uri) + '</span>';
+						return data + '<span class="float-right jtox-details">[<span title="Number of values">' + full.count + '</span>]' + 
+							jT.ui.fillHtml('info-ball', { href: full.uri, title: "Endpoints detailed info" }) +
+							'</span>';
 					}
 				},
 			}

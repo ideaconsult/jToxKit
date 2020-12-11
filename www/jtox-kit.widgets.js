@@ -246,10 +246,6 @@
             return out;
         },
 
-        putInfo: function (href, title) {
-            return '<sup class="helper"><a target="_blank" href="' + (href || '#') + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
-        },
-
         putStars: function (kit, stars, title) {
             if (!kit.settings.shortStars) {
                 var res = '<div title="' + title + '">';
@@ -273,7 +269,8 @@
 
             var res = '';
             for (var i = 0, il = data.length; i < il; ++i)
-                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
+                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + 
+                    jT.ui.fillHtml('info-ball', { href: full.URI + '/composition', title: data[i].compositionName + '(' + data[i].compositionUUID + ')' });
             return res;
         },
 
@@ -1105,55 +1102,26 @@ jT.tables = {
 			return '<div>' + render(data[0], full) + '</div>';
 		else
 			return '<table>' + _.map(data, function (entry, idx) {
-				return '<tr class="' + (idx % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(entry, full, idx) + '</td></tr>';
-			}) + '</table>';
+					return '<tr class="' + (idx % 2 == 0 ? 'even' : 'odd') + '"><td>' + render(entry, full, idx) + '</td></tr>';
+				})
+				.join('') + 
+				'</table>';
 	},
 
-	columnData: function (cols, data, type) {
-		var out = new Array(data.length);
-		if (type == null)
-			type = 'display';
-		for (var i = 0, dl = data.length; i < dl; ++i) {
-			var entry = {};
-			var d = data[i];
-			for (var c = 0, cl = cols.length; c < cl; ++c) {
-				var col = cols[c];
-				var val = _.get(d, col.data, col.defaultValue);
-				entry[col.title] = typeof col.render != 'function' ? val : col.render(val, type, d);
-			}
-
-			out[i] = entry;
-		}
-
-		return out;
+	getTable: function (el) {
+		return $(el).closest('table.dataTable').DataTable();
 	},
 
 	getRowData: function (el) {
-		var table = $(el).closest('table').DataTable(),
+		var table = this.getTable(el),
 			row = $(el).closest('tr')[0];
 		return table && table.row(row).data();
 	},
 
 	getCellData: function (el) {
-		var table = $(el).closest('table').DataTable(),
+		var table = this.getTable(el),
 			cell = $(el).closest('td')[0];
 		return table && table.cell(cell).data();
-	},
-
-	queryInfo: function (data) {
-		var info = {};
-		for (var i = 0, dl = data.length; i < dl; ++i)
-			info[data[i].name] = data[i].value;
-
-		if (info.sortingCols > 0) {
-			info.sortDirection = info.sortDir_0.toLowerCase();
-			info.sortData = info["dataProp_" + info.sortCol_0];
-		} else {
-			info.sortDirection = 0;
-			info.sortData = "";
-		}
-
-		return info;
 	},
 
 	putTable: function (kit, root, config, settings) {
@@ -1265,6 +1233,7 @@ jT.tables = {
 			}
 		}
 	},
+
 	commonHandlers: {
 		nextPage: function () {
 			if (this.entriesCount == null || this.pageStart + this.pageSize < this.entriesCount)
@@ -1620,9 +1589,14 @@ jT.ambit = {
 			return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
 		},
 		formatConcentration: function (data) {
-			return jT.valueAndUnits(
-				data.value || (data.lowewValue + (data.upperValue && ('-' + data.upperValue))) || '?',
-				data.unit || '%&nbsp;(w/w)');
+			var val = data.value;
+			if (val == null) {
+				val = data.lowerValue;
+				if (data.upperValue != null)
+					val = val + '-' + data.upperValue;
+			}
+
+			return jT.valueAndUnits(val == null ? '?' : val, data.unit || '%&nbsp;(w/w)');
 		}
 	}
 };

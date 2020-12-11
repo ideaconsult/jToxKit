@@ -29,7 +29,7 @@
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
 		jT.ui.putTemplate('all-matrix', ' ? ', this.rootElement);
 
-		this.settings = $.extend(true, {}, MatrixKit.defaults, settings);
+		this.settings = $.extend(true, { baseFeatures: jT.ambit.baseFeatures }, MatrixKit.defaults, settings);
 		jT.ui.rebindRenderers(this, this.settings.baseFeatures, true);
 		this.reboundHandlers = _.defaults(
 			_.mapValues(this.settings.handlers, function (hnd) {  return _.bind(hnd, self); }), 
@@ -97,7 +97,7 @@
 	},
 
 	MatrixKit.prototype.validateBundleForm = function (e) {
-
+		// TODO: !!!
 	},
 
 	MatrixKit.prototype.updateTaggedEntry = function (row, data, index) {
@@ -113,9 +113,34 @@
 			note$.prop('disabled', true).val(' ');
 	};
 
-	MatrixKit.prototype.getTagButtonsRenderer = function (subject, buttons, arrows) {
+	MatrixKit.prototype.getTagButtonsRenderer = function (subject) {
 		return function (data, type, full) {
 			return (type !== 'display') ? data : jT.ui.fillHtml('matrix-tag-buttons', { subject: subject });
+		};
+	};
+
+	MatrixKit.prototype.getMoveRenderer = function (subject, innerRender) {
+		return function (data, type, full) {
+			if (type !== 'display')
+				return data;
+
+			var els = [];
+			// Up aroow, if not the first row.
+			els.push((full.index == 0) ? '' : jT.ui.fillHtml('matrix-sel-arrow', {
+				subject: subject,
+				direction: 'up'
+			}));
+			// The given inner renderer - usually the number.
+			if (typeof innerRender === 'function')
+				els.push(innerRender(data, type, full));
+			// The download
+			els.push((full.index == full.total - 1) ? '' : jT.ui.fillHtml('matrix-sel-arrow', {
+				subject: subject,
+				direction: 'down'
+			}));
+
+			// Join and return all of them.
+			return els.join('<br/>');
 		};
 	};
 
@@ -568,78 +593,80 @@
 			});
 	};
 
+	MatrixKit.prototype.getFeatureRenderer = function (kit, feat, theId) {
+		var self = this;
+
+		return function (data, type, full) {
+			if (type != 'display')
+				return '-';
+
+			var html = '';
+			for (var fId in kit.dataset.feature) {
+				var f = kit.dataset.feature[fId];
+				if (f.sameAs != feat.sameAs || full.values[fId] == null)
+					continue;
+
+				var catId = jT.ambit.parseFeatureId(fId).category,
+					config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[catId]),
+					theData = full.values[fId],
+					preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>" + f.title + "</strong>" : null,
+					icon = f.isModelPredictionFeature ? "ui-icon-calculator" : "ui-icon-tag",
+					studyType = "<span class='ui-icon "+icon+"' title='" + f.source.type + "'></span>",
+				// preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : '),
+					postVal = '', postValParts = [], parameters = [], conditions = [];
+
+				for (var i = 0, l = f.annotation.length; i < l; i++){
+					var a = f.annotation[i];
+					if ( a.type == 'conditions' && _.get(config, 'conditions["' + a.p.toLowerCase() + '"].inMatrix', false) == true ) {
+						var t = _.get(config, 'conditions["' + a.p.toLowerCase() + '"].sTitle', '') || a.p;
+						conditions.push(t + ' = ' + a.o);
+					} else if (a.type == 'parameters') {
+						parameters.push(a.o);
+					}
+				}
+				if (parameters.length > 0)
+					postValParts.push('<span>' + parameters.join(', ') + '</span>');
+				if (conditions.length > 0)
+					postValParts.push('<span>' + conditions.join(', ') + '</span>');
+				if (_.get(config, 'protocol.guideline.inMatrix', false) && !!f.creator && f.creator != 'null' &&  f.creator != 'no data')
+					postValParts.push('<span class="shortened" title="'+f.creator+'">'+f.creator + '</span>');
+				
+				postVal = (postValParts.length > 0) ? '(' + postValParts.join(', ') + ')' : '';
+
+				if (!f.isMultiValue || !$.isArray(theData))
+					theData = [theData];
+
+				// now - ready to produce HTML
+				for (var i = 0, vl = theData.length; i < vl; ++i) {
+					var d = theData[i];
+					if (d.deleted && !self.bundleSummary.edits.matrixEditable)
+						continue;
+					html += '<div>';
+
+					if (self.bundleSummary.edits.matrixEditable)
+						html += '<span class="ui-icon ' + (d.deleted ? 'ui-icon-info' : 'ui-icon-circle-minus')+ ' delete-popup"></span>&nbsp;';
+
+					html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
+							+ studyType
+							+ ' ' + postVal;
+					html += jT.ui.fillHtml('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
+					html += '</div>';
+				}
+			}
+
+			if (self.bundleSummary.edits.matrixEditable)
+				html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
+
+			return  html;
+		};
+	};
+
 	MatrixKit.prototype.getMatrixGrouper = function () {
 		var self = this;
 
 		return function(miniset, kit) {
-			var groups = { "Identifiers" : self.settings.groups.matrix.Identifiers.concat(self.settings.groups.matrix.MultiRowIdentifiers) },
+			var groups = { "Identifiers" : self.settings.groups.matrix.Identifiers },
 				endpoints = {};
-
-			var fRender = function (feat, theId) {
-				return function (data, type, full) {
-					if (type != 'display')
-						return '-';
-
-					var html = '';
-					for (var fId in kit.dataset.feature) {
-						var f = kit.dataset.feature[fId];
-						if (f.sameAs != feat.sameAs || full.values[fId] == null)
-							continue;
-
-						var catId = jT.ambit.parseFeatureId(fId).category,
-							config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[catId]),
-							theData = full.values[fId],
-							preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>" + f.title + "</strong>" : null,
-							icon = f.isModelPredictionFeature ? "ui-icon-calculator" : "ui-icon-tag",
-							studyType = "<span class='ui-icon "+icon+"' title='" + f.source.type + "'></span>",
-						// preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : '),
-							postVal = '', postValParts = [], parameters = [], conditions = [];
-
-						for (var i = 0, l = f.annotation.length; i < l; i++){
-							var a = f.annotation[i];
-							if ( a.type == 'conditions' && _.get(config, 'conditions["' + a.p.toLowerCase() + '"].inMatrix', false) == true ) {
-								var t = _.get(config, 'conditions["' + a.p.toLowerCase() + '"].sTitle', '') || a.p;
-								conditions.push(t + ' = ' + a.o);
-							} else if (a.type == 'parameters') {
-								parameters.push(a.o);
-							}
-						}
-						if (parameters.length > 0)
-							postValParts.push('<span>' + parameters.join(', ') + '</span>');
-						if (conditions.length > 0)
-							postValParts.push('<span>' + conditions.join(', ') + '</span>');
-						if (_.get(config, 'protocol.guideline.inMatrix', false) && !!f.creator && f.creator != 'null' &&  f.creator != 'no data')
-							postValParts.push('<span class="shortened" title="'+f.creator+'">'+f.creator + '</span>');
-						
-						postVal = (postValParts.length > 0) ? '(' + postValParts.join(', ') + ')' : '';
-
-						if (!f.isMultiValue || !$.isArray(theData))
-							theData = [theData];
-
-						// now - ready to produce HTML
-						for (var i = 0, vl = theData.length; i < vl; ++i) {
-							var d = theData[i];
-							if (d.deleted && !self.bundleSummary.edits.matrixEditable)
-								continue;
-							html += '<div>';
-
-							if (self.bundleSummary.edits.matrixEditable)
-								html += '<span class="ui-icon ' + (d.deleted ? 'ui-icon-info' : 'ui-icon-circle-minus')+ ' delete-popup"></span>&nbsp;';
-
-							html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
-									+ studyType
-									+ ' ' + postVal;
-							html += jT.ui.getTemplate('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
-							html += '</div>';
-						}
-					}
-
-					if (self.bundleSummary.edits.matrixEditable)
-						html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
-
-					return  html;
-				};
-			};
 
 			for (var fId in miniset.feature) {
 				var feat = miniset.feature[fId];
@@ -655,8 +682,8 @@
 					endpoints[feat.sameAs] = true;
 					if (!feat.title)
 						feat.title = feat.sameAs.substr(feat.sameAs.indexOf('#') + 1);
-					feat.render = fRender(feat, fId);
-					feat.column = { className: "breakable", sWidth: "80px" };
+					feat.render = self.getFeatureRenderer(kit, feat, fId);
+					feat.column = { className: "breakable", width: "80px" };
 					grp.push(fId);
 				}
 			}
@@ -680,67 +707,93 @@
 		};
 	};
 
-	MatrixKit.prototype.getFeatureRenderer = function (fId, oldData, oldRender) {
-		return function (data, type, full) {
-			return typeof data != 'object' ? '-' : jT.ui.renderMulti(data, type, full, function (_data, _type, _full){
-				var dt = _.get(_data, (fId.indexOf('#Diagram') > 0 ? 'component.' : '') + oldData);
-				return (typeof oldRender == 'function' ? oldRender(dt, _type, fId.indexOf('#Diagram') > 0 ? _data.component : _data) : dt);
-			});
-		};
-	};
-
 	MatrixKit.prototype.getMatrixFeatures = function() {
-		var self = this;
+		var self = this,
+			matrixFeatures = {};
 
-		var conf = this.settings;
+		matrixFeatures['#IdRow'] = {
+			primary: true,
+			render: this.getMoveRenderer('substance', this.settings.baseFeatures['#IdRow'].render)
+		};
 
-		conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "className": "center"}, render: function (data, type, full) {
-			if (type != 'display')
-				return data || 0;
-			var bInfo = full.bundles[self.bundleUri];
-			var tag = 'target'; // the default
-			if (!!bInfo && !!bInfo.tag) {
-				tag = bInfo.tag;
-			}
-			var html = "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>";
-			if (self.bundleSummary.edits.matrixEditable) {
-				html += '<button class="jt-toggle jtox-handler target' + ( (tag == 'target') ? ' active' : '') + '" data-tag="target" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Target">T</button>' +
-						'<button class="jt-toggle jtox-handler source' + ( (tag == 'source') ? ' active' : '') + '" data-tag="source" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Source">S</button>' +
-						'<button class="jt-toggle jtox-handler cm' + ( (tag == 'cm') ? ' active' : '') + '" data-tag="cm" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Category Member">CM</button>';
-			}
-			else {
-				tag = (tag == 'cm') ? 'CM' : tag.substr(0,1).toUpperCase();
-				html += '<button class="jt-toggle active" disabled="true">' + tag + '</button>';
-			}
-			html += '<div><button type="button" class="ui-button ui-button-icon-only jtox-up"><span class="ui-icon ui-icon-triangle-1-n">up</span></button><br />' +
-							'<button type="button" class="ui-button ui-button-icon-only jtox-down"><span class="ui-icon ui-icon-triangle-1-s">down</span></button><br /></div>'
-			return html;
-		} };
+		matrixFeatures['#SelectionCol'] = {
+			render: this.getTagButtonsRenderer('substance')
+		};
 
-		conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "className": "center"}, render: function (data, type, full) {
-
-			if (type != 'display')
-				return data || 0;
-
-			var html = "";
-			var bInfo = full.bundles[self.bundleUri];
-			if (!bInfo) {
-				return html;
+		matrixFeatures['#TagCol'] = {
+			title: '',
+			primary: true,
+			data: 'composition',
+			column: { className: "jtox-multi" },
+			render: function (data, type, full) {
+				return type !== 'display'
+					? _.map(data, ['component', 'bundles', self.bundleUri, 'tag']).join(',')
+					: jT.tables.renderMulti(data, full, function (data) {
+						return self.settings.baseFeatures['#TagCol'].render(data.component.bundles, type, data);
+					});
 			}
-			if (!!bInfo.tag) {
-				var tag = (bInfo.tag == 'cm') ? 'CM' : bInfo.tag.substr(0,1).toUpperCase();
-				html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
-			}
-			if (!!bInfo.remarks && bInfo.remarks != '') {
-				html += jT.ui.getTemplate('info-ball', { href: '$', title: bInfo.remarks});
-			}
+		};
 
-			return html;
-		} };
+		matrixFeatures['#MultiDiagram'] = {
+			primary: true,
+			data: 'composition',
+			column: { className: "jtox-multi" },
+			render: function (data, type, full) {
+				return type !== 'display'
+					? _.map(data, 'component.compound.URI').join(',')
+					: jT.tables.renderMulti(data, full, function (data) {
+						return self.settings.baseFeatures['http://www.opentox.org/api/1.1#Diagram'].render(data.component.compound.URI, type, data);
+					});
+			}
+		};
+
+		// conf.baseFeatures['#IdRow'] = { used: true, basic: true, data: "number", column: { "className": "center"}, render: function (data, type, full) {
+		// 	if (type != 'display')
+		// 		return data || 0;
+		// 	var bInfo = full.bundles[self.bundleUri];
+		// 	var tag = 'target'; // the default
+		// 	if (!!bInfo && !!bInfo.tag) {
+		// 		tag = bInfo.tag;
+		// 	}
+		// 	var html = "&nbsp;-&nbsp;" + data + "&nbsp;-&nbsp;<br/>";
+		// 	if (self.bundleSummary.edits.matrixEditable) {
+		// 		html += '<button class="jt-toggle jtox-handler target' + ( (tag == 'target') ? ' active' : '') + '" data-tag="target" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Target">T</button>' +
+		// 				'<button class="jt-toggle jtox-handler source' + ( (tag == 'source') ? ' active' : '') + '" data-tag="source" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Source">S</button>' +
+		// 				'<button class="jt-toggle jtox-handler cm' + ( (tag == 'cm') ? ' active' : '') + '" data-tag="cm" data-uri="' + full.compound.URI + '" data-handler="onTagSubstance" title="Select the substance as Category Member">CM</button>';
+		// 	}
+		// 	else {
+		// 		tag = (tag == 'cm') ? 'CM' : tag.substr(0,1).toUpperCase();
+		// 		html += '<button class="jt-toggle active" disabled="true">' + tag + '</button>';
+		// 	}
+		// 	html += '<div><button type="button" class="ui-button ui-button-icon-only jtox-up"><span class="ui-icon ui-icon-triangle-1-n">up</span></button><br />' +
+		// 					'<button type="button" class="ui-button ui-button-icon-only jtox-down"><span class="ui-icon ui-icon-triangle-1-s">down</span></button><br /></div>'
+		// 	return html;
+		// } };
+
+		// conf.baseFeatures['#Tag'] = { title: 'Tag', used: false, basic: true, visibility: "main", primary: true, column: { "className": "center"}, render: function (data, type, full) {
+
+		// 	if (type != 'display')
+		// 		return data || 0;
+
+		// 	var html = "";
+		// 	var bInfo = full.bundles[self.bundleUri];
+		// 	if (!bInfo) {
+		// 		return html;
+		// 	}
+		// 	if (!!bInfo.tag) {
+		// 		var tag = (bInfo.tag == 'cm') ? 'CM' : bInfo.tag.substr(0,1).toUpperCase();
+		// 		html += '<button class="jt-toggle active" disabled="true"' + (!bInfo.remarks ? '' : 'title="' + bInfo.remarks + '"') + '>' + tag + '</button><br />';
+		// 	}
+		// 	if (!!bInfo.remarks && bInfo.remarks != '') {
+		// 		html += jT.ui.fillHtml('info-ball', { href: '$', title: bInfo.remarks});
+		// 	}
+
+		// 	return html;
+		// } };
 
 		//conf.baseFeatures['http://www.opentox.org/api/1.1#CASRN'].primary = true;
 
-		return _.defaults(conf.baseFeatures, this.settings.baseFeatures);
+		return _.defaultsDeep(matrixFeatures, this.settings.baseFeatures);
 	};
 
 	// called when a sub-action in bundle details tab is called
@@ -764,23 +817,6 @@
 				featureUri: this.bundleUri + '/property',
 				baseFeatures: this.getMatrixFeatures(),
 				groups: this.getMatrixGrouper(),
-				// onPrepared: function (miniset, kit) {
-				// 	// and now - process the multi-row columns
-				// 	for (var i = 0, mrl = self.settings.matrixMultiRows.length;i < mrl; ++i) {
-				// 		var fId = self.settings.matrixMultiRows[i];
-				// 		var mr = miniset.feature[fId];
-				// 		mr.render = self.getFeatureRenderer(fId, mr.data, mr.render);
-				// 		mr.data = 'composition';
-				// 		var col = mr.column;
-				// 		if (col == null)
-				// 			mr.column = col = { className: "jtox-multi" };
-				// 		else if (col.className == null)
-				// 			col.className = "jtox-multi";
-				// 		else
-				// 			col.className += " jtox-multi";
-				// 	}
-				// },
-	
 				onLoaded: function (dataset) {
 					// Because of the nested data, we need to have manual processing here
 					CompoundKit.processFeatures(dataset.feature, this.feature);
@@ -1629,6 +1665,9 @@
 			matrixMode: function (e) { this.queryMatrix($(e.target).attr('id').substr(1)); },
 			saveMatrix: function (e) { this.saveMatrix(); },
 			createWorkingCopy: function (e) { this.createWorkingCopy(); },
+			substanceTag: function (e) {
+				this.selectSubstance();
+			},
 			substanceMove: function (e) {
 				var el$ = $(e.target),
 					dir = el$.data('direction'),
@@ -1693,14 +1732,13 @@
 			},
 			matrix: {
 				Identifiers: [
+					"#SelectionCol",
 					"http://www.opentox.org/api/1.1#CASRN",
 					"#SubstanceName",
 					"#SubstanceUUID",
 					"http://www.opentox.org/api/1.1#SubstanceDataSource",
-				],
-				MultiRowIdentifiers: [
-					"#Tag",
-					"http://www.opentox.org/api/1.1#Diagram",
+					"#TagCol",
+					"#MultiDiagram",
 					"#ConstituentName",
 					"#ConstituentContent",
 					"#ConstituentContainedAs"
@@ -1735,7 +1773,7 @@
 						bDef = defTagButtons[bInfo && bInfo.tag];
 
 					return !bDef || type !== 'display'
-						? data
+						? bInfo && bInfo.tag || '?'
 						: jT.ui.fillHtml('matrix-tag-indicator', $.extend({ subject: "substance" },  bDef));
 				}
 			},
@@ -1798,7 +1836,7 @@
 				data: "composition",
 				accumulate: false,
 				primary: true,
-				column: { className: "breakable work-break" },
+				column: { className: "breakable work-break jtox-multi" },
 				render: function (data, type, full) {
 					return type !== 'display'
 						? _.map(data, "component.compound.name").join(',')
@@ -1810,7 +1848,7 @@
 				data: "composition",
 				accumulate: false,
 				primary: true,
-				column: { className: "center" },
+				column: { className: "center jtox-multi" },
 				render: function (data, type, full) {
 					return type !== 'display'
 						? _.map(data, "proportion.typical").join(',')
@@ -1824,12 +1862,13 @@
 				data: "composition",
 				accumulate: false,
 				primary: true,
-				column: { className: "center" },
+				column: { className: "center jtox-multi" },
 				render: function (data, type, full) {
 					return type !== 'display'
 						? _.map(data, "relation").join(',')
 						: jT.tables.renderMulti(data, full, function (data) {
-							return '<span>' + data.relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(data.substance.URI + '/composition', data.compositionName)
+							return '<span>' + data.relation.substring(4).toLowerCase() + '</span>' + 
+								jT.ui.fillHtml('info-ball', { href: data.substance.URI + '/composition', title: data.compositionName });
 						});
 				}
 		  	}

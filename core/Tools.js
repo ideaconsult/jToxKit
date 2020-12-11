@@ -43,15 +43,8 @@ jT = a$.extend(jT, {
     if (num == null)
       return "";
 
-    var maxPrec = Math.pow(10, prec || 9),
-        rounded, prec;
-    for (prec = 10; prec < maxPrec; prec *= 10) {
-      rounded = Math.round(num * prec);
-      if (Math.abs(rounded - num * prec) < .1)
-        break;
-    }
-
-    return parseInt(rounded) / prec;
+    var multiplier = Math.pow(10, prec || 2);
+    return (Math.round(num * multiplier) / multiplier).toFixed(prec);
   },
 
   formatUnits: function (str) {

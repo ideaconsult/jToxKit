@@ -56,7 +56,6 @@
   display: inline-block;
 }
 
-
 #jtox-identifiers table th {
   font-weight: normal;
   cursor: default;
@@ -100,32 +99,8 @@ button.details-expand-all, button.details-collapse-all {
   overflow-y: scroll !important;
 }
 
-
-.jtox-slidable {
-  overflow: hidden;
-  position: relative;
-  top: 0px;
-  width: 202%;
-  padding: 0px;
-  white-space: nowrap;
-  -moz-transition: left ease 800ms;
-  -ms-transition: left ease 800ms;
-  -o-transition: left ease 800ms;
-  -webkit-transition: left ease 800ms;
-  transition: left ease 800ms;
-}
-
-.jtox-slidable > div {
-  width: 50%;
-  position: relative;
-  margin: 0 -.25em 0 0;
-  vertical-align: top;
-  box-sizing: border-box;
-  white-space: normal;
-}
-
-.jtox-slidable>div>div {
-  position: relative;
+.jtox-toolkit i.fa.jtox-handler:hover {
+  color: #f00;
 }
 
 #jtox-matrix div.jtox-toolkit {

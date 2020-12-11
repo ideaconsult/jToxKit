@@ -246,10 +246,6 @@
             return out;
         },
 
-        putInfo: function (href, title) {
-            return '<sup class="helper"><a target="_blank" href="' + (href || '#') + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
-        },
-
         putStars: function (kit, stars, title) {
             if (!kit.settings.shortStars) {
                 var res = '<div title="' + title + '">';
@@ -273,7 +269,8 @@
 
             var res = '';
             for (var i = 0, il = data.length; i < il; ++i)
-                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
+                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + 
+                    jT.ui.fillHtml('info-ball', { href: full.URI + '/composition', title: data[i].compositionName + '(' + data[i].compositionUUID + ')' });
             return res;
         },
 

@@ -322,9 +322,14 @@ jT.ambit = {
 			return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
 		},
 		formatConcentration: function (data) {
-			return jT.valueAndUnits(
-				data.value || (data.lowewValue + (data.upperValue && ('-' + data.upperValue))) || '?',
-				data.unit || '%&nbsp;(w/w)');
+			var val = data.value;
+			if (val == null) {
+				val = data.lowerValue;
+				if (data.upperValue != null)
+					val = val + '-' + data.upperValue;
+			}
+
+			return jT.valueAndUnits(val == null ? '?' : val, data.unit || '%&nbsp;(w/w)');
 		}
 	}
 };
