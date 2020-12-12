@@ -514,8 +514,9 @@
 		}
 
 		// And, make the call!
-		this.bundleSummary.edits.matrixEditable = editable;
-		this.matrixKit.query(this.bundleUri + queryPath);
+		this.matrixEditable = editable;
+		this.matrixKit.query(this.bundleUri + queryPath, this.resetFeatures);
+		this.resetFeatures = false;
 	};
 
 	MatrixKit.prototype.addMatrixFeature = function(data, fId, value, element) {
@@ -639,11 +640,11 @@
 				// now - ready to produce HTML
 				for (var i = 0, vl = theData.length; i < vl; ++i) {
 					var d = theData[i];
-					if (d.deleted && !self.bundleSummary.edits.matrixEditable)
+					if (d.deleted && !self.matrixEditable)
 						continue;
 					html += '<div>';
 
-					if (self.bundleSummary.edits.matrixEditable)
+					if (self.matrixEditable)
 						html += '<span class="ui-icon ' + (d.deleted ? 'ui-icon-info' : 'ui-icon-circle-minus')+ ' delete-popup"></span>&nbsp;';
 
 					html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
@@ -654,7 +655,7 @@
 				}
 			}
 
-			if (self.bundleSummary.edits.matrixEditable)
+			if (self.matrixEditable)
 				html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
 
 			return  html;
@@ -720,7 +721,7 @@
 			render: function (data, type, full) {
 				if (type !== 'display')
 					return data;
-				if (self.bundleSummary.edits.matrixEditable)
+				if (self.matrixEditable)
 					return jT.ui.fillHtml('matrix-tag-buttons', { subject: 'substance' });
 				else
 					return self.settings.baseFeatures['#TagCol'].render(data, type, full);
@@ -808,7 +809,7 @@
 					if (!!result) {
 						$('#xfinal').button('enable');
 						self.bundleSummary.matrix++;
-						self.bundleSummary.edits.matrixEditable = true;
+						self.matrixEditable = true;
 
 						// TODO: Do this by activating the proper mode.
 						$('.jtox-toolkit', panel).show();
@@ -820,7 +821,8 @@
 			});
 		}
 
-		// the actual initial query comes from the handlers
+		// the actual initial query comes from the handlers, we just need to ask for fature reset
+		this.resetFeatures = true;
 	};
 
 	MatrixKit.prototype.onReport = function(id, panel){

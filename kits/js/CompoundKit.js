@@ -199,7 +199,7 @@
 		}
 	};
 
-	CompoundKit.prototype.featureValue = function (fId, entry, type) {
+	CompoundKit.prototype.getFeatureValue = function (fId, entry, type) {
 		var self = this;
 		var feature = self.feature[fId];
 		var val = (feature.data !== undefined) ? (_.get(entry, $.isArray(feature.data) ? feature.data[0] : feature.data)) : entry.values[fId];
@@ -208,11 +208,11 @@
 			jT.ui.renderRange(val, feature.units, type);
 	};
 
-	CompoundKit.prototype.featureUri = function (fId) {
+	CompoundKit.prototype.getFeatureUri = function (fId) {
 		return this.feature[fId].URI || fId;
 	};
 
-	CompoundKit.prototype.featureData = function (entry, set, scope) {
+	CompoundKit.prototype.getFeatureData = function (entry, set, scope) {
 		if (scope == null)
 			scope = 'details';
 		var self = this;
@@ -223,7 +223,7 @@
 			if (!!vis && vis != scope) return;
 
 			var title = feat.title;
-			feat.value = self.featureValue(fId, entry, scope);
+			feat.value = self.getFeatureValue(fId, entry, scope);
 			if (!!title && (!self.settings.hideEmptyDetails || !!feat.value)) {
 				if (!feat.value)
 					feat.value = '-';
@@ -505,7 +505,7 @@
 		var self = this;
 
 		return this.prepareTabs(root, false, function (parent, gr) {
-			var data = self.featureData(entry, self.groups[gr]);
+			var data = self.getFeatureData(entry, self.groups[gr]);
 
 			if (data.length > 0 || !self.settings.hideEmpty) {
 				var tabTable = $('<table>').appendTo($(parent).addClass('jtox-details-table'));
@@ -602,7 +602,7 @@
 					var feat = self.feature[fId];
 					if (feat.search !== undefined && !feat.search)
 						return false;
-					var val = self.featureValue(fId, entry, 'sort');
+					var val = self.getFeatureValue(fId, entry, 'sort');
 					return val != null && val.toString().toLowerCase().indexOf(needle) >= 0;
 				});
 
@@ -636,7 +636,7 @@
 		self.equalizeTables();
 	};
 
-	CompoundKit.prototype.queryUri = function (scope) {
+	CompoundKit.prototype.getQueryUri = function (scope) {
 		if (!this.datasetUri)
 			return null;
 		if (scope == null)
@@ -652,20 +652,31 @@
 		return jT.addParameter(this.datasetUri, "page=" + Math.floor(scope.from / scope.size) + "&pagesize=" + scope.size);
 	};
 
+	CompoundKit.prototype.getFeatureUri = function (featureUri) {
+		var queryUri = featureUri || this.settings.featureUri || this.settings.feature_uri;
+		if (!queryUri) // rollback this is the automatic way, which makes a false query in the beginning
+			queryUri = jT.addParameter(this.datasetUri, "page=0&pagesize=1");
+
+		return queryUri;
+	};
+
 	// make the actual query for the (next) portion of data.
 	CompoundKit.prototype.queryEntries = function (from, size, dataset) {
-		var self = this;
-		var scope = {
-			'from': from,
-			'size': size
-		};
-		var qUri = self.queryUri(scope);
+		var self = this,
+			scope = {
+				'from': from,
+				'size': size
+			},
+			qUri = self.getQueryUri(scope);
+
 		$('.jtox-controls select', self.rootElement).val(scope.size);
 		self.dataset = null;
 
 		// the function for filling
-		var fillFn = function (dataset) {
-			if (!!dataset) {
+		var fillFn = function (dataset, jhr) {
+			if (!dataset && jhr.status != 200) {
+				self.$errDiv.show().find('.message').html('Server error: ' + jhr.statusText);
+			} else if (!!dataset) {
 				// first, arrange the page markers
 				self.pageSize = scope.size;
 				var qStart = self.pageStart = Math.floor(scope.from / scope.size) * scope.size;
@@ -701,15 +712,12 @@
 	 */
 	CompoundKit.prototype.queryFeatures = function (featureUri, callback) {
 		var self = this;
-		var dataset = null;
 
-		// first, build the proper
-		var queryUri = featureUri || self.settings.featureUri || self.settings.feature_uri;
-		if (!queryUri) // rollback this is the automatic way, which makes a false query in the beginning
-			queryUri = jT.addParameter(self.datasetUri, "page=0&pagesize=1");
+		// Remember this one, because we'll optimize not to rebuild again if it is the same
+		this.lastFeatureUri = featureUri || this.getFeatureUri(featureUri);
 
 		// now make the actual call...
-		jT.ambit.call(self, queryUri, function (result, jhr) {
+		jT.ambit.call(self, this.lastFeatureUri, function (result, jhr) {
 			if (!result && jhr.status != 200) {
 				self.$errDiv.show().find('.message').html('Server error: ' + jhr.statusText);
 			}
@@ -730,7 +738,7 @@
 					var nodeFn = function (id, name, parent) {
 						var fEl = jT.ui.getTemplate('compound-one-feature', {
 							title: name.replace(/_/g, ' '),
-							uri: self.featureUri(id)
+							uri: self.getFeatureUri(id)
 						});
 						$(parent).append(fEl);
 
@@ -764,38 +772,45 @@
 				self.equalizeTables(); // to make them nicer, while waiting...
 
 				// finally make the callback for
-				callback(dataset);
+				callback(result);
 			}
 		});
 	};
 
 	/* Makes a query to the server for particular dataset, asking for feature list first, so that the table(s) can be
-	prepared.
+	prepared. If the featureUri passed is the same as the previous time - the featuers are not re-quiried, UNLESS,
+	the `force` argument is true.
 	*/
-	CompoundKit.prototype.queryDataset = function (datasetUri, featureUri) {
-		var self = this;
-		// if some oldies exist...
-		this.clear();
-		this.init();
-
-		datasetUri = jT.ambit.grabPaging(self, datasetUri);
-
-		self.settings.baseUrl = self.settings.baseUrl || jT.formBaseUrl(datasetUri);
+	CompoundKit.prototype.queryDataset = function (datasetUri, featureUri, force) {
+		// Deal with the dataserUri passed
+		datasetUri = jT.ambit.grabPaging(this, datasetUri);
+		this.settings.baseUrl = this.settings.baseUrl || jT.formBaseUrl(datasetUri);
 
 		// remember the _original_ datasetUri and make a call with one size length to retrieve all features...
-		self.datasetUri = (datasetUri.indexOf('http') != 0 ? self.settings.baseUrl : '') + datasetUri;
+		this.datasetUri = (datasetUri.indexOf('http') != 0 ? this.settings.baseUrl : '') + datasetUri;
 
-		self.$errDiv.hide();
+		featureUri = this.getFeatureUri(featureUri);
 
-		self.queryFeatures(featureUri, function (dataset) {
-			self.queryEntries(self.pageStart, self.pageSize, dataset);
-		});
+		// We're asked or needed to reset
+		if (!this.lastFeatureUri || featureUri != this.lastFeatureUri || force === true) {
+			this.clear();
+			this.init();
+			this.$errDiv.hide();
+			var self = this;
+
+			this.queryFeatures(featureUri, function () {
+				self.queryEntries(self.pageStart, self.pageSize);
+			});
+		} else {// Otherwise - just make the request
+			this.$errDiv.hide();
+			this.queryEntries(this.pageStart, this.pageSize);
+		}
 	};
 
 	/* This is a needed shortcut that jToxQuery routine will call
 	 */
-	CompoundKit.prototype.query = function (uri) {
-		this.queryDataset(uri);
+	CompoundKit.prototype.query = function (uri, resetFeatures) {
+		this.queryDataset(uri, null, resetFeatures);
 	};
 	// end of prototype
 
