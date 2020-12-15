@@ -3024,17 +3024,13 @@
 		callId.box.show();
 	};
 
-	MatrixKit.prototype.pollAmbit = function (service, method, data, el, cb) {
+	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
 		el && $(el).addClass('loading');
 
-		console.warn("Calling ambit: " + method + " " + service + " with: " + JSON.stringify(data));
+		console.warn("Polling ambit: " + JSON.stringify(ajax));
 		var callId = this.beginAmbitCall(service),
 			self = this;
-		jT.ambit.call(this, this.bundleUri + service, {
-			contentType: 'application/json',
-			method: method,
-			data: data
-		}, jT.ambit.taskPoller(this, function (result, jhr) {
+		jT.ambit.call(this, this.bundleUri + service, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
 			self.endAmbitCall(callId, jhr);
 
@@ -3418,14 +3414,19 @@
 			return;
 
 		var toAdd = JSON.stringify({ study: edit }),
-			self = this;
+			self = this,
+			ajax = { 
+				method: 'PUT', 
+				data: toAdd, 
+				contentType: 'application/json' 
+			};
 
 		// make two nested calls - for adding and for deleting
-		this.pollAmbit('/matrix', 'PUT', toAdd, $(this), function (result) {
+		this.pollAmbit('/matrix', ajax, $(this), function (result) {
 			if (!result) {
 				self.queryMatrix('working');
 			} else
-				self.pollAmbit('/matrix/deleted', 'PUT', toAdd, $(this), function () {
+				self.pollAmbit('/matrix/deleted', ajax, $(this), function () {
 					self.queryMatrix('working');
 				});
 		});
@@ -3776,7 +3777,7 @@
 
 			// Take care for matrix management buttons!
 			$('.create-button', panel).on('click', function () {
-				self.pollAmbit('/matrix/working', 'POST', { deletematrix:  false }, $(this), function (result) {
+				self.pollAmbit('/matrix/working', { method: 'POST', data: { deletematrix: false } }, $(this), function (result) {
 					if (!!result) {
 						$('#xfinal').button('enable');
 						self.bundleSummary.matrix++;
@@ -4417,11 +4418,14 @@
 			toAdd = !el$.hasClass('active'),
 			self = this;
 
-		this.pollAmbit('/compound', 'PUT', {
-			compound_uri: full.compound.URI,
-			command: toAdd ? 'add' : 'delete',
-			tag: tag,
-			remarks: toAdd ? note$.val() : ''
+		this.pollAmbit('/compound', { 
+			method: 'PUT', 
+			data: {
+				compound_uri: full.compound.URI,
+				command: toAdd ? 'add' : 'delete',
+				tag: tag,
+				remarks: toAdd ? note$.val() : ''
+			}
 		}, el$, function (result) {
 			if (result) {
 				if (!toAdd) {
@@ -4451,11 +4455,14 @@
 		if (!bInfo)
 			console.warn('Empty bundle info came for: ' + JSON.stringify(full));
 		else
-			this.pollAmbit('/compound', 'PUT', {
-				compound_uri: full.compound.URI,
-				command: 'add',
-				tag: bInfo.tag,
-				remarks: el$.val()
+			this.pollAmbit('/compound', { 
+				method: 'PUT',
+				data: {
+					compound_uri: full.compound.URI,
+					command: 'add',
+					tag: bInfo.tag,
+					remarks: el$.val()
+				}
 			}, el$, function (result) {
 				if (result) {
 					full.bundles[self.bundleUri].remarks = el$.val();
@@ -4470,7 +4477,7 @@
 			self = this,
 			toAdd = el$.prop('checked');
 
-		this.pollAmbit('/substance', 'PUT', { substance_uri: uri, command: toAdd ? 'add' : 'delete' }, el$, function (result) {
+		this.pollAmbit('/substance', { method: 'PUT', data: { substance_uri: uri, command: toAdd ? 'add' : 'delete' } }, el$, function (result) {
 			if (!result) // i.e. need to revert on failure
 				el$.prop('checked', !toAdd);
 			if (toAdd)
@@ -4486,10 +4493,13 @@
 			toAdd = el$.prop('checked'),
 			self = this;
 
-		this.pollAmbit('/property', 'PUT', {
-			topcategory: full.subcategory,
-			endpointcategory: full.endpoint,
-			command: toAdd ? 'add' : 'delete'
+		this.pollAmbit('/property', { 
+			method: 'PUT', 
+			data: {
+				topcategory: full.subcategory,
+				endpointcategory: full.endpoint,
+				command: toAdd ? 'add' : 'delete'
+			}
 		}, el$, function (result) {
 			if (!result)  // i.e. need to revert on failure
 				el$.prop('checked', toAdd);
@@ -4521,7 +4531,7 @@
 					return;
 
 				data[el.name] = el.value;
-				this.pollAmbit('', 'PUT', data, el, function (result) {
+				this.pollAmbit('', { method: 'PUT', data: data }, el, function (result) {
 					// on error - request the old data
 					if (!result) self.load(self.bundleUri);
 				});
@@ -6868,7 +6878,7 @@ jT.ui.templates['endpoint-info-panel']  =
 "</tbody>" +
 "</table>" +
 "<div class=\"size-full delete-box {{ deleteBoxClass }}\">" +
-"<div class=\"jtox-inline size-full\"><textarea data-id=\"reason\" data-path=\"effects_to_delete[0].result.remarks\" placeholder=\"Reason for deleting_\">{{ reason }}</textarea></div>" +
+"<div class=\"jtox-inline size-full\"><textarea class=\"no-auto\" data-id=\"reason\" data-path=\"effects_to_delete[0].result.remarks\" placeholder=\"Reason for deleting_\">{{ reason }}</textarea></div>" +
 "</div>" +
 "</div>" +
 ""; // end of endpoint-info-panel 
