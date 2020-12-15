@@ -6,6 +6,67 @@
 
 (function (_, a$, $, jT) {
 
+	var endpointParsers = [{
+		regex: /^[\s=]*([\(\[])\s*(\-?\d*[\.eE]?\-?\d*)\s*,\s*(\-?\d*[\.eE]?\-?\d*)\s*([\)\]])\s*([^\d,]*)\s*$/,
+		fields: ['', 'loQualifier', 'loValue', 'upValue', 'upQualifier', 'unit'],
+		// adjust the parsed value, if needed
+		adjust: function (obj, parse) {
+			if (!obj.upValue) delete obj.upQualifier;
+			else obj.upQualifier = parse[4] == ']' ? '<=' : '<';
+
+			if (!obj.loValue) delete obj.loQualifier;
+			else obj.loQualifier = parse[1] == '[' ? '>=' : '>';
+		}
+	},{
+		regex: /^\s*(>|>=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)[,\s]+(<|<=)?\s*(\-?\d*[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'loQualifier', 'loValue', 'unit', 'upQualifier', 'upValue', 'unit'],
+	}, {
+		regex: /^\s*(>|>=|=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'loQualifier', 'loValue', 'unit'],
+		adjust: function (obj, parse) {
+			if (!obj.loQualifier) obj.loQualifier = '=';
+		}
+	}, {
+		regex: /^\s*(<|<=)\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'upQualifier', 'upValue', 'unit'],
+	}, {
+		regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(<|<=)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'upValue', 'upQualifier', 'unit'],
+	}, {
+		regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(>|>=)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'loValue', 'loQualifier', 'unit'],
+	}];
+
+	function parseValue (text) {
+		var obj = {};
+
+		for (var pi = 0; pi < endpointParsers.length; ++pi) {
+			var parse = text.match(endpointParsers[pi].regex);
+			if (!parse)
+				continue;
+			for (var i = 1; i < parse.length; ++i)
+				if (!!parse[i]) {
+					var f = endpointParsers[pi].fields[i];
+					obj[f] = parse[i];
+				}
+
+			if (endpointParsers[pi].adjust)
+				endpointParsers[pi].adjust(obj, parse);
+			if (!!obj.unit) obj.unit = obj.unit.trim();
+			break;
+		}
+
+		if (pi >= endpointParsers.length)
+			obj.textValue = _.trim(text);
+
+		return obj;
+	};
+
+
+	function extractLast(val) {
+		return !!val ? val.split(/[,\(\)\s]*/).pop() : val;
+	};
+
 	function EndpointKit(settings) {
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
 		jT.ui.putTemplate('all-endpoint', ' ? ', this.rootElement);
@@ -20,11 +81,12 @@
 			self.edittedValues = {};
 			self.settings.onDetails = function (root, data, element) {
 				self.edittedValues[data.endpoint] = {};
-				EndpointKit.linkEditors(self, jT.ui.getTemplate('endpoint-one-editor', {}).appendTo(root), {
+				// TODO: Change this!!
+				jT.ui.attachEditors(self, jT.ui.getTemplate('endpoint-one-editor', {}).appendTo(root), {
 					category: data.endpoint,
 					top: data.subcategory,
 					conditions: self.settings.showConditions,
-					onchange: function (e, field, value) {
+					onChange: function (e, field, value) {
 						_.set(self.edittedValues[data.endpoint], field, value);
 					}
 				});
@@ -104,20 +166,11 @@
 	EndpointKit.prototype.updateStats = function (name) {
 		var self = this;
 		return function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
-			var head = $('h3.' + name, self.rootElement)[0],
-				html = '';
+			var head = $('h3[data-cat=' + name + ']', self.rootElement),
+				data = this.fnGetData(),
+				count = _.sumBy(data, 'count');
 
-			// now make the summary...
-			if (iTotal > 0) {
-				var count = 0;
-				var data = this.fnGetData();
-				for (var i = iStart; i <= iEnd && i < iMax; ++i)
-					count += data[i].count;
-				html = "[" + count + "]";
-			} else
-				html = '';
-
-			$('div.jtox-details span', head).html(html);
+			$('div.jtox-details span', head).html(iTotal > 0 ? '[' + count + ']' : '');
 			return sPre;
 		}
 	};
@@ -172,9 +225,7 @@
 		});
 	};
 
-	EndpointKit.prototype.query = function (uri) {
-		this.loadEndpoints(uri);
-	};
+	EndpointKit.prototype.query = EndpointKit.prototype.loadEndpoints;
 
 	EndpointKit.prototype.modifyUri = function (uri) {
 		$('input[type="checkbox"]', this.rootElement).each(function () {
@@ -185,197 +236,53 @@
 		return uri;
 	};
 
-	// now the editors...
-	EndpointKit.linkEditors = function (kit, root, settings) { // category, top, onchange, conditions
-		// get the configuration so we can setup the fields and their titles according to it
-		var config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[settings.category]);
-
-		var putAutocomplete = function (box, service, configEntry, options) {
-			// if we're not supposed to be visible - hide us.
-			var field = box.data('field');
-			if (!configEntry || configEntry.bVisible === false) {
-				box.hide();
-				return null;
-			}
-
-			// now deal with the title...
-			var t = !!configEntry ? configEntry.title : null;
-			if (!!t)
-				$('div', box[0]).html(t);
-
-			// prepare the options
-			if (!options)
-				options = {};
-
-			// finally - configure the autocomplete options themselves to initialize the component itself
-			if (!options.source) options.source = function (request, response) {
-				jT.ambit.call(kit, service, {
-					method: "GET",
-					data: {
-						'category': settings.category,
-						'top': settings.top,
-						'max': kit.settings.maxHits || defaultSettings.maxHits,
-						'search': request.term
-					}
-				}, function (data) {
-					response(!data ? [] : $.map(data.facet, function (item) {
-						var val = item[field] || '';
-						return {
-							label: val + (!item.count ? '' : " [" + item.count + "]"),
-							value: val
-						}
-					}));
-				});
-			};
-
-			// and the change functon
-			if (!options.change) options.change = function (e, ui) {
-				settings.onchange.call(this, e, field, !ui.item ? _.trim(this.value) : ui.item.value);
-			};
-
-			// and the final parameter
-			if (!options.minLength) options.minLength = 0;
-
-			return $('input', box[0]).autocomplete(options);
-		};
-
-		var putValueComplete = function (root, configEntry) {
-			var field = root.data('field');
-			var extractLast = function (val) {
-				return !!val ? val.split(/[,\(\)\s]*/).pop() : val;
-			};
-			var parseValue = function (text) {
-				var obj = {};
-				var parsers = [{
-						regex: /^[\s=]*([\(\[])\s*(\-?\d*[\.eE]?\-?\d*)\s*,\s*(\-?\d*[\.eE]?\-?\d*)\s*([\)\]])\s*([^\d,]*)\s*$/,
-						fields: ['', 'loQualifier', 'loValue', 'upValue', 'upQualifier', 'unit'],
-						// adjust the parsed value, if needed
-						adjust: function (obj, parse) {
-							if (!obj.upValue) delete obj.upQualifier;
-							else obj.upQualifier = parse[4] == ']' ? '<=' : '<';
-
-							if (!obj.loValue) delete obj.loQualifier;
-							else obj.loQualifier = parse[1] == '[' ? '>=' : '>';
-						}
-					},
-					{
-						regex: /^\s*(>|>=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)[,\s]+(<|<=)?\s*(\-?\d*[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'loQualifier', 'loValue', 'unit', 'upQualifier', 'upValue', 'unit'],
-					},
-					{
-						regex: /^\s*(>|>=|=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'loQualifier', 'loValue', 'unit'],
-						adjust: function (obj, parse) {
-							if (!obj.loQualifier) obj.loQualifier = '=';
-						}
-					},
-					{
-						regex: /^\s*(<|<=)\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'upQualifier', 'upValue', 'unit'],
-					},
-					{
-						regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(<|<=)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'upValue', 'upQualifier', 'unit'],
-					},
-					{
-						regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(>|>=)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'loValue', 'loQualifier', 'unit'],
-					}
-				];
-
-				for (var pi = 0; pi < parsers.length; ++pi) {
-					var parse = text.match(parsers[pi].regex);
-					if (!parse)
-						continue;
-					for (var i = 1; i < parse.length; ++i)
-						if (!!parse[i]) {
-							var f = parsers[pi].fields[i];
-							obj[f] = parse[i];
-						}
-
-					if (parsers[pi].adjust)
-						parsers[pi].adjust(obj, parse);
-					if (!!obj.unit) obj.unit = obj.unit.trim();
-					break;
-				}
-
-				if (pi >= parsers.length)
-					obj.textValue = _.trim(text);
-
-				return obj;
-			};
-
-			var allTags = [].concat(kit.settings.loTags || defaultSettings.loTags, kit.settings.hiTags || defaultSettings.hiTags, kit.settings.units || defaultSettings.units);
-
-			var autoEl = putAutocomplete(root, null, configEntry, {
-				change: function (e, ui) {
-					settings.onchange.call(this, e, field, parseValue(this.value));
-				},
-				source: function (request, response) {
-					// extract the last term
-					var result = $.ui.autocomplete.filter(allTags, extractLast(request.term));
-					if (request.term == '') {
-						// if term is empty don't show results
-						// avoids IE opening all results after initialization.
-						result = '';
-					}
-					// delegate back to autocomplete
-					response(result);
-				},
-				focus: function () { // prevent value inserted on focus
-					return false;
-				},
-				select: function (event, ui) {
-					var theVal = this.value,
-						last = extractLast(theVal);
-
-					this.value = theVal.substr(0, theVal.length - last.length) + ui.item.value + ' ';
-					return false;
-				}
-			});
-
-			// it might be a hidden one - so, take care for this
-			if (!!autoEl) autoEl.bind('keydown', function (event) {
-				if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
-					event.preventDefault();
-			});
-		};
-
-		// deal with endpoint name itself
-		putAutocomplete($('div.box-endpoint', root), '/query/experiment_endpoints', _.get(config, 'effects.endpoint'));
-		putAutocomplete($('div.box-interpretation', root), '/query/interpretation_result', _.get(config, 'interpretation.result'));
-
-		$('.box-conditions', root).hide(); // to optimize process with adding children
-		if (!!settings.conditions) {
-			// now put some conditions...
-			var any = false;
-			var condRoot = $('div.box-conditions .jtox-border-box', root)[0];
-			for (var cond in config.conditions) {
-				any = true;
-				var div = jT.ui.getTemplate('endpoint-one-condition', {
-					title: config.conditions[cond].title || cond,
-					codition: cond
-				}).appendTo(condRoot);
-
-				$('input', div).attr('placeholder', "Enter value or range");
-				putValueComplete($(div), config.conditions[cond]);
-			}
-			if (any)
-				$('.box-conditions', root).show();
+	EndpointKit.prototype.getFeatureInfoHtml = function (feature, value, canDelete) {
+		var condHeaders = [],
+			condValues = [],
+			conditionsCount = feature.annotation.length;
+			
+		for (var i = 0; i < conditionsCount; ++i) {
+			var ano = feature.annotation[i];
+			condHeaders.push(jT.formatString('<th class="conditions">{{p}}</th>', ano));
+			condValues.push(jT.formatString('<td>{{o}}</td>', ano))
 		}
 
-		// now comes the value editing mechanism
-		var confRange = _.get(config, 'effects.result') || {};
-		var confText = _.get(config, 'effects.text') || {};
-		putValueComplete($('.box-value', root), confRange.bVisible === false ? confText : confRange);
+		// make sure there is at least one cell.
+		if (conditionsCount < 1)
+			condValues.push(jT.formatString('<td>-</td>', ano));
 
-		// now initialize other fields, marked with box-field
-		$('.box-field', root).each(function () {
-			var name = $(this).data('name');
-			$('input, textarea, select', this).on('change', function (e) {
-				settings.onchange.call(this, e, name, $(this).val());
-			});
+		return jT.ui.fillHtml('endpoint-info-panel', {
+			conditionsHeaders: condHeaders.join(''),
+			conditionsValues: condValues.join(''),
+			conditionsCount: conditionsCount,
+			endpoint: feature.title,
+			guidance: feature.creator,
+			value: jT.ui.renderRange(value, feature.units, 'display'),
+			reason: value.remarks || null,
+			deleteBoxClass: canDelete ? '' : 'jtox-hidden'
 		});
+	};
+
+	EndpointKit.prototype.getFeatureEditHtml = function (feature, opts) {
+		var config = $.extend(true, {}, this.settings.columns["_"], this.settings.columns[feature.id.category]),
+			editors = _.map(this.settings.editors, function (editor) {
+				var oneCfg = _.defaults(_.get(config, editor.path, {}), editor, { autoClass: "no-auto" });
+				return !oneCfg.visible || oneCfg.preloaded ? '' : jT.ui.fillHtml('endpoint-one-editor', oneCfg);
+			}),
+			conditions = _.map(config.conditions, function (cond, cId) {
+				return typeof cond !== 'object' || cond.visible === false ? '' : jT.ui.fillHtml('endpoint-one-editor', _.defaults({
+					id: cId,
+					title: cond.title || cId,
+					autoClass: "tags-auto",
+					path: 'effects.conditions.' + cId
+				}, config.conditions[cId]));
+			});
+
+		return jT.ui.fillHtml('endpoint-edit-panel', _.defaults({
+			editorsHtml: editors.join(''),
+			conditionsClass: conditions.length > 0 ? '' : 'jtox-hidden',
+			conditionsHtml: conditions.join('')
+		}, opts));
 	};
 
 	EndpointKit.defaults = { 	// all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
@@ -391,6 +298,7 @@
 		loTags: ['>', '>=', '='],
 		hiTags: ['<', '<='],
 		dom: "<i>rt", 			// passed with dataTable settings upon creation
+		/* endpointUri */
 		language: {
 			loadingRecords: "No endpoints found.",
 			zeroRecords: "No endpoints found.",
@@ -409,7 +317,53 @@
 					.trigger('change');
 			}
 		},
-		/* endpointUri */
+		editors: [{
+			id: 'endpoint',
+			path: 'effects.endpoint', // 'effects[0].endpoint'
+			title: 'Endpoint name',
+			service: 'query/experiment_endpoints',
+			autoClass: 'ajax-auto'
+		}, {
+			id: 'value',
+			path: 'value',
+			title: 'Value range',
+		}, {
+			id: 'interpretation_result',
+			path: 'interpretation.result',
+			title: 'Intepretation of the results',
+			service: 'query/interpretation_result',
+			autoClass: 'ajax-auto'
+		}, {
+			id: 'value',
+			path: 'effect.result', // 'effects[0].result'
+			title: 'Effects result'
+			// service: '/query/interpretation_result'
+		}, {
+			id: 'value',
+			path: 'effects.text',
+			title: 'Effects result',
+			// service: '/query/interpretation_result'
+		}, {
+			id: 'type',
+			path: 'reliability.r_studyResultType',
+			title: 'Study type',
+			preloaded: true
+		}, {
+			id: 'reference',
+			path: 'citation.title',
+			title: 'Reference',
+			preloaded: true
+		}, {
+			id: 'justification',
+			path: 'protocol.guideline[0]',
+			title: "Guideline or Justification",
+			preloaded: true
+		}, {
+			id: 'remarks',
+			path: 'interpretation.criteria',
+			title: "Remarks",
+			preloaded: true
+		}],
 		columns: {
 			endpoint: {
 				'Id': {

@@ -77,83 +77,61 @@
 		</div>
 <!-- // end of all-endpoint ]]-->
 <!--[[ jT.ui.templates['endpoint-one-editor'] -->
-		<div class="jt-endeditor">
-			<div class="jtox-medium-box box-endpoint" data-field="endpoint">
-				<div class="jtox-details font-heavy">Endpoint name</div>
-				<input type="text" placeholder="Endpoint_" />
-			</div>
-			<div class="jtox-medium-box box-value" data-field="value">
-				<div class="jtox-details font-heavy jtox-required">Value range</div>
-				<input type="text" />
-			</div>
-			<div class="jtox-medium-box box-interpretation" data-field="interpretation_result">
-				<div class="jtox-details font-heavy jtox-required">Intepretation of the results</div>
-				<input type="text" placeholder="Intepretation" />
-			</div>
-			<div class="size-full box-conditions">
-				<div class="jtox-details font-heavy">Conditions</div>
-				<div class="jtox-border-box"></div>
-			</div>
-		</div>
-<!-- // end of endpoint-one-editor ]]-->
-<!--[[ jT.ui.templates['endpoint-one-condition'] -->
-		<div class="jtox-medium-box" data-condition="{{condition}}">
-			<div class="jtox-details font-heavy">{{title}}</div>
-			<input type="text" placeholder="Intepretation" />
-		</div>
-<!-- // end of endpoint-one-condition ]]-->
+    <div class="jtox-medium-box">
+      <div class="jtox-details font-heavy {{ requiredClass }}">{{ title }}</div>
+      <input class="{{ autoClass }}" type="text" data-id="{{ id }}" data-service="{{ service }}" data-path="{{ path }}" placeholder="{{ title }}_" value="{{ value }}"/>
+    </div>
+<!-- // end of endpoint-one-panel ]]-->
 <!--[[ jT.ui.templates['endpoint-info-panel'] -->
-    <div class="info-box">
+    <div class="endpoint-panel">
       <table>
         <thead>
           <tr>
             <th rowspan="2">Endpoint</th>
             <th rowspan="2">Value</th>
-            <th class="conditions center">Conditions</th>
+            <th class="conditions center" colspan="{{ conditionsCount }}">Conditions</th>
             <th rowspan="2">Guideline or Justification</th>
           </tr>
           <tr class="conditions">
+			      {{ conditionsHeaders}}
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="the-endpoint">{{ endpoint }}</td>
-            <td class="the-value non-breakable">{{ value }}</td>
-            <td class="postconditions">{{ guidance }}</td>
-          </tr>
-        </tbody>
+			      <td class="the-value non-breakable">{{ value }}</td>
+			      {{ conditionsValues }}
+            <td>{{ guidance }}</td>
+		      </tr>
+		    </tbody>
       </table>
-      <table class="delete-box">
-        <tr>
-          <td><textarea placeholder="Reason for deleting_"></textarea></td>
-          <td><button class="jt-alert">Delete</button></td>
-        </tr>
-      </table>
+      <div class="size-full delete-box {{ deleteBoxClass }}">
+        <div class="jtox-inline size-full"><textarea data-id="reason" data-path="effects_to_delete[0].result.remarks" placeholder="Reason for deleting_">{{ reason }}</textarea></div>
+      </div>
     </div>
 <!-- // end of endpoint-info-panel ]]-->
 <!--[[ jT.ui.templates['endpoint-edit-panel'] -->
-    <div class="edit-box">
-      <div class="jtox-medium-box box-field" data-name="type">
+    <div class="endpoint-panel">
+      {{ editorsHtml }}
+			<div class="size-full box-conditions {{ conditionsClass }}">
+				<div class="jtox-details font-heavy">Conditions</div>
+				<div class="jtox-border-box">{{ conditionsHtml }}</div>
+			</div>
+      <div class="jtox-medium-box">
         <div class="jtox-details font-heavy jtox-required">Study type</div>
-        <select class="type-list" value="{{type}}">
-          <option value="-1"> - Select type - </option>
-        </select>
+        <select class="type-list no-auto" data-id="type"><option value="-1"> - Select type - </option>{{ studyOptionsHtml }}</select>
       </div>
-      <div class="jtox-medium-box box-field" data-name="reference">
+      <div class="jtox-medium-box">
         <div class="jtox-details font-heavy jtox-required">Reference</div>
-        <input type="text" value="{{reference}}" placeholder="Reference_" />
+        <input type="text no-auto" data-id="reference" placeholder="Reference_" value="{{ reference }}"/>
       </div>
-      <div class="jtox-medium-box box-field size-full" data-name="justification">
+      <div class="jtox-medium-box size-full">
         <div class="jtox-details font-heavy jtox-required">Guideline or Justification</div>
-        <textarea placeholder="Justification_">{{justification}}</textarea>
+        <textarea class="no-auto" data-id="justification" placeholder="Justification_">{{ justification }}</textarea>
       </div>
-      <div class="jtox-medium-box box-field size-full" data-name="remarks">
+      <div class="jtox-medium-box size-full">
         <div class="jtox-details font-heavy">Remarks</div>
-        <textarea placeholder="Remarks_">{{remarks}}</textarea>
-      </div>
-      <div class="size-full the-send">
-        <span class="the-endpoint">{{endpoint}}</span>
-        <input value="Apply" type="button" />
+        <textarea class="no-auto" data-id="remarks" placeholder="Remarks_">{{ remarks }}</textarea>
       </div>
     </div>
 <!-- // end of endpoint-edit-panel ]]-->

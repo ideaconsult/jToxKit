@@ -104,7 +104,7 @@
                 <th class="right size-third"><label for="source" id="l_source">Source URL</label>*<a href='#' class='chelp a_doclink'>?</a>:</th>
                 <td>
                   <input class="first-time" value="{{source}}" name="source" id="source" required />
-                  <a href="" id="source-link" target="_blank" class="ui-icon ui-icon-extlink">open link</a>
+                  <a href="" id="source-link" target="_blank" class="fa fa-action fa-external-link">open link</a>
                 </td>
               </tr>
               <tr>
@@ -183,7 +183,6 @@
           <input type="radio" id="xworking" name="xaction" class="jtox-handler" data-handler="matrixMode"><label for="xworking">Working matrix</label></input>
           <input type="radio" id="xfinal" name="xaction" class="jtox-handler" data-handler="matrixMode"><label for="xfinal">Final matrix</label></input>
         </div>
-        <button class="save-button jt-disabled jtox-handler" data-handler="saveMatrix">Saved</button>
         <button class="create-button jtox-handler" data-handler="createWorkingCopy">Create working copy</button>
         <div id="matrix-table" class="jtox-kit" 
           data-kit="Compound"
@@ -224,7 +223,7 @@
 <button class="jt-toggle {{tag}} active" data-tag="{{tag}}" title="Select the {{subject}} as {{name}}">{{code}}</button>
 <!-- // end of matrix-tag-indicator ]]-->
 <!--[[ jT.ui.templates['matrix-sel-arrow'] -->
-    <i class="jt-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
+<i class="jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
 <!-- // end of matrix-sel-arrow ]]-->
   </div>
 </body>

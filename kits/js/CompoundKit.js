@@ -921,7 +921,6 @@
 			CompoundKit.processEntry(dataset.dataEntry[i], features, fnValue);
 			dataset.dataEntry[i].number = i + 1 + startIdx;
 			dataset.dataEntry[i].index = i;
-			dataset.dataEntry[i].total = dl;
 		}
 
 		return dataset;

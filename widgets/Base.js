@@ -147,7 +147,7 @@
             if (data.toString().length <= 5) {
                 res += content;
             } else {
-                res += '<div class="shortened"><span>' + content + '</div><i class="icon fa fa-copy"';
+                res += '<div class="shortened"><span>' + content + '</div><i class="icon fa fa-copy fa-action"';
                 if (message != null)
                     res +=  ' title="' + message + '"';
                 res += ' data-uuid="' + data + '"></i>';
@@ -250,7 +250,7 @@
             if (!kit.settings.shortStars) {
                 var res = '<div title="' + title + '">';
                 for (var i = 0;i < kit.settings.maxStars;++i) {
-                    res += '<span class="ui-icon ui-icon-star jtox-inline';
+                    res += '<span class="fa fa-star fa-action jtox-inline';
                     if (i >= stars)
                         res += ' transparent';
                     res += '"></span>';
@@ -259,7 +259,7 @@
                 return res + '</div>';
             }
             else { // i.e. short version
-                return '<span class="ui-icon ui-icon-star jtox-inline" title="' + title + '"></span>' + stars;
+                return '<span class="fa fa-action fa-star jtox-inline" title="' + title + '"></span>' + stars;
             }
         },
 
@@ -288,6 +288,85 @@
             }
 
             return inplace ? features : _.defaults(newFeats, features);
+        },
+
+        attachEditors: function (kit, root, data, opts) {
+            var allTags = [].concat(kit.settings.loTags, kit.settings.hiTags, kit.settings.units);
+                field = null;
+        
+            // Make it easier to call with less checks.
+            opts = opts || {};
+        
+            $('.ajax-auto', root).autocomplete({
+                appendTo: root,
+                source: function (request, response) {
+                    var field = $(this.element).data('id');
+                    _.set(opts.ajax, opts.searchPath, request.term);
+        
+                    jT.ambit.call(kit, $(this.element).data('service'), opts.ajax, function (data) {
+                        response(!data ? [] : $.map(data.facet, function (item) {
+                            var val = item[field] || '';
+                            return {
+                                label: val + (!item.count ? '' : " [" + item.count + "]"),
+                                value: val
+                            }
+                        }));
+                    });	
+                },
+                change: function (e, ui) {
+                    var id = $(this).data('id'),
+                        path = $(this).data('path') || _.find(kit.settings.editors, { id: id }).path,
+                        value = !ui.item ? _.trim(this.value) : ui.item.value;
+                    if (!opts.onChange || opts.onChange.call(kit, e, id,  path, value) !== false)
+                        _.set(data, path, value);
+                },
+                minLength: kit.settings.minLength || 0
+            });
+        
+            $('.tags-auto', root).autocomplete({
+                appendTo: root,
+                change: function (e, ui) {
+                    var id = $(this).data('id'),
+                        path = $(this).data('path') || _.find(kit.settings.editors, { id: id }).path,
+                        value = parseValue(this.value);
+                    if (!opts.onChange || opts.onChange.call(kit, e, id,  path, value) !== false)
+                        _.set(data, path, value);
+                },
+                source: function (request, response) {
+                    // extract the last term
+                    var result = $.ui.autocomplete.filter(allTags, extractLast(request.term));
+                    if (request.term == '') {
+                        // if term is empty don't show results
+                        // avoids IE opening all results after initialization.
+                        result = '';
+                    }
+                    // delegate back to autocomplete
+                    response(result);
+                },
+                focus: function () { // prevent value inserted on focus
+                    return false;
+                },
+                select: function (event, ui) {
+                    var theVal = this.value,
+                        last = extractLast(theVal);
+        
+                    this.value = theVal.substr(0, theVal.length - last.length) + ui.item.value + ' ';
+                    return false;
+                }
+            })
+            .bind('keydown', function (event) {
+                if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
+                    event.preventDefault();
+            });
+        
+            // now initialize other fields, marked with '.no-auto''
+            $('.no-auto', root).on('change', function (e) {
+                var id = $(this).data('id'),
+                    path = $(this).data('path') || _.find(kit.settings.editors, { id: id }).path,
+                    value = $(this).val();
+                if (!opts.onChange || opts.onChange.call(kit, e, id,  path, value) !== false)
+                    _.set(data, path, value);
+            });
         }
     });
 

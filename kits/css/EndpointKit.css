@@ -1,0 +1,55 @@
+.endpoint-panel .delete-box {
+	margin-top: 8px;
+}
+
+.endpoint-panel .box-reference input {
+	font-size: 110%;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.endpoint-panel th,
+.endpoint-panel td {
+	padding: 2px 5px 2px 5px;
+	border-left: 1px solid #666;
+	border-right: 1px solid #666;
+	text-align: center;
+}
+
+.endpoint-panel td:first-child,
+.endpoint-panel th:first-child {
+	border-left: 0px;
+}
+
+.endpoint-panel td:last-child,
+.endpoint-panel th:last-child {
+	border-right: 0px;
+}
+
+.endpoint-panel thead tr:first-child {
+	border-bottom: 1px solid #666;
+}
+
+.endpoint-panel tbody {
+	border-top: 1px solid #666;
+}
+
+.endpoint-panel th {
+	font-size: 80%;
+	font-weight: bold;
+	word-wrap: normal;
+	white-space: nowrap;
+}
+
+.endpoint-panel .the-value {
+	font-style: italic;
+	font-weight: bold;
+}
+
+.endpoint-panel .the-endpoint {
+	font-weight: bold;
+}
+
+.endpoint-panel .the-send input {
+	float: right;
+}

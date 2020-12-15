@@ -161,7 +161,6 @@
 			});
 		return anno;
 	};
-
 	
 	AnnotationKit.prototype.buildScopes = function (rootPath, pathList, data, anno) {
 		var idFields = this.pathHandlers[rootPath] && this.pathHandlers[rootPath].idFields,

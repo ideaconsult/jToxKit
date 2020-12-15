@@ -170,7 +170,7 @@
 					"data": "component.compound.name",
 					"render": function (val, type, full) {
 						return (type != 'display') ? '' + val :
-							'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="ui-icon ui-icon-link" style="float: left; margin-right: .3em;"></span></a>' + val;
+							'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="fa fa-action fa-link" style="float: left; margin-right: .3em;"></span></a>' + val;
 					}
 				},
 				'EC No.': {

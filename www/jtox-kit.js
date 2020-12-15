@@ -77,7 +77,13 @@ jT = a$.extend(jT, {
       out += jT.formatUnits(unit);
 		}
 		return out;
-	},
+  },
+  
+  // Extracts only values from the given (possibly nested) object
+  simplifyValues: function (data, sep) {
+    var extract = function (o) { return typeof o === 'object' ? _.map(o, extract) : o.toString(); };
+    return _.flatMapDeep(data, extract).join(sep || ',');
+  },
 
   addParameter: function (url, param) {
     return url + (("&?".indexOf(url.charAt(url.length - 1)) == -1) ? (url.indexOf('?') > 0 ? "&" : "?") : '') + param;

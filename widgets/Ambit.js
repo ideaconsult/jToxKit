@@ -49,14 +49,23 @@ jT.ambit = {
 	},
 
 	parseFeatureId: function (featureId) {
-		var parse = featureId.match(/https?\:\/\/(.*)\/property\/([^\/]+)\/([^\/]+)\/.+/);
+		var parse = featureId.match(/(https?\:\/\/.*)\/property\/([^\/]+)\/([^\/]+)\/(.+)/);
 		if (parse == null)
 			return null;
 		else
 			return {
+				baseUri: parse[1],
 				topcategory: parse[2].replace("+", " "),
-				category: parse[3].replace("+", " ")
+				category: parse[3].replace("+", " "),
+				suffix: parse[4]
 			};
+	},
+
+	buildFeatureId: function (parsedFeature, suffix) {
+		return parsedFeature.baseUri + '/property/' + 
+			parsedFeature.topcategory.replace(' ', '+') + '/' + 
+			parsedFeature.category.replace(' ', '+') + '/' +
+			parsedFeature.suffix;
 	},
 
 	diagramUri: function (uri) {

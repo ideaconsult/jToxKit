@@ -13,7 +13,7 @@
 }
 
 .jtox-matrix-kit textarea,
-.popup-box textarea {
+.endpoint-panel textarea {
   width: 100%;
   box-sizing: border-box;
   resize: none;
@@ -99,10 +99,6 @@ button.details-expand-all, button.details-collapse-all {
   overflow-y: scroll !important;
 }
 
-.jtox-toolkit i.fa.jtox-handler:hover {
-  color: #f00;
-}
-
 #jtox-matrix div.jtox-toolkit {
   font-size: 80%;
 }
@@ -147,7 +143,8 @@ button.details-expand-all, button.details-collapse-all {
 	color: #999;
 }
 
-#jtox-matrix a.unsaved-study,#jtox-matrix a.deleted {
+#jtox-matrix .unsaved-study,
+#jtox-matrix .deleted {
   background: #ffcccc;
   border-radius: 3px;
 }
@@ -161,92 +158,11 @@ button.details-expand-all, button.details-collapse-all {
   vertical-align: middle;
 }
 
-
-/* Now come info and edit box declarations
-*/
-.popup-box .box-reference {
-  width: 100%;
-}
-
-.popup-box .box-reference input {
-  font-size: 110%;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.popup-box .delete-box td {
-	border: 0px;
-}
-
-.popup-box table.delete-box {
-	width: 100%;
-}
-
-.popup-box .delete-box button {
-	margin-bottom: 10px;
-}
-
-.popup-box .delete-box td:last-child {
-	width: 80px;
-	vertical-align: middle;
-}
-
-.popup-box th,
-.popup-box td {
-  padding: 2px 5px 2px 5px;
-  border-left: 1px solid #666;
-  border-right: 1px solid #666;
-  text-align: center;
-}
-
-.popup-box td:first-child,
-.popup-box th:first-child{
-  border-left: 0px;
-}
-
-.popup-box td:last-child,
-.popup-box th:last-child {
-  border-right: 0px;
-}
-
-.popup-box thead tr:first-child {
-  border-bottom: 1px solid #666;
-}
-
-.popup-box tbody {
-  border-top: 1px solid #666;
-}
-
-.popup-box th {
-  font-size: 80%;
-  font-weight: bold;
-  word-wrap: normal;
-  white-space: nowrap;
-}
-
-.popup-box .the-value {
-  font-style: italic;
-  font-weight: bold;
-}
-
-.popup-box .the-endpoint {
-  font-weight: bold;
-}
-
-.popup-box .the-send input {
-  float: right;
-}
-
-.ui-button-icon-only {
-  height: 2.4em;
-  margin-bottom: 0;
-}
-
-tr:first-child .jtox-up {
+.jtox-toolkit tr:first-child .jtox-up {
   display: none;
 }
 
-tr:last-child .jtox-down {
+.jtox-toolkit tr:last-child .jtox-down {
   display: none;
 }
 
@@ -260,6 +176,20 @@ tr:last-child .jtox-down {
   overflow: visible !important;
 }
 
+/* Some jBox adjustments */
+div.jBox-Confirm div.jBox-content {
+  text-align: left !important;
+  padding: 15px !important;
+}
+
+div.jBox-Confirm.jtox-toolkit.delete .jBox-Confirm-button-submit {
+  background: #d20;
+}
+
+div.jBox-Confirm.jtox-toolkit.delete .jBox-Confirm-button-submit:active,
+div.jBox-Confirm.jtox-toolkit.delete .jBox-Confirm-button-submit:hover {
+  background:#c20
+}
 
 .jtox-report .jtox-matrix-kit {
   overflow: auto;
@@ -293,7 +223,7 @@ tr:last-child .jtox-down {
   display: none;
 }
 
-#jtox-report .ui-icon {
+#jtox-report .fa {
   display: inline-block;
 }
 

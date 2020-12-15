@@ -161,7 +161,6 @@
 			});
 		return anno;
 	};
-
 	
 	AnnotationKit.prototype.buildScopes = function (rootPath, pathList, data, anno) {
 		var idFields = this.pathHandlers[rootPath] && this.pathHandlers[rootPath].idFields,
@@ -381,7 +380,7 @@
 					"data": "component.compound.name",
 					"render": function (val, type, full) {
 						return (type != 'display') ? '' + val :
-							'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="ui-icon ui-icon-link" style="float: left; margin-right: .3em;"></span></a>' + val;
+							'<a href="' + full.component.compound.URI + '" target="_blank" title="Click to view the compound"><span class="fa fa-action fa-link" style="float: left; margin-right: .3em;"></span></a>' + val;
 					}
 				},
 				'EC No.': {
@@ -1360,7 +1359,6 @@
 			CompoundKit.processEntry(dataset.dataEntry[i], features, fnValue);
 			dataset.dataEntry[i].number = i + 1 + startIdx;
 			dataset.dataEntry[i].index = i;
-			dataset.dataEntry[i].total = dl;
 		}
 
 		return dataset;
@@ -1545,6 +1543,67 @@
 
 (function (_, a$, $, jT) {
 
+	var endpointParsers = [{
+		regex: /^[\s=]*([\(\[])\s*(\-?\d*[\.eE]?\-?\d*)\s*,\s*(\-?\d*[\.eE]?\-?\d*)\s*([\)\]])\s*([^\d,]*)\s*$/,
+		fields: ['', 'loQualifier', 'loValue', 'upValue', 'upQualifier', 'unit'],
+		// adjust the parsed value, if needed
+		adjust: function (obj, parse) {
+			if (!obj.upValue) delete obj.upQualifier;
+			else obj.upQualifier = parse[4] == ']' ? '<=' : '<';
+
+			if (!obj.loValue) delete obj.loQualifier;
+			else obj.loQualifier = parse[1] == '[' ? '>=' : '>';
+		}
+	},{
+		regex: /^\s*(>|>=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)[,\s]+(<|<=)?\s*(\-?\d*[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'loQualifier', 'loValue', 'unit', 'upQualifier', 'upValue', 'unit'],
+	}, {
+		regex: /^\s*(>|>=|=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'loQualifier', 'loValue', 'unit'],
+		adjust: function (obj, parse) {
+			if (!obj.loQualifier) obj.loQualifier = '=';
+		}
+	}, {
+		regex: /^\s*(<|<=)\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'upQualifier', 'upValue', 'unit'],
+	}, {
+		regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(<|<=)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'upValue', 'upQualifier', 'unit'],
+	}, {
+		regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(>|>=)\s*([^\d,<=>]*)\s*$/,
+		fields: ['', 'loValue', 'loQualifier', 'unit'],
+	}];
+
+	function parseValue (text) {
+		var obj = {};
+
+		for (var pi = 0; pi < endpointParsers.length; ++pi) {
+			var parse = text.match(endpointParsers[pi].regex);
+			if (!parse)
+				continue;
+			for (var i = 1; i < parse.length; ++i)
+				if (!!parse[i]) {
+					var f = endpointParsers[pi].fields[i];
+					obj[f] = parse[i];
+				}
+
+			if (endpointParsers[pi].adjust)
+				endpointParsers[pi].adjust(obj, parse);
+			if (!!obj.unit) obj.unit = obj.unit.trim();
+			break;
+		}
+
+		if (pi >= endpointParsers.length)
+			obj.textValue = _.trim(text);
+
+		return obj;
+	};
+
+
+	function extractLast(val) {
+		return !!val ? val.split(/[,\(\)\s]*/).pop() : val;
+	};
+
 	function EndpointKit(settings) {
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even when manually initialized
 		jT.ui.putTemplate('all-endpoint', ' ? ', this.rootElement);
@@ -1559,11 +1618,12 @@
 			self.edittedValues = {};
 			self.settings.onDetails = function (root, data, element) {
 				self.edittedValues[data.endpoint] = {};
-				EndpointKit.linkEditors(self, jT.ui.getTemplate('endpoint-one-editor', {}).appendTo(root), {
+				// TODO: Change this!!
+				jT.ui.attachEditors(self, jT.ui.getTemplate('endpoint-one-editor', {}).appendTo(root), {
 					category: data.endpoint,
 					top: data.subcategory,
 					conditions: self.settings.showConditions,
-					onchange: function (e, field, value) {
+					onChange: function (e, field, value) {
 						_.set(self.edittedValues[data.endpoint], field, value);
 					}
 				});
@@ -1643,20 +1703,11 @@
 	EndpointKit.prototype.updateStats = function (name) {
 		var self = this;
 		return function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
-			var head = $('h3.' + name, self.rootElement)[0],
-				html = '';
+			var head = $('h3[data-cat=' + name + ']', self.rootElement),
+				data = this.fnGetData(),
+				count = _.sumBy(data, 'count');
 
-			// now make the summary...
-			if (iTotal > 0) {
-				var count = 0;
-				var data = this.fnGetData();
-				for (var i = iStart; i <= iEnd && i < iMax; ++i)
-					count += data[i].count;
-				html = "[" + count + "]";
-			} else
-				html = '';
-
-			$('div.jtox-details span', head).html(html);
+			$('div.jtox-details span', head).html(iTotal > 0 ? '[' + count + ']' : '');
 			return sPre;
 		}
 	};
@@ -1711,9 +1762,7 @@
 		});
 	};
 
-	EndpointKit.prototype.query = function (uri) {
-		this.loadEndpoints(uri);
-	};
+	EndpointKit.prototype.query = EndpointKit.prototype.loadEndpoints;
 
 	EndpointKit.prototype.modifyUri = function (uri) {
 		$('input[type="checkbox"]', this.rootElement).each(function () {
@@ -1724,197 +1773,53 @@
 		return uri;
 	};
 
-	// now the editors...
-	EndpointKit.linkEditors = function (kit, root, settings) { // category, top, onchange, conditions
-		// get the configuration so we can setup the fields and their titles according to it
-		var config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[settings.category]);
-
-		var putAutocomplete = function (box, service, configEntry, options) {
-			// if we're not supposed to be visible - hide us.
-			var field = box.data('field');
-			if (!configEntry || configEntry.bVisible === false) {
-				box.hide();
-				return null;
-			}
-
-			// now deal with the title...
-			var t = !!configEntry ? configEntry.title : null;
-			if (!!t)
-				$('div', box[0]).html(t);
-
-			// prepare the options
-			if (!options)
-				options = {};
-
-			// finally - configure the autocomplete options themselves to initialize the component itself
-			if (!options.source) options.source = function (request, response) {
-				jT.ambit.call(kit, service, {
-					method: "GET",
-					data: {
-						'category': settings.category,
-						'top': settings.top,
-						'max': kit.settings.maxHits || defaultSettings.maxHits,
-						'search': request.term
-					}
-				}, function (data) {
-					response(!data ? [] : $.map(data.facet, function (item) {
-						var val = item[field] || '';
-						return {
-							label: val + (!item.count ? '' : " [" + item.count + "]"),
-							value: val
-						}
-					}));
-				});
-			};
-
-			// and the change functon
-			if (!options.change) options.change = function (e, ui) {
-				settings.onchange.call(this, e, field, !ui.item ? _.trim(this.value) : ui.item.value);
-			};
-
-			// and the final parameter
-			if (!options.minLength) options.minLength = 0;
-
-			return $('input', box[0]).autocomplete(options);
-		};
-
-		var putValueComplete = function (root, configEntry) {
-			var field = root.data('field');
-			var extractLast = function (val) {
-				return !!val ? val.split(/[,\(\)\s]*/).pop() : val;
-			};
-			var parseValue = function (text) {
-				var obj = {};
-				var parsers = [{
-						regex: /^[\s=]*([\(\[])\s*(\-?\d*[\.eE]?\-?\d*)\s*,\s*(\-?\d*[\.eE]?\-?\d*)\s*([\)\]])\s*([^\d,]*)\s*$/,
-						fields: ['', 'loQualifier', 'loValue', 'upValue', 'upQualifier', 'unit'],
-						// adjust the parsed value, if needed
-						adjust: function (obj, parse) {
-							if (!obj.upValue) delete obj.upQualifier;
-							else obj.upQualifier = parse[4] == ']' ? '<=' : '<';
-
-							if (!obj.loValue) delete obj.loQualifier;
-							else obj.loQualifier = parse[1] == '[' ? '>=' : '>';
-						}
-					},
-					{
-						regex: /^\s*(>|>=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)[,\s]+(<|<=)?\s*(\-?\d*[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'loQualifier', 'loValue', 'unit', 'upQualifier', 'upValue', 'unit'],
-					},
-					{
-						regex: /^\s*(>|>=|=)?\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'loQualifier', 'loValue', 'unit'],
-						adjust: function (obj, parse) {
-							if (!obj.loQualifier) obj.loQualifier = '=';
-						}
-					},
-					{
-						regex: /^\s*(<|<=)\s*(\-?\d+[\.eE]?\-?\d*)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'upQualifier', 'upValue', 'unit'],
-					},
-					{
-						regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(<|<=)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'upValue', 'upQualifier', 'unit'],
-					},
-					{
-						regex: /^\s*(\-?\d+[\.eE]?\-?\d*)\s*(>|>=)\s*([^\d,<=>]*)\s*$/,
-						fields: ['', 'loValue', 'loQualifier', 'unit'],
-					}
-				];
-
-				for (var pi = 0; pi < parsers.length; ++pi) {
-					var parse = text.match(parsers[pi].regex);
-					if (!parse)
-						continue;
-					for (var i = 1; i < parse.length; ++i)
-						if (!!parse[i]) {
-							var f = parsers[pi].fields[i];
-							obj[f] = parse[i];
-						}
-
-					if (parsers[pi].adjust)
-						parsers[pi].adjust(obj, parse);
-					if (!!obj.unit) obj.unit = obj.unit.trim();
-					break;
-				}
-
-				if (pi >= parsers.length)
-					obj.textValue = _.trim(text);
-
-				return obj;
-			};
-
-			var allTags = [].concat(kit.settings.loTags || defaultSettings.loTags, kit.settings.hiTags || defaultSettings.hiTags, kit.settings.units || defaultSettings.units);
-
-			var autoEl = putAutocomplete(root, null, configEntry, {
-				change: function (e, ui) {
-					settings.onchange.call(this, e, field, parseValue(this.value));
-				},
-				source: function (request, response) {
-					// extract the last term
-					var result = $.ui.autocomplete.filter(allTags, extractLast(request.term));
-					if (request.term == '') {
-						// if term is empty don't show results
-						// avoids IE opening all results after initialization.
-						result = '';
-					}
-					// delegate back to autocomplete
-					response(result);
-				},
-				focus: function () { // prevent value inserted on focus
-					return false;
-				},
-				select: function (event, ui) {
-					var theVal = this.value,
-						last = extractLast(theVal);
-
-					this.value = theVal.substr(0, theVal.length - last.length) + ui.item.value + ' ';
-					return false;
-				}
-			});
-
-			// it might be a hidden one - so, take care for this
-			if (!!autoEl) autoEl.bind('keydown', function (event) {
-				if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
-					event.preventDefault();
-			});
-		};
-
-		// deal with endpoint name itself
-		putAutocomplete($('div.box-endpoint', root), '/query/experiment_endpoints', _.get(config, 'effects.endpoint'));
-		putAutocomplete($('div.box-interpretation', root), '/query/interpretation_result', _.get(config, 'interpretation.result'));
-
-		$('.box-conditions', root).hide(); // to optimize process with adding children
-		if (!!settings.conditions) {
-			// now put some conditions...
-			var any = false;
-			var condRoot = $('div.box-conditions .jtox-border-box', root)[0];
-			for (var cond in config.conditions) {
-				any = true;
-				var div = jT.ui.getTemplate('endpoint-one-condition', {
-					title: config.conditions[cond].title || cond,
-					codition: cond
-				}).appendTo(condRoot);
-
-				$('input', div).attr('placeholder', "Enter value or range");
-				putValueComplete($(div), config.conditions[cond]);
-			}
-			if (any)
-				$('.box-conditions', root).show();
+	EndpointKit.prototype.getFeatureInfoHtml = function (feature, value, canDelete) {
+		var condHeaders = [],
+			condValues = [],
+			conditionsCount = feature.annotation.length;
+			
+		for (var i = 0; i < conditionsCount; ++i) {
+			var ano = feature.annotation[i];
+			condHeaders.push(jT.formatString('<th class="conditions">{{p}}</th>', ano));
+			condValues.push(jT.formatString('<td>{{o}}</td>', ano))
 		}
 
-		// now comes the value editing mechanism
-		var confRange = _.get(config, 'effects.result') || {};
-		var confText = _.get(config, 'effects.text') || {};
-		putValueComplete($('.box-value', root), confRange.bVisible === false ? confText : confRange);
+		// make sure there is at least one cell.
+		if (conditionsCount < 1)
+			condValues.push(jT.formatString('<td>-</td>', ano));
 
-		// now initialize other fields, marked with box-field
-		$('.box-field', root).each(function () {
-			var name = $(this).data('name');
-			$('input, textarea, select', this).on('change', function (e) {
-				settings.onchange.call(this, e, name, $(this).val());
-			});
+		return jT.ui.fillHtml('endpoint-info-panel', {
+			conditionsHeaders: condHeaders.join(''),
+			conditionsValues: condValues.join(''),
+			conditionsCount: conditionsCount,
+			endpoint: feature.title,
+			guidance: feature.creator,
+			value: jT.ui.renderRange(value, feature.units, 'display'),
+			reason: value.remarks || null,
+			deleteBoxClass: canDelete ? '' : 'jtox-hidden'
 		});
+	};
+
+	EndpointKit.prototype.getFeatureEditHtml = function (feature, opts) {
+		var config = $.extend(true, {}, this.settings.columns["_"], this.settings.columns[feature.id.category]),
+			editors = _.map(this.settings.editors, function (editor) {
+				var oneCfg = _.defaults(_.get(config, editor.path, {}), editor, { autoClass: "no-auto" });
+				return !oneCfg.visible || oneCfg.preloaded ? '' : jT.ui.fillHtml('endpoint-one-editor', oneCfg);
+			}),
+			conditions = _.map(config.conditions, function (cond, cId) {
+				return typeof cond !== 'object' || cond.visible === false ? '' : jT.ui.fillHtml('endpoint-one-editor', _.defaults({
+					id: cId,
+					title: cond.title || cId,
+					autoClass: "tags-auto",
+					path: 'effects.conditions.' + cId
+				}, config.conditions[cId]));
+			});
+
+		return jT.ui.fillHtml('endpoint-edit-panel', _.defaults({
+			editorsHtml: editors.join(''),
+			conditionsClass: conditions.length > 0 ? '' : 'jtox-hidden',
+			conditionsHtml: conditions.join('')
+		}, opts));
 	};
 
 	EndpointKit.defaults = { 	// all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
@@ -1930,6 +1835,7 @@
 		loTags: ['>', '>=', '='],
 		hiTags: ['<', '<='],
 		dom: "<i>rt", 			// passed with dataTable settings upon creation
+		/* endpointUri */
 		language: {
 			loadingRecords: "No endpoints found.",
 			zeroRecords: "No endpoints found.",
@@ -1948,7 +1854,53 @@
 					.trigger('change');
 			}
 		},
-		/* endpointUri */
+		editors: [{
+			id: 'endpoint',
+			path: 'effects.endpoint', // 'effects[0].endpoint'
+			title: 'Endpoint name',
+			service: 'query/experiment_endpoints',
+			autoClass: 'ajax-auto'
+		}, {
+			id: 'value',
+			path: 'value',
+			title: 'Value range',
+		}, {
+			id: 'interpretation_result',
+			path: 'interpretation.result',
+			title: 'Intepretation of the results',
+			service: 'query/interpretation_result',
+			autoClass: 'ajax-auto'
+		}, {
+			id: 'value',
+			path: 'effect.result', // 'effects[0].result'
+			title: 'Effects result'
+			// service: '/query/interpretation_result'
+		}, {
+			id: 'value',
+			path: 'effects.text',
+			title: 'Effects result',
+			// service: '/query/interpretation_result'
+		}, {
+			id: 'type',
+			path: 'reliability.r_studyResultType',
+			title: 'Study type',
+			preloaded: true
+		}, {
+			id: 'reference',
+			path: 'citation.title',
+			title: 'Reference',
+			preloaded: true
+		}, {
+			id: 'justification',
+			path: 'protocol.guideline[0]',
+			title: "Guideline or Justification",
+			preloaded: true
+		}, {
+			id: 'remarks',
+			path: 'interpretation.criteria',
+			title: "Remarks",
+			preloaded: true
+		}],
 		columns: {
 			endpoint: {
 				'Id': {
@@ -2998,16 +2950,94 @@
 		return this;
 	};
 
+	MatrixKit.prototype.loadBundle = function(bundleUri) {
+		var self = this;
+		jT.ambit.call(self, bundleUri, function (bundle) {
+			if (!!bundle) {
+				bundle = bundle.dataset[0];
+				self.bundleUri = bundle.URI;
+				self.bundle = bundle;
+
+				if (!!self.createForm) {
+
+					jT.ui.updateTree(self.createForm, bundle, self.settings.formatters);
+
+					$('#status-' + bundle.status).prop('checked', true);
+
+					self.starHighlight($('.data-stars-field div', self.createForm)[0], bundle.stars);
+					self.createForm.stars.value = bundle.stars;
+
+					// now take care for enabling proper buttons on the Identifiers page
+					self.createForm.assFinalize.style.display = '';
+					self.createForm.assNewVersion.style.display = '';
+					self.createForm.assStart.style.display = 'none';
+
+				}
+
+				$(self.rootElement).tabs('enable', 1);
+
+				// now request and process the bundle summary
+				jT.ambit.call(self, bundle.URI + "/summary", function (summary) {
+					if (!!summary) {
+						for (var i = 0, sl = summary.facet.length; i < sl; ++i) {
+							var facet = summary.facet[i];
+							self.bundleSummary[facet.value] = facet.count;
+						}
+					}
+					self.updateTabs();
+				});
+
+				// self.initUsers();
+
+				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
+				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+				$('#export-initial-matrix').prop('href', self.bundleUri + '/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+				jT.fireCallback(self.settings.onLoaded, self);
+			}
+		});
+	};
+
 	/************** SOME HELPER ROUTINES ***************/
+	MatrixKit.prototype.beginAmbitCall = function (subject) {
+		subject = subject.replace(/^\W+|\W+$/, '');
+		return {
+			box: new jBox("Notice", {
+				animation: "flip",
+				color: 'green',
+				content: 'Saving ' + subject + ' ...',
+				delayOnHover: true,
+				delayClose: 1000,
+				showCountdown: false,
+				offset: { y: 50 }
+			}),
+			subject: subject
+		};
+	};
+
+	MatrixKit.prototype.endAmbitCall = function (callId, jhr) {
+		callId.box.setContent(jhr.status !== 200 
+			? '<span style="color: #d20">Error saving ' + callId.subject + '!</span>'
+			: 'The ' + callId.subject + ' saved.');
+
+		callId.box.show();
+	};
+
 	MatrixKit.prototype.pollAmbit = function (service, method, data, el, cb) {
 		el && $(el).addClass('loading');
 
 		console.warn("Calling ambit: " + method + " " + service + " with: " + JSON.stringify(data));
+		var callId = this.beginAmbitCall(service),
+			self = this;
 		jT.ambit.call(this, this.bundleUri + service, {
+			contentType: 'application/json',
 			method: method,
 			data: data
-		}, jT.ambit.taskPoller(this, function (result) {
+		}, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
+			self.endAmbitCall(callId, jhr);
+
 			if (typeof cb === 'function')
 				return cb(result);
 		}));
@@ -3042,19 +3072,15 @@
 				return data;
 
 			var els = [];
-			// Up aroow, if not the first row.
-			els.push((full.index == 0) ? '' : jT.ui.fillHtml('matrix-sel-arrow', {
-				subject: subject,
-				direction: 'up'
-			}));
+			// Up arrow
+			els.push(jT.ui.fillHtml('matrix-sel-arrow', { subject: subject, direction: 'up' }));
+
 			// The given inner renderer - usually the number.
 			if (typeof innerRender === 'function')
 				els.push(innerRender(data, type, full));
-			// The download
-			els.push((full.index == full.total - 1) ? '' : jT.ui.fillHtml('matrix-sel-arrow', {
-				subject: subject,
-				direction: 'down'
-			}));
+
+			// The downarrow
+			els.push(jT.ui.fillHtml('matrix-sel-arrow', { subject: subject, direction: 'down' }));
 
 			// Join and return all of them.
 			return els.join('<br/>');
@@ -3197,7 +3223,7 @@
 
 		var starsEl = $('.data-stars-field', self.createForm)[0];
 		starsEl.innerHTML += jT.ui.putStars(self, 0, "Assessment rating");
-		$('span.ui-icon-star', starsEl)
+		$('span.fa-star', starsEl)
 			.on('mouseover', function (e) {
 				for (var el = this; !!el; el = el.previousElementSibling)
 					$(el).removeClass('transparent');
@@ -3254,6 +3280,7 @@
 				groups: this.settings.groups.structure,
 				handlers: this.reboundHandlers,
 				formatters: this.settings.formatters,
+				columns: this.settings.columns,
 				onRow: _.bind(this.updateTaggedEntry, this),
 				onLoaded: function (dataset) {
 					if (self.queryKit.getQueryType() === 'selected') {
@@ -3313,6 +3340,7 @@
 				groups: this.settings.groups.substance,
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
+				columns: this.settings.columns,
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri),
 						substanceUri = baseUrl + 'substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + 
@@ -3370,9 +3398,9 @@
 				handlers: this.reboundHandlers,
 				formatters: this.settings.formatters,
 				showMultiselect: true,
-				columns: { 
-					endpoint: { 'Id': idCol }
-				},
+				columns: $.extend({  
+					endpoint: { 'Id': idCol } 
+				},this.settings.columns),
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
@@ -3382,30 +3410,25 @@
 			});
 		}
 		// The auto-init has taken care to have a query initiated.
+		// NOTE: This method is invoked from `onMatrix` to make sure `this.endpointKit` is initialized.
 	};
 
-	MatrixKit.prototype.saveMatrix = function () {
-		if (self.bundleSummary.edits.study.length > 0) {
-			var toAdd = JSON.stringify({ study: self.bundleSummary.edits.study });
+	MatrixKit.prototype.saveMatrixEdit = function (edit) {
+		if (!edit)
+			return;
 
-			// make two nested calls - for adding and for deleting
-			$(saveButton).addClass('loading');
-			jT.ambit.call(self, self.bundleUri + '/matrix', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd }, function (result, jhr) {
-				if (!!result) {
-					jT.ambit.call(self, self.bundleUri + '/matrix/deleted', { method: 'PUT', headers: { 'Content-Type': "application/json" }, data: toAdd },function (result, jhr) {
-						$(saveButton).removeClass('loading');
-						if (!!result) {
-							self.bundleSummary.edits.study = [];
-							self.matrixKit.query(self.bundleUri + '/matrix');
-							self.updateMatrixButtons();
-						}
-					});
-				}
-				else {
-					$(saveButton).removeClass('loading');
-				}
-			});
-		}
+		var toAdd = JSON.stringify({ study: edit }),
+			self = this;
+
+		// make two nested calls - for adding and for deleting
+		this.pollAmbit('/matrix', 'PUT', toAdd, $(this), function (result) {
+			if (!result) {
+				self.queryMatrix('working');
+			} else
+				self.pollAmbit('/matrix/deleted', 'PUT', toAdd, $(this), function () {
+					self.queryMatrix('working');
+				});
+		});
 	},
 
 	MatrixKit.prototype.queryMatrix = function (mode) {
@@ -3436,101 +3459,25 @@
 		this.resetFeatures = false;
 	};
 
-	MatrixKit.prototype.addMatrixFeature = function(data, fId, value, element) {
-		this.bundleSummary.edits.study.push(value);
-		this.updateMatrixButtons();
-
-		// TODO:
-		// now fix the UI a bit, so we can see the
-		fId += '/' + self.bundleSummary.edits.study.length;
-
-		var catId = jT.ambit.parseFeatureId(fId).category,
-			config = $.extend(true, {}, self.matrixKit.settings.columns["_"], self.matrixKit.settings.columns[catId]),
-			f = null;
-
-		self.matrixKit.dataset.feature[fId] = f = {};
-		f.sameAs = "http://www.opentox.org/echaEndpoints.owl#" + catId;
-		f.title = value.effects[0].endpoint || (value.citation.title || "");
-		f.creator = value.protocol.guideline[0];
-		f.isMultiValue = true;
-		f.annotation = [];
-		for (var cId in value.effects[0].conditions) {
-			f.annotation.push({
-				'p': cId,
-				'o': jT.ui.renderRange(value.effects[0].conditions[cId])
-			});
-		}
-
-		data.values[fId] = [value.effects[0].result];
-
-		var preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? f.title : null;
-		preVal = [f.creator, preVal].filter(function(value){return value!==null}).join(' ');
-
-		var html = 	'<span class="ui-icon ui-icon-circle-minus delete-popup" data-index="' + (self.bundleSummary.edits.study.length - 1) + '"></span>&nbsp;' + 
-					'<a class="info-popup unsaved-study" data-index="0" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(value.effects[0].result, null, 'display', preVal) + '</a>',
-			span = document.createElement('div');
-
-		span.innerHTML = html;
-		element.parentNode.insertBefore(span, element);
-		self.matrixKit.equalizeTables();
-
-		$('.info-popup', span).on('click', function (e) { onEditClick.call(this, data); });
-		$('.delete-popup', span).on('click', function (e) {
-			var idx = $(this).data('index');
-			self.bundleSummary.edits.study.splice(idx, 1);
-			$(this.parentNode).remove();
-			self.updateMatrixButtons();
-		});
-	};
-
-	MatrixKit.prototype.deleteMatrixFeature = function (data, featureId, valueIdx, reason, element) {
-		self.bundleSummary.edits.study.push({
-			owner: { substance: { uuid: data.compound.i5uuid } },
-			effects_to_delete: [{
-				result: {
-					idresult: data.values[featureId][valueIdx].idresult,
-					deleted: true,
-					remarks: reason
-				},
-			}]
-		});
-		self.updateMatrixButtons();
-
-		// Now deal with the UI
-		$(element).addClass('unsaved-study');
-		$('span', element.parentNode)
-			.removeClass('ui-icon-circle-minus')
-			.addClass('ui-icon-circle-plus')
-			.data('index', self.bundleSummary.edits.study.length - 1)
-			.on('click.undodelete', function () {
-				var idx = $(this).data('index');
-				$(this).addClass('ui-icon-circle-minus').removeClass('ui-icon-circle-plus').off('click.undodelete').data('index', null);
-				$('a', this.parentNode).removeClass('unsaved-study');
-				self.bundleSummary.edits.study.splice(idx, 1);
-				self.updateMatrixButtons();
-			});
-	};
-
 	MatrixKit.prototype.getFeatureRenderer = function (kit, feat, theId) {
 		var self = this;
 
 		return function (data, type, full) {
 			if (type != 'display')
-				return '-';
+				return jT.simplifyValues(data);
 
 			var html = '';
 			for (var fId in kit.dataset.feature) {
 				var f = kit.dataset.feature[fId];
-				if (f.sameAs != feat.sameAs || full.values[fId] == null)
+				if (f.sameAs != feat.sameAs || data[fId] == null)
 					continue;
 
 				var catId = jT.ambit.parseFeatureId(fId).category,
 					config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[catId]),
-					theData = full.values[fId],
+					theData = data[fId],
 					preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>" + f.title + "</strong>" : null,
-					icon = f.isModelPredictionFeature ? "ui-icon-calculator" : "ui-icon-tag",
-					studyType = "<span class='ui-icon "+icon+"' title='" + f.source.type + "'></span>",
-				// preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : '),
+					// preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : '),
+					studyType = "&nbsp;<span class='fa " + (f.isModelPredictionFeature ? "fa-calculator" : "fa-tag") + "' title='" + f.source.type + "'></span>",
 					postVal = '', postValParts = [], parameters = [], conditions = [];
 
 				for (var i = 0, l = f.annotation.length; i < l; i++){
@@ -3547,11 +3494,11 @@
 				if (conditions.length > 0)
 					postValParts.push('<span>' + conditions.join(', ') + '</span>');
 				if (_.get(config, 'protocol.guideline.inMatrix', false) && !!f.creator && f.creator != 'null' &&  f.creator != 'no data')
-					postValParts.push('<span class="shortened" title="'+f.creator+'">'+f.creator + '</span>');
+					postValParts.push('<span class="shortened" title="'+f.creator+'">' + f.creator + '</span>');
 				
 				postVal = (postValParts.length > 0) ? '(' + postValParts.join(', ') + ')' : '';
 
-				if (!f.isMultiValue || !$.isArray(theData))
+				if (!f.isMultiValue || !Array.isArray(theData))
 					theData = [theData];
 
 				// now - ready to produce HTML
@@ -3559,23 +3506,23 @@
 					var d = theData[i];
 					if (d.deleted && !self.matrixEditable)
 						continue;
-					html += '<div>';
+					html += '<div class="feature-entry" data-feature="' + fId + '" data-index="' + i + '">';
 
 					if (self.matrixEditable)
-						html += '<span class="ui-icon ' + (d.deleted ? 'ui-icon-info' : 'ui-icon-circle-minus')+ ' delete-popup"></span>&nbsp;';
+						html += '<span class="fa ' + (d.deleted ? 'fa-info' : 'fa-minus-circle')+ ' fa-action jtox-handler" data-handler="openPopup" data-action="delete"></span>&nbsp;';
 
-					html += '<a class="info-popup' + ((d.deleted) ? ' deleted' : '') + '" data-index="' + i + '" data-feature="' + fId + '" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
-							+ studyType
-							+ ' ' + postVal;
+					html += '<a class="' + ((d.deleted) ? 'deleted' : '') + ' jtox-handler" data-handler="openPopup" data-action="info" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
+						+ studyType
+						+ ' ' + postVal;
 					html += jT.ui.fillHtml('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
 					html += '</div>';
 				}
 			}
 
 			if (self.matrixEditable)
-				html += '<span class="ui-icon ui-icon-circle-plus edit-popup" data-feature="' + theId + '"></span>';
+				html += '<span class="fa fa-plus-circle fa-action feature-entry jtox-handler" data-handler="openPopup" data-action="add" data-feature="' + theId + '"></span>';
 
-			return  html;
+			return html;
 		};
 	};
 
@@ -3600,8 +3547,10 @@
 					endpoints[feat.sameAs] = true;
 					if (!feat.title)
 						feat.title = feat.sameAs.substr(feat.sameAs.indexOf('#') + 1);
+
+					feat.data = 'values';
 					feat.render = self.getFeatureRenderer(kit, feat, fId);
-					feat.column = { className: "breakable", width: "80px" };
+					feat.column = { className: "breakable", width: "80px", orderable: false };
 					grp.push(fId);
 				}
 			}
@@ -3623,6 +3572,113 @@
 
 			return groups;
 		};
+	};
+
+	MatrixKit.prototype.openFeatureBox = function (action, el) {
+		var featureId = el.data('feature'),
+			valueIdx = el.data('index'),
+			data = jT.tables.getRowData(el),
+			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]);
+			boxOptions = {
+				title: feature.title || feature.id.category || "Endpoint",
+				closeButton: "box",
+				closeOnEsc: true,
+				overlay: false,
+				closeOnClick: "body",
+				addClass: "jtox-toolkit " + action,
+				theme: "TooltipBorder",
+				animation: "move",
+				maxWidth: 800,
+				onCloseComplete: function () { this.destroy(); }
+			},
+			self = this;
+
+		if (action === 'add' || action === 'edit') {
+			if (this.studyOptionsHtml == null)
+				this.studyOptionsHtml = _.map(this.settings.studyTypeList, function (val, id) {
+					return '<option value="' + id + '">' + val.title + '</option>';
+				});
+
+			var featureJson = {
+					owner: { substance: { uuid: data.compound.i5uuid } },
+					protocol: {
+						topcategory: feature.id.topcategory,
+						category: { code: feature.id.category },
+						endpoint: feature.title,
+						guideline: '' },
+					citation: { year: (new Date()).getFullYear().toString() },
+					parameters: { },
+					interpretation: { },
+					reliability: { },
+					effects: {
+						result: { },
+						conditions: { }
+					}
+				},
+				goAction = function () {
+					// TODO: Clarify this here!
+					featureJson.effects = [ featureJson.effects ];
+					featureJson.protocol.guideline = [ featureJson.protocol.guideline ];
+
+					if (action === 'add')
+						self.saveMatrixEdit(featureJson);
+					else if (action === 'edit')
+						self.editMatrixFeature(feature, valueIdx, featureJson);
+				};
+			
+
+			boxOptions = $.extend(boxOptions, {
+				content: this.endpointKit.getFeatureEditHtml(feature, val, {
+					studyOptionsHtml: this.studyOptionsHtml
+				}),
+				confirmButton: "Add",
+				confirm: goAction, // NOTE: Due to some bug in jBox, it appears we need to provide this one...
+				onConfirm: goAction, // ... but since the Doc says `onConfirm` -> we need to have that too.
+				onOpen: function () {
+					jT.ui.attachEditors(self.endpointKit, this.content, featureJson, {
+						ajax: {
+							method: "GET",
+							data: {
+								'category': feature.id.category,
+								'top': feature.id.topcategory,
+								'max': self.endpointKit.settings.maxHits
+							},
+						},
+						searchTerm: 'data.search'
+					});
+				}
+			});
+		} else { //info & delete
+			feature.id.suffix = '*';
+			var val = data.values[featureId],
+				mainFeature = jT.ambit.buildFeatureId(feature.id);
+
+			if (feature.isMultiValue && Array.isArray(val))
+				val = val[valueIdx];
+
+			var ajaxData = {
+					owner: { substance: { uuid: data.compound.i5uuid } },
+					effects_to_delete: [{
+						result: {
+							idresult: val.idresult,
+							deleted: true
+						},
+					}]
+				};
+			$.extend(boxOptions, {
+				target: el,
+				title: this.matrixKit.feature[mainFeature] && this.matrixKit.feature[mainFeature].title || boxOptions.title,
+				content: this.endpointKit.getFeatureInfoHtml(feature, val, action !== "info"),
+				confirmButton: action !== "info" ? "Delete" : "Ok",
+				cancelButton: action !== "info" ? "Cancel" : "Dismiss",
+				confirm: function () { self.saveMatrixEdit(ajaxData); },
+				onConfirm: function () { self.saveMatrixEdit(ajaxData); },
+				onOpen: function () { jT.ui.attachEditors(self.endpointKit, this.content, ajaxData); }
+			});
+		}
+
+		// Finally - open it!
+		new jBox(action === 'info' ? 'Tooltip' : 'Confirm', boxOptions).open();
 	};
 
 	MatrixKit.prototype.getMatrixFeatures = function() {
@@ -3679,16 +3735,14 @@
 	MatrixKit.prototype.onMatrix = function (mode, panel) {
 		if (!this.matrixKit) {
 			var self = this,
-				studyList = _.map(this.settings.studyTypeList, function (val, id) {
-					return '<option value="' + id + '">' + val.title + '</option>';
-				}),
 				CompoundKit = jT.ui.Compound,
-				self = this;
+				self = this,
+				matrixRoot = $('#matrix-table');
 
 			// TODO: Use studyList to preare the edit box content!
 			// this.editBoxHtml = jT.ui.formatStr(studyList);
 
-			this.matrixKit = jT.ui.initKit($('#matrix-table'), {
+			this.matrixKit = jT.ui.initKit(matrixRoot, {
 				baseUrl: this.settings.baseUrl,
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
@@ -3740,6 +3794,9 @@
 
 		// the actual initial query comes from the handlers, we just need to ask for fature reset
 		this.resetFeatures = true;
+
+		// Because we need the `this.endpointKit` one initialized!
+		this.onEndpoints();
 	};
 
 	MatrixKit.prototype.onReport = function(id, panel){
@@ -3899,7 +3956,7 @@
 									var parts = [];
 									if (cells[3*i + c] !== undefined) {
 										$(cells[3*i + c].childNodes).each(function(){
-											if ( $('.ui-icon-calculator', this).length > 0 ) {
+											if ( $('.fa-calculator', this).length > 0 ) {
 												prefix = '<w:r><w:rPr><w:color w:val="FF0000" /></w:rPr><w:t xml:space="preserve">';
 											}
 											else {
@@ -4315,55 +4372,6 @@
 		}
 	};
 
-	MatrixKit.prototype.loadBundle = function(bundleUri) {
-		var self = this;
-		jT.ambit.call(self, bundleUri, function (bundle) {
-			if (!!bundle) {
-				bundle = bundle.dataset[0];
-				self.bundleUri = bundle.URI;
-				self.bundle = bundle;
-
-				if (!!self.createForm) {
-
-					jT.ui.updateTree(self.createForm, bundle, self.settings.formatters);
-
-					$('#status-' + bundle.status).prop('checked', true);
-
-					self.starHighlight($('.data-stars-field div', self.createForm)[0], bundle.stars);
-					self.createForm.stars.value = bundle.stars;
-
-					// now take care for enabling proper buttons on the Identifiers page
-					self.createForm.assFinalize.style.display = '';
-					self.createForm.assNewVersion.style.display = '';
-					self.createForm.assStart.style.display = 'none';
-
-				}
-
-				$(self.rootElement).tabs('enable', 1);
-
-				// now request and process the bundle summary
-				jT.ambit.call(self, bundle.URI + "/summary", function (summary) {
-					if (!!summary) {
-						for (var i = 0, sl = summary.facet.length; i < sl; ++i) {
-							var facet = summary.facet[i];
-							self.bundleSummary[facet.value] = facet.count;
-						}
-					}
-					self.updateTabs();
-				});
-
-				// self.initUsers();
-
-				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
-				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-				$('#export-initial-matrix').prop('href', self.bundleUri + '/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-
-				jT.fireCallback(self.settings.onLoaded, self);
-			}
-		});
-	};
-
 	MatrixKit.prototype.updateTabs = function () {
 		// This routine ensures the wizard-like advacement through the tabs
 		var theSummary = this.bundleSummary;
@@ -4506,7 +4514,7 @@
 				if (!this.bundleUri)
 					return;
 	
-				var el = e.target,
+				var el = e.currentTarget,
 					data = {},
 					self = this;
 				if (!this.validateBundleForm(e))
@@ -4519,37 +4527,38 @@
 				});
 			},
 			// Structure selection related
-			structureTag: function (e) { return this.tagStructure($(e.target)); },
-			structureReason: function (e) { return this.reasonStructure(el$ = $(e.target)); },
+			structureTag: function (e) { return this.tagStructure($(e.currentTarget)); },
+			structureReason: function (e) { return this.reasonStructure(el$ = $(e.currentTarget)); },
 			// Substance selection related
-			substanceSelect: function(e) { this.selectSubstance($(e.target)); },
+			substanceSelect: function(e) { this.selectSubstance($(e.currentTarget)); },
 			expandAll: function (e) {
-				var panel = $(e.target).closest('.ui-tabs-panel');
+				var panel = $(e.currentTarget).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder', panel).trigger('click')				
 			},
 			collapseAll: function (e) { 
-				var panel = $(e.target).closest('.ui-tabs-panel');
+				var panel = $(e.currentTarget).closest('.ui-tabs-panel');
 				$('.jtox-details-open.fa-folder-open', panel).trigger('click');
 			},
 			// Endpoint selection related
-			endpointSelect: function (e) { this.selectEndpoint($(e.target)); },
+			endpointSelect: function (e) { this.selectEndpoint($(e.currentTarget)); },
 			endpointMode: function (e) {
 				var bUri = encodeURIComponent(this.bundleUri),
 					qUri = this.settings.baseUrl + "query/study?mergeDatasets=true&bundle_uri=" + bUri;
-				if ($(e.target).attr('id') == 'erelevant')
+				if ($(e.currentTarget).attr('id') == 'erelevant')
 					qUri += "&selected=substances&filterbybundle=" + bUri;
 				
 				this.endpointKit.query(qUri);
 			},
 			// Matrix / read across selection related
-			matrixMode: function (e) { this.queryMatrix($(e.target).attr('id').substr(1)); },
-			saveMatrix: function (e) { this.saveMatrix(); },
-			createWorkingCopy: function (e) { this.createWorkingCopy(); },
-			substanceTag: function (e) {
-				this.selectSubstance();
+			openPopup: function (e) { 
+				var el = $(e.currentTarget);
+				this.openFeatureBox(el.data('action'), el.closest('.feature-entry'));
 			},
+			matrixMode: function (e) { this.queryMatrix($(e.currentTarget).attr('id').substr(1)); },
+			createWorkingCopy: function (e) { this.createWorkingCopy(); },
+			substanceTag: function (e) { this.tagSubstance($(e.currentTarget)); },
 			substanceMove: function (e) {
-				var el$ = $(e.target),
+				var el$ = $(e.currentTarget),
 					dir = el$.data('direction'),
 					data = jT.tables.getCellData(el$);
 
@@ -4577,7 +4586,7 @@
 					$(varRow).insertAfter( $(varRow.nextElementSibling) );
 				});
 
-			},
+			}
 		},
 		groups: {
 			structure: {
@@ -6713,16 +6722,12 @@ jT.ui.templates['anno-form']  =
 "</form>" +
 "";// end of anno-form 
 
-jT.ui.templates['button-icon']  = 
-"<button title=\"{{ title }}\"><i class=\"fa fa-{{ icon }} {{ className }}\"></i></button>" +
-""; // end of #button-icon 
-
 jT.ui.templates['select-one-option']  = 
 "<option value=\"{{ value }}\" {{ selected }}>{{ name }}</button>" +
 ""; // end of #select-one-option 
 
 jT.ui.templates['info-ball']  = 
-"<sup class=\"helper\"><a target=\"_blank\" href=\"{{ href }}\" title=\"{{ title }}\"><span class=\"fa fa-info-circle\"></span></a></sup>" +
+"<sup class=\"helper\"><a target=\"_blank\" href=\"{{ href }}\" title=\"{{ title }}\"><span class=\"fa fa-action fa-info-circle\"></span></a></sup>" +
 ""; // end of #info-ball 
 
 jT.ui.templates['all-composition']  = 
@@ -6775,7 +6780,7 @@ jT.ui.templates['compound-one-tab']  =
 jT.ui.templates['compound-one-feature']  = 
 "<div class=\"jtox-ds-feature\"><input type=\"checkbox\" checked=\"yes\"" +
 "class=\"jtox-checkbox\" /><span class=\"jtox-title\">{{ title }}</span><sup class=\"helper\"><a target=\"_blank\"" +
-"href=\"{{ uri }}\"><i class=\"fa fa-info-circle\"></i></a></sup></div>" +
+"href=\"{{ uri }}\"><i class=\"fa fa-action fa-info-circle\"></i></a></sup></div>" +
 ""; // end of #jtox-ds-feature 
 
 jT.ui.templates['compound-download']  = 
@@ -6833,86 +6838,63 @@ jT.ui.templates['all-endpoint']  =
 ""; // end of all-endpoint 
 
 jT.ui.templates['endpoint-one-editor']  = 
-"<div class=\"jt-endeditor\">" +
-"<div class=\"jtox-medium-box box-endpoint\" data-field=\"endpoint\">" +
-"<div class=\"jtox-details font-heavy\">Endpoint name</div>" +
-"<input type=\"text\" placeholder=\"Endpoint_\" />" +
+"<div class=\"jtox-medium-box\">" +
+"<div class=\"jtox-details font-heavy {{ requiredClass }}\">{{ title }}</div>" +
+"<input class=\"{{ autoClass }}\" type=\"text\" data-id=\"{{ id }}\" data-service=\"{{ service }}\" data-path=\"{{ path }}\" placeholder=\"{{ title }}_\" value=\"{{ value }}\"/>" +
 "</div>" +
-"<div class=\"jtox-medium-box box-value\" data-field=\"value\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Value range</div>" +
-"<input type=\"text\" />" +
-"</div>" +
-"<div class=\"jtox-medium-box box-interpretation\" data-field=\"interpretation_result\">" +
-"<div class=\"jtox-details font-heavy jtox-required\">Intepretation of the results</div>" +
-"<input type=\"text\" placeholder=\"Intepretation\" />" +
-"</div>" +
-"<div class=\"size-full box-conditions\">" +
-"<div class=\"jtox-details font-heavy\">Conditions</div>" +
-"<div class=\"jtox-border-box\"></div>" +
-"</div>" +
-"</div>" +
-""; // end of endpoint-one-editor 
-
-jT.ui.templates['endpoint-one-condition']  = 
-"<div class=\"jtox-medium-box\" data-condition=\"{{condition}}\">" +
-"<div class=\"jtox-details font-heavy\">{{title}}</div>" +
-"<input type=\"text\" placeholder=\"Intepretation\" />" +
-"</div>" +
-""; // end of endpoint-one-condition 
+""; // end of endpoint-one-panel 
 
 jT.ui.templates['endpoint-info-panel']  = 
-"<div class=\"info-box\">" +
+"<div class=\"endpoint-panel\">" +
 "<table>" +
 "<thead>" +
 "<tr>" +
 "<th rowspan=\"2\">Endpoint</th>" +
 "<th rowspan=\"2\">Value</th>" +
-"<th class=\"conditions center\">Conditions</th>" +
+"<th class=\"conditions center\" colspan=\"{{ conditionsCount }}\">Conditions</th>" +
 "<th rowspan=\"2\">Guideline or Justification</th>" +
 "</tr>" +
 "<tr class=\"conditions\">" +
+"{{ conditionsHeaders}}" +
 "</tr>" +
 "</thead>" +
 "<tbody>" +
 "<tr>" +
 "<td class=\"the-endpoint\">{{ endpoint }}</td>" +
 "<td class=\"the-value non-breakable\">{{ value }}</td>" +
-"<td class=\"postconditions\">{{ guidance }}</td>" +
+"{{ conditionsValues }}" +
+"<td>{{ guidance }}</td>" +
 "</tr>" +
 "</tbody>" +
 "</table>" +
-"<table class=\"delete-box\">" +
-"<tr>" +
-"<td><textarea placeholder=\"Reason for deleting_\"></textarea></td>" +
-"<td><button class=\"jt-alert\">Delete</button></td>" +
-"</tr>" +
-"</table>" +
+"<div class=\"size-full delete-box {{ deleteBoxClass }}\">" +
+"<div class=\"jtox-inline size-full\"><textarea data-id=\"reason\" data-path=\"effects_to_delete[0].result.remarks\" placeholder=\"Reason for deleting_\">{{ reason }}</textarea></div>" +
+"</div>" +
 "</div>" +
 ""; // end of endpoint-info-panel 
 
 jT.ui.templates['endpoint-edit-panel']  = 
-"<div class=\"edit-box\">" +
-"<div class=\"jtox-medium-box box-field\" data-name=\"type\">" +
+"<div class=\"endpoint-panel\">" +
+"{{ editorsHtml }}" +
+"<div class=\"size-full box-conditions {{ conditionsClass }}\">" +
+"<div class=\"jtox-details font-heavy\">Conditions</div>" +
+"<div class=\"jtox-border-box\">{{ conditionsHtml }}</div>" +
+"</div>" +
+"<div class=\"jtox-medium-box\">" +
 "<div class=\"jtox-details font-heavy jtox-required\">Study type</div>" +
-"<select class=\"type-list\" value=\"{{type}}\">" +
-"<option value=\"-1\"> - Select type - </option>" +
-"</select>" +
+"<select class=\"type-list no-auto\" data-id=\"type\"><option value=\"-1\"> - Select type - </option>{{ studyOptionsHtml }}</select>" +
 "</div>" +
-"<div class=\"jtox-medium-box box-field\" data-name=\"reference\">" +
+"<div class=\"jtox-medium-box\">" +
 "<div class=\"jtox-details font-heavy jtox-required\">Reference</div>" +
-"<input type=\"text\" value=\"{{reference}}\" placeholder=\"Reference_\" />" +
+"<input type=\"text no-auto\" data-id=\"reference\" placeholder=\"Reference_\" value=\"{{ reference }}\"/>" +
 "</div>" +
-"<div class=\"jtox-medium-box box-field size-full\" data-name=\"justification\">" +
+"<div class=\"jtox-medium-box size-full\">" +
 "<div class=\"jtox-details font-heavy jtox-required\">Guideline or Justification</div>" +
-"<textarea placeholder=\"Justification_\">{{justification}}</textarea>" +
+"<textarea class=\"no-auto\" data-id=\"justification\" placeholder=\"Justification_\">{{ justification }}</textarea>" +
 "</div>" +
-"<div class=\"jtox-medium-box box-field size-full\" data-name=\"remarks\">" +
+"<div class=\"jtox-medium-box size-full\">" +
 "<div class=\"jtox-details font-heavy\">Remarks</div>" +
-"<textarea placeholder=\"Remarks_\">{{remarks}}</textarea>" +
-"</div>" +
-"<div class=\"size-full the-send\">" +
-"<span class=\"the-endpoint\">{{endpoint}}</span>" +
-"<input value=\"Apply\" type=\"button\" />" +
+"<textarea class=\"no-auto\" data-id=\"remarks\" placeholder=\"Remarks_\">{{ remarks }}</textarea>" +
 "</div>" +
 "</div>" +
 ""; // end of endpoint-edit-panel 
@@ -7127,7 +7109,7 @@ jT.ui.templates['all-matrix']  =
 "<th class=\"right size-third\"><label for=\"source\" id=\"l_source\">Source URL</label>*<a href='#' class='chelp a_doclink'>?</a>:</th>" +
 "<td>" +
 "<input class=\"first-time\" value=\"{{source}}\" name=\"source\" id=\"source\" required />" +
-"<a href=\"\" id=\"source-link\" target=\"_blank\" class=\"ui-icon ui-icon-extlink\">open link</a>" +
+"<a href=\"\" id=\"source-link\" target=\"_blank\" class=\"fa fa-action fa-external-link\">open link</a>" +
 "</td>" +
 "</tr>" +
 "<tr>" +
@@ -7206,7 +7188,6 @@ jT.ui.templates['all-matrix']  =
 "<input type=\"radio\" id=\"xworking\" name=\"xaction\" class=\"jtox-handler\" data-handler=\"matrixMode\"><label for=\"xworking\">Working matrix</label></input>" +
 "<input type=\"radio\" id=\"xfinal\" name=\"xaction\" class=\"jtox-handler\" data-handler=\"matrixMode\"><label for=\"xfinal\">Final matrix</label></input>" +
 "</div>" +
-"<button class=\"save-button jt-disabled jtox-handler\" data-handler=\"saveMatrix\">Saved</button>" +
 "<button class=\"create-button jtox-handler\" data-handler=\"createWorkingCopy\">Create working copy</button>" +
 "<div id=\"matrix-table\" class=\"jtox-kit\"" +
 "data-kit=\"Compound\"" +
@@ -7250,7 +7231,7 @@ jT.ui.templates['matrix-tag-indicator']  =
 ""; // end of matrix-tag-indicator 
 
 jT.ui.templates['matrix-sel-arrow']  = 
-"<i class=\"jt-{{direction}} fa fa-arrow-{{direction}} jtox-handler\" data-handler=\"substanceMove\" data-direction=\"{{direction}}\" title=\"Move the {{subject}} up in the list\"></i>" +
+"<i class=\"jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler\" data-handler=\"substanceMove\" data-direction=\"{{direction}}\" title=\"Move the {{subject}} up in the list\"></i>" +
 ""; // end of matrix-sel-arrow 
 
 jT.ui.templates['kit-query-all']  = 
@@ -7270,7 +7251,7 @@ jT.ui.templates['kit-query-all']  =
 "<div class=\"dynamic auto-hide searchauto hidden jtox-inline\">" +
 "<input type=\"checkbox\" name=\"regexp\" id=\"toxquery-regexp\" />" +
 "<label for=\"toxquery-regexp\">Enable fragment search<sup class=\"helper\">" +
-"<a target=\"_blank\" href=\"http://en.wikipedia.org/wiki/Regular_expression\"><i class=\"fa fa-info-circle\"></i></a>" +
+"<a target=\"_blank\" href=\"http://en.wikipedia.org/wiki/Regular_expression\"><i class=\"fa fa-action fa-info-circle\"></i></a>" +
 "</sup>" +
 "</label>" +
 "</div>" +
@@ -7297,7 +7278,7 @@ jT.ui.templates['kit-query-all']  =
 "<div class=\"jtox-inline\">" +
 "<input type=\"text\" name=\"searchbox\" />" +
 "<button name=\"searchbutton\" class=\"jtox-handler\" title=\"Search/refresh\" data-handler=\"query\"><i class=\"fa fa-search\"></i></button>" +
-"<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\" data-toggle=\"modal\" data-target=\"#mol-composer\"><i class=\"fa fa-edit\"></i></button>" +
+"<button name=\"drawbutton\" class=\"dynamic\" title=\"Draw the (sub)structure\" data-toggle=\"modal\" data-target=\"#mol-composer\"><i class=\"fa fa-action fa-edit\"></i></button>" +
 "</div>" +
 "</div>" +
 "<div id=\"searchcontext\" class=\"size-full\">" +
