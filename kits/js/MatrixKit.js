@@ -40,10 +40,7 @@
 			compound: 0,
 			substance: 0,
 			property: 0,
-			matrix: 0,
-			edits: {
-				study: [],
-			}
+			matrix: 0
 		};
 		this.matrixGroups = null;
 
@@ -1708,34 +1705,35 @@
 			createWorkingCopy: function (e) { this.createWorkingCopy(); },
 			substanceTag: function (e) { this.tagSubstance($(e.currentTarget)); },
 			substanceMove: function (e) {
-				var el$ = $(e.currentTarget),
-					dir = el$.data('direction'),
-					data = jT.tables.getCellData(el$);
+				var el = $(e.currentTarget),
+					dir = el.data('direction'),
+					theTable = jT.tables.getTable(el),
+					rowData = jT.tables.getRowData(el),
+					otherData = theTable.row(rowData.index + (dir == 'up' ? -1 : 1)).data(),
+					varTable = jT.tables.getTable(this.matrixKit.varTable),
+					tmpIdx;
 
-				console.log("Move [" + dir + "] with data: " + JSON.stringify(data));
+				// Now, swap the indices, switch the data and redraw.
+				tmpIdx = rowData.index;
+				rowData.index = otherData.index;
+				otherData.index = tmpIdx;
 
-				var datatable = selector.DataTable();
-				//var rows = datatable.rows().data();
-				var row1Data = datatable.row(row1Index).data();
-				var row2Data = datatable.row(row2Index).data();
-			
-				datatable.row(row1Index).data(row2Data).draw();
-				datatable.row(row2Index).data(row1Data).draw();
-			
-				// TODO:
-				$('button.jtox-up', row).on('click', function(){
-					var i = $(self.fixTable).find('> tbody > tr').index(row);
-					var varRow = $(self.varTable).find('> tbody > tr')[i];
-					$(row).insertBefore( $(row.previousElementSibling) );
-					$(varRow).insertBefore( $(varRow.previousElementSibling) );
-				});
-				$('button.jtox-down', row).on('click', function(){
-					var i = $(self.fixTable).find('> tbody > tr').index(row);
-					var varRow = $(self.varTable).find('> tbody > tr')[i];
-					$(row).insertAfter( $(row.nextElementSibling) );
-					$(varRow).insertAfter( $(varRow.nextElementSibling) );
-				});
+				// Note: the indices are already swapped!
+				theTable.row(rowData.index).data(rowData);
+				theTable.row(otherData.index).data(otherData).draw();
 
+				// Don't forget the variable table....
+				var varOtherData = varTable.row(rowData.index).data();
+				varTable.row(rowData.index).data(varTable.row(otherData.index).data());
+				varTable.row(otherData.index).data(varOtherData).draw();
+
+				this.matrixKit.equalizeTables();
+
+				// Now, reattach the handlers...
+				jT.ui.installHandlers(this.matrixKit, theTable.row(rowData.index).node());
+				jT.ui.installHandlers(this.matrixKit, theTable.row(otherData.index).node());
+				jT.ui.installHandlers(this.matrixKit, varTable.row(rowData.index).node());
+				jT.ui.installHandlers(this.matrixKit, varTable.row(otherData.index).node());
 			}
 		},
 		groups: {
