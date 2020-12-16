@@ -434,7 +434,7 @@
 				substance["IUCFlags"] = jT.ambit.formatters.extIdentifiers(substance.externalIdentifiers);
 				self.substance = substance;
 
-				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
+				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance, jT.ambit.formatters);
 
 				// go and query for the reference substance
 				jT.ambit.call(self, substance.referenceSubstance.uri, function (dataset) {

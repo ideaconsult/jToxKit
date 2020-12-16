@@ -537,11 +537,9 @@ jT.ListWidget.prototype = {
   	this.items = docs;
   	this.length = docs.length;
   	
-  	this.target.empty().hide(); // Hiding for performnance improvements.
+  	this.target.empty();
   	for (var i = 0, l = docs.length; i < l; i++)
       this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
-
-    this.target.show();
   },
   
   addItem: function (doc) {
@@ -625,8 +623,7 @@ jT.TagWidget.prototype = {
       
       if (!preserve)
         this.target.empty();
-      
-      this.target.hide(); // Hiding for performance improvement
+        
       for (var i = 0, l = objectedItems.length; i < l; i++) {
         item = objectedItems[i];
         value = item.value || item.val;
@@ -645,8 +642,6 @@ jT.TagWidget.prototype = {
         if (selected)
           el.addClass("selected");
       }
-
-      this.target.show();
     }
       
     a$.act(this, this.onUpdated, total);
@@ -660,26 +655,29 @@ jT.TagWidget.prototype = {
   *
   */
 
- jT.AutocompleteWidget = function (settings) {
+jT.AutocompleteWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.target = $(settings.target);
   this.lookupMap = settings.lookupMap || {};
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest" ],
+  __expects: [ "doRequest", "onSelect" ],
   tokenMode: true,
-  initialState: 'enabled',
 
   init: function (manager) {
     var self = this;
         
     // now configure the "accept value" behavior
     this.findBox = this.target.find('input').addBack('input').on("change", function (e) {
-      if (!self._inChange && self.onChange) {
-        var thi$ = $(this);
-        self.onChange(thi$.val()) && thi$.blur();
-      }
+      if (self.requestSent)
+        return;
+      
+      var thi$ = $(this);
+      if (!self.onSelect(thi$.val()))
+        return;
+        
+      thi$.blur()[self.tokenMode ? 'tokenfield' : 'autocomplete']("disable");
     });
 
     // configure the auto-complete box. 
@@ -690,16 +688,13 @@ jT.AutocompleteWidget.prototype = {
         self.doRequest(request.term);
       },
       'select': function(event, ui) {
+        self.requestSent = false;
         if (!ui.item)
           return;
-        self.onSelect && self.onSelect(ui.item);
-        self.onAdded && self.onAdded(ui.item);
-        self.onChange && self.onChange(ui.item);
-      },
-      'focus': function (event, ui) {
-        // Make sure the label is shown, not the value.
-        event.preventDefault();
-        $(this).val(ui.item.label);        
+        if (self.onSelect)
+          self.requestSent = self.onSelect(ui.item);
+        if (self.onAdded)
+          self.requestSent = self.requestSent || self.onAdded(ui.item);
       }
     };
 
@@ -707,30 +702,22 @@ jT.AutocompleteWidget.prototype = {
       this.findBox.autocomplete(boxOpts);
     else
       this.findBox
-        .on('tokenfield:removedtoken', function (e) { 
-          self.onRemoved && self.onRemoved(e.attrs.value); 
+        .on('tokenfield:removedtoken', function (e) {
+          self.requestSent = self.onRemoved && self.onRemoved(e.attrs.value);
         })
         .tokenfield({ autocomplete: boxOpts });
-
-    if (this.initialState === 'disabled')
-        this.findBox[this.tokenMode ? 'tokenfield' : 'autocomplete']("disable");
 
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
   },
 
   resetValue: function(val) {
-    this._inChange = true;
-    if (this.tokenMode)
-      this.findBox.tokenfield('enable').tokenfield('setTokens', val);
-    else
-      this.findBox.autocomplete('enable').val(val);
-    this._inChange = false;
+    this.findBox.val(val)[this.controlMode]("enable");
+    this.requestSent = false;
   },
   
   onFound: function (list) {
-    this.findBox[this.tokenMode ? 'tokenfield' : 'autocomplete']("enable");
     this.reportCallback && this.reportCallback(list);
-    this.reportCallback = null;
+    this.requestSent = false;
   }
 };
 /** jToxKit - chem-informatics multi-tool-kit.
@@ -1524,8 +1511,14 @@ jT.ambit = {
 	},
 
 	// Makes a server call for provided service, with settings form the given kit and calls 'callback' at the end - always.
-	call: function (kit, service, callback) {
-		var settings = $.extend({}, kit.settings.ajaxSettings),
+	call: function (kit, service, opts, callback) {
+		// some parameter deals in the begining.
+		if (typeof opts === 'function') {
+			callback = opts;
+			opts = undefined;
+		}
+
+		var settings = $.extend(true, {}, kit.settings.ajaxSettings, opts ),
 			accType = settings.plainText ? "text/plain" : (settings.jsonp ? "application/x-javascript" : "application/json");
 
 		if (!settings.data) {

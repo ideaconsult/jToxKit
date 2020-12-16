@@ -204,7 +204,7 @@
 	EndpointKit.prototype.loadEndpoints = function (uri) {
 		var self = this;
 		if (uri == null)
-			uri = self.settings.baseUrl + '/query/study';
+			uri = self.settings.baseUrl + 'query/study';
 		else if (!self.settings.baseUrl)
 			self.settings.baseUrl = jT.formBaseUrl(uri, "query");
 

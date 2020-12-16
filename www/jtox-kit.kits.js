@@ -1741,7 +1741,7 @@
 	EndpointKit.prototype.loadEndpoints = function (uri) {
 		var self = this;
 		if (uri == null)
-			uri = self.settings.baseUrl + '/query/study';
+			uri = self.settings.baseUrl + 'query/study';
 		else if (!self.settings.baseUrl)
 			self.settings.baseUrl = jT.formBaseUrl(uri, "query");
 
@@ -2934,8 +2934,6 @@
 
 		$('.jq-buttonset', this.rootElement).buttonset();
 
-		// $('.jtox-users-submit', this.rootElement).on('click', updateUsers);
-
 		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
 		
 		// finally, if provided - load the given bundleUri
@@ -2956,8 +2954,7 @@
 				self.bundle = bundle;
 
 				if (!!self.createForm) {
-
-					jT.ui.updateTree(self.createForm, bundle, self.settings.formatters);
+					jT.ui.updateTree(self.createForm, bundle, _.defaults(self.settings.formatters, jT.ambit.formatters));
 
 					$('#status-' + bundle.status).prop('checked', true);
 
@@ -2965,10 +2962,9 @@
 					self.createForm.stars.value = bundle.stars;
 
 					// now take care for enabling proper buttons on the Identifiers page
-					self.createForm.assFinalize.style.display = '';
-					self.createForm.assNewVersion.style.display = '';
-					self.createForm.assStart.style.display = 'none';
-
+					$(self.createForm.assFinalize).show();
+					$(self.createForm.assNewVersion).show();
+					$(self.createForm.assStart).hide();
 				}
 
 				$(self.rootElement).tabs('enable', 1);
@@ -2984,12 +2980,7 @@
 					self.updateTabs();
 				});
 
-				// self.initUsers();
-
-				$('#open-report').prop('href', self.settings.baseUrl + '/ui/assessment_report?bundleUri=' + encodeURIComponent(self.bundleUri));
-				$('#export-substance').prop('href', self.bundleUri + '/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-				$('#export-initial-matrix').prop('href', self.bundleUri + '/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-				$('#export-working-matrix').prop('href', self.bundleUri + '/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+				self.loadUsers();
 
 				jT.fireCallback(self.settings.onLoaded, self);
 			}
@@ -3016,7 +3007,7 @@
 	MatrixKit.prototype.endAmbitCall = function (callId, jhr) {
 		callId.box.setContent(jhr.status !== 200 
 			? '<span style="color: #d20">Error saving ' + callId.subject + '!</span>'
-			: 'The ' + callId.subject + ' saved.');
+			: callId.subject ? 'The ' + callId.subject + ' saved.' : 'Saved.');
 	};
 
 	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
@@ -3032,10 +3023,6 @@
 			if (typeof cb === 'function')
 				return cb(result);
 		}));
-	},
-
-	MatrixKit.prototype.validateBundleForm = function (e) {
-		// TODO: !!!
 	},
 
 	MatrixKit.prototype.getTagButtonsRenderer = function (subject) {
@@ -3078,46 +3065,16 @@
 		});
 	};
 
-	MatrixKit.prototype.initUsers = function () {
+	MatrixKit.prototype.loadUsers = function () {
 		var self = this;
-		var bundle = self.bundle;
+			makeReq = function (mode, field) {
+				jT.ambit.call(self, self.settings.baseUrl + "myaccount/users?mode=" + mode + "&bundle_uri=" + encodeURIComponent(self.bundleUri), function (users) {
+					field.tokenfield('setTokens', _.map(users, function (u) { return { value: u.id, label: u.name }; }))
+				});
+			};
 
-		// request and process users with write access
-		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=W&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
-			if (!!users) {
-				var select = $('#users-write');
-				if (select.length == 0) return;
-				select.data('tokenize').clear();
-				for (var i = 0, l = users.length; i < l; ++i) {
-					var u = users[i];
-					select.data('tokenize').tokenAdd(u.id, u.name, true);
-				}
-			}
-		});
-
-		// request and process users with read only access
-		jT.ambit.call(self, self.settings.baseUrl + "/myaccount/users?mode=R&bundleUri=" + encodeURIComponent(bundle.URI), function (users) {
-			if (!!users) {
-				var select = $('#users-read');
-				if (select.length == 0) return;
-				select.data('tokenize').clear();
-				for (var i = 0, l = users.length; i < l; ++i) {
-					var u = users[i];
-					select.data('tokenize').tokenAdd(u.id, u.name, true);
-				}
-			}
-		});
-
-		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
-		$('.jtox-users-select', this.rootElement).each(function (el) {
-			(new UserEditor({
-				target: el,
-				baseUrl: self.settings.baseUrl,
-				tokenMode: true,
-				extraParam: 'bundle_number=' + self.bundle && self.bundle.number,
-				permission: $(el).data('permission')
-			})).init();
-		});
+		makeReq('R', $('#users-read'));
+		makeReq('W', $('#users-write'));
 	};
 
 	/************************ TAB INITIALIZATION ROUTINES **************/
@@ -3135,8 +3092,9 @@
 			e.stopPropagation();
 
 			if (jT.validateForm(self.createForm)) {
-				jT.ambit.call(self, self.settings.baseUrl + '/bundle', { method: 'POST', data: $(self.createForm).serializeArray()},
-					function (bundleUri, jhr) {
+				$(e.currentTarget).addClass('loading');
+				jT.ambit.call(self, self.settings.baseUrl + 'bundle', { method: 'POST', data: $(self.createForm).serializeArray()}, function (bundleUri, jhr) {
+					$(e.currentTarget).removeClass('loading');
 					if (!!bundleUri) {
 						self.load(bundleUri);
 						var url = jT.parseURL( window.location.href );
@@ -3200,8 +3158,8 @@
 			});
 		};
 
-		self.createForm.assFinalize.style.display = 'none';
-		self.createForm.assNewVersion.style.display = 'none';
+		$(self.createForm.assFinalize).hide();
+		$(self.createForm.assNewVersion).hide();
 
 		var starsEl = $('.data-stars-field', self.createForm)[0];
 		starsEl.innerHTML += jT.ui.putStars(self, 0, "Assessment rating");
@@ -3224,27 +3182,36 @@
 
 		// install change handlers so that we can update the values
 		$('input, select, textarea', self.createForm).on('change', function (e) {
+			if (!self.bundleUri || !jT.validateForm(self.createForm) || $(this).hasClass('ignore-auto'))
+				return;
+			
 			e.preventDefault();
 			e.stopPropagation();
-			if (!self.bundleUri) return;
 
-			var el = this;
-			if (jT.fireCallback(checkForm, el, e)) {
-				var data = {};
-				data[el.name] = el.value;
-				$(el).addClass('loading');
-				jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-					$(el).removeClass('loading');
-					if (!result) { // i.e. on error - request the old data
-						self.load(self.bundleUri);
-					}
-				});
-			}
+			var data = {};
+
+			data[this.name] = this.value;
+			self.pollAmbit('', { method: 'PUT', data: data }, $(this), function (result) {
+				if (!result) // i.e. on error - request the old data
+					self.loadBundle(self.bundleUri);
+			});
 		});
 
 		var link = $('#source-link')[0], $source = $('#source');
 		link.href = $source[0].value;
 		$source.on('change', function() { link.href = this.value; });
+
+		// Finally, initialize the users handling part
+		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
+		$('.jtox-users-select', this.rootElement).each(function () {
+			(new UserEditor({
+				target: this,
+				baseUrl: self.settings.baseUrl,
+				tokenMode: true,
+				extraParam: 'bundle_number=' + (self.bundle && self.bundle.number),
+				permission: $(this).data('permission')
+			})).init();
+		});
 	};
 
 	// called when a sub-action in structures selection tab is called
@@ -3419,17 +3386,9 @@
 			editable = mode == 'working';
 
 		// Make sure the buttons reflect the reality!
-		if (mode == 'initial') {
-			$('.jtox-toolkit', panel).show();
-			$('.save-button', panel).hide();
-			$('.create-button', panel).hide();
-		} else if (this.bundleSummary.matrix > 0) {
+		if (mode == 'initial' || this.bundleSummary.matrix > 0) {
 			$('.jtox-toolkit', panel).show();
 			$('.create-button', panel).hide();
-			if (editable)
-				$('.save-button', panel).show();
-			else
-				$('.save-button', panel).hide();
 		} else {
 			$('.jtox-toolkit', panel).hide();
 			$('.create-button', panel).show();
@@ -3598,7 +3557,7 @@
 					}
 				},
 				goAction = function () {
-					// TODO: Clarify this here!
+					// TODO: Clarify this here, regarding EDIT
 					featureJson.effects = [ featureJson.effects ];
 					featureJson.protocol.guideline = [ featureJson.protocol.guideline ];
 
@@ -3731,9 +3690,6 @@
 				self = this,
 				matrixRoot = $('#matrix-table');
 
-			// TODO: Use studyList to preare the edit box content!
-			// this.editBoxHtml = jT.ui.formatStr(studyList);
-
 			this.matrixKit = jT.ui.initKit(matrixRoot, {
 				baseUrl: this.settings.baseUrl,
 				formatters: this.settings.formatters,
@@ -3772,13 +3728,7 @@
 					if (!!result) {
 						$('#xfinal').button('enable');
 						self.bundleSummary.matrix++;
-						self.matrixEditable = true;
-
-						// TODO: Do this by activating the proper mode.
-						$('.jtox-toolkit', panel).show();
-						$('.save-button', panel).show();
-						$('.create-button', panel).hide();
-						self.matrixKit.query(self.bundleUri + '/matrix/working');
+						self.queryMatrix('working')
 					}
 				});
 			});
@@ -4383,23 +4333,6 @@
 			$('#xfinal').button('disable');
 	};
 
-	MatrixKit.prototype.updateMatrixButtons = function () {
-		// TODO: 
-		var saveButton = $('.save-button', panel)[0];
-		saveButton.disabled = true;
-
-		if (self.bundleSummary.edits.study.length < 1) {
-			saveButton.disabled = true;
-			$(saveButton).removeClass('jt-alert').addClass('jt-disabled');
-			saveButton.innerHTML = "Saved";
-		}
-		else {
-			saveButton.disabled = false;
-			$(saveButton).addClass('jt-alert').removeClass('jt-disabled');
-			saveButton.innerHTML = "Save";
-		}
-	}
-
 	/********************** Some check/tag/etc. handlers */
 	MatrixKit.prototype.tagStructure = function (el$) {
 		var tag = el$.data('tag'),
@@ -4536,25 +4469,6 @@
 		maxStars: 10,
 		studyTypeList: {},
 		handlers: {
-			// TODO: This is form validation handler - link it from the HTML !!!
-			fieldUpdate: function (e) {
-				e.preventDefault();
-				e.stopPropagation();
-				if (!this.bundleUri)
-					return;
-	
-				var el = e.currentTarget,
-					data = {},
-					self = this;
-				if (!this.validateBundleForm(e))
-					return;
-
-				data[el.name] = el.value;
-				this.pollAmbit('', { method: 'PUT', data: data }, el, function (result) {
-					// on error - request the old data
-					if (!result) self.load(self.bundleUri);
-				});
-			},
 			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.currentTarget)); },
 			structureReason: function (e) { return this.reasonStructure(el$ = $(e.currentTarget)); },
@@ -6278,7 +6192,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 				substance["IUCFlags"] = jT.ambit.formatters.extIdentifiers(substance.externalIdentifiers);
 				self.substance = substance;
 
-				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance);
+				jT.ui.updateTree($('.jtox-substance', self.rootElement), substance, jT.ambit.formatters);
 
 				// go and query for the reference substance
 				jT.ambit.call(self, substance.referenceSubstance.uri, function (dataset) {
@@ -6682,7 +6596,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	UserWidget.prototype.callAmbit = function (data) {
 		var self = this,
-			uri = this.settings.baseUrl + '/myaccount/users';
+			uri = this.settings.baseUrl + 'myaccount/users';
 
 		if (typeof data === 'string') {
 			uri += '?' + data;
@@ -7131,11 +7045,11 @@ jT.ui.templates['all-matrix']  =
 "</tr>" +
 "<tr class=\"lri_hide\">" +
 "<th class=\"right size-third\"><label for=\"license\">License</label>*:</th>" +
-"<td><input class=\"first-time\" value=\"{{rights.URI}}\" name=\"license\" id=\"license\" /></td>" +
+"<td><input class=\"first-time\" value=\"{{rights.URI}}\" name=\"license\" id=\"license\" required /></td>" +
 "</tr>" +
 "<tr class=\"lri_hide\">" +
 "<th class=\"right size-third\"><label for=\"rightsHolder\">Rights holder</label>*<a href='#' class='chelp a_rightsholder'>?</a>:</th>" +
-"<td><input class=\"first-time\" value=\"{{rightsHolder}}\" name=\"rightsHolder\" id=\"rightsHolder\" /></td>" +
+"<td><input class=\"first-time\" value=\"{{rightsHolder}}\" name=\"rightsHolder\" id=\"rightsHolder\" required /></td>" +
 "</tr>" +
 "<tr>" +
 "<th class=\"right size-third\"><label for=\"seeAlso\" id=\"l_seeAlso\">See also</label>*<a href='#' class='chelp a_code'>?</a>:</th>" +
@@ -7159,15 +7073,13 @@ jT.ui.templates['all-matrix']  =
 "<tr class=\"aadb\">" +
 "<th class=\"right size-third top\"><label for=\"users-write\">Users with write access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>" +
 "<td class=\"jtox-user-rights\">" +
-"<input name=\"users-write\" id=\"users-write\" class=\"jtox-users-select\" data-permission=\"canWrite\" />" +
-"<button type=\"button\" class=\"jtox-users-submit\">Save</button>" +
+"<input name=\"users-write\" id=\"users-write\" class=\"jtox-users-select ignore-auto\" data-permission=\"canWrite\" />" +
 "</td>" +
 "</tr>" +
 "<tr class=\"aadb\">" +
 "<th class=\"right size-third top\"><label for=\"users-read\">Users with read access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>" +
 "<td class=\"jtox-user-rights\">" +
-"<input name=\"users-read\" id=\"users-read\" class=\"jtox-users-select\" data-permission=\"canRead\" />" +
-"<button type=\"button\" class=\"jtox-users-submit\">Save</button>" +
+"<input name=\"users-read\" id=\"users-read\" class=\"jtox-users-select ignore-auto\" data-permission=\"canRead\" />" +
 "</td>" +
 "</tr>" +
 "</thead>" +

@@ -24,7 +24,7 @@
 
 	UserWidget.prototype.callAmbit = function (data) {
 		var self = this,
-			uri = this.settings.baseUrl + '/myaccount/users';
+			uri = this.settings.baseUrl + 'myaccount/users';
 
 		if (typeof data === 'string') {
 			uri += '?' + data;

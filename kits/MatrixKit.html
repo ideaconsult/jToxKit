@@ -42,10 +42,11 @@
   <script src="ui-matrix.js"></script>
   <script src="config-matrix.js"></script>
   <script src="config-study.js"></script>
+  <!-- ?bundleUri=https%3A%2F%2Fapps.ideaconsult.net%2Fdata%2Fbundle%2F36# -->
 </head>
 
 <body>
-  <div class="jtox-template">
+  <div class="jtox-template"> 
 <!--[[ jT.ui.templates['all-matrix'] -->
     <div class="jtox-matrix-kit">
       <ul>
@@ -90,11 +91,11 @@
               </tr>
               <tr class="lri_hide">
                 <th class="right size-third"><label for="license">License</label>*:</th>
-                <td><input class="first-time" value="{{rights.URI}}" name="license" id="license" /></td>
+                <td><input class="first-time" value="{{rights.URI}}" name="license" id="license" required /></td>
               </tr>
               <tr class="lri_hide">
                 <th class="right size-third"><label for="rightsHolder">Rights holder</label>*<a href='#' class='chelp a_rightsholder'>?</a>:</th>
-                <td><input class="first-time" value="{{rightsHolder}}" name="rightsHolder" id="rightsHolder" /></td>
+                <td><input class="first-time" value="{{rightsHolder}}" name="rightsHolder" id="rightsHolder" required /></td>
               </tr>
               <tr>
                 <th class="right size-third"><label for="seeAlso" id="l_seeAlso">See also</label>*<a href='#' class='chelp a_code'>?</a>:</th>
@@ -118,15 +119,13 @@
               <tr class="aadb">
                 <th class="right size-third top"><label for="users-write">Users with write access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>
                 <td class="jtox-user-rights">
-                  <input name="users-write" id="users-write" class="jtox-users-select" data-permission="canWrite" />
-                  <button type="button" class="jtox-users-submit">Save</button>
+                  <input name="users-write" id="users-write" class="jtox-users-select ignore-auto" data-permission="canWrite" />
                 </td>
               </tr>
               <tr class="aadb">
                 <th class="right size-third top"><label for="users-read">Users with read access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>
                 <td class="jtox-user-rights">
-                  <input name="users-read" id="users-read" class="jtox-users-select" data-permission="canRead" />
-                  <button type="button" class="jtox-users-submit">Save</button>
+                  <input name="users-read" id="users-read" class="jtox-users-select ignore-auto" data-permission="canRead" />
                 </td>
               </tr>
             </thead>

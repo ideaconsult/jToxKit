@@ -1308,7 +1308,8 @@ div.cm button.jt-toggle.jtox-handler.cm {
 
 #jtox-identifiers form textarea,
 #jtox-identifiers form input {
-	width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 #jtox-identifiers form input[type="radio"],
@@ -1322,11 +1323,6 @@ div.cm button.jt-toggle.jtox-handler.cm {
   display: inline-block;
   font-weight: normal;
   font-size: inherit;
-}
-
-#jtox-identifiers #source {
-  width: 90%;
-  width: calc(100% - 3em);
 }
 
 #source-link {
@@ -1405,19 +1401,6 @@ button.details-expand-all, button.details-collapse-all {
 #jtox-matrix table.dataTable td span.ui-icon {
   display: inline-block;
   vertical-align: middle !important;
-}
-
-#jtox-matrix button.save-button {
-	position: absolute;
-	top: 5px;
-	right: 20px;
-	font-size: 80%;
-}
-
-#jtox-matrix button.save-button.jt-disabled {
-	background: none;
-	border: none;
-	color: #999;
 }
 
 #jtox-matrix .unsaved-study,
