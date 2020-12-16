@@ -3020,8 +3020,6 @@
 		callId.box.setContent(jhr.status !== 200 
 			? '<span style="color: #d20">Error saving ' + callId.subject + '!</span>'
 			: 'The ' + callId.subject + ' saved.');
-
-		callId.box.show();
 	};
 
 	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
@@ -3584,7 +3582,7 @@
 				title: feature.title || feature.id.category || "Endpoint",
 				closeButton: "box",
 				closeOnEsc: true,
-				overlay: false,
+				overlay: true,
 				closeOnClick: "body",
 				addClass: "jtox-toolkit " + action,
 				theme: "TooltipBorder",
@@ -3657,25 +3655,34 @@
 			if (feature.isMultiValue && Array.isArray(val))
 				val = val[valueIdx];
 
-			var ajaxData = {
-					owner: { substance: { uuid: data.compound.i5uuid } },
-					effects_to_delete: [{
-						result: {
-							idresult: val.idresult,
-							deleted: true
-						},
-					}]
-				};
-			$.extend(boxOptions, {
-				target: el,
-				title: this.matrixKit.feature[mainFeature] && this.matrixKit.feature[mainFeature].title || boxOptions.title,
-				content: this.endpointKit.getFeatureInfoHtml(feature, val, action !== "info"),
-				confirmButton: action !== "info" ? "Delete" : "Ok",
-				cancelButton: action !== "info" ? "Cancel" : "Dismiss",
-				confirm: function () { self.saveMatrixEdit(ajaxData); },
-				onConfirm: function () { self.saveMatrixEdit(ajaxData); },
-				onOpen: function () { jT.ui.attachEditors(self.endpointKit, this.content, ajaxData); }
-			});
+			if (action === 'delete' ) { 
+				var ajaxData = {
+						owner: { substance: { uuid: data.compound.i5uuid } },
+						effects_to_delete: [{
+							result: {
+								idresult: val.idresult,
+								deleted: true
+							},
+						}]
+					};
+				$.extend(boxOptions, {
+					title: this.matrixKit.feature[mainFeature] && this.matrixKit.feature[mainFeature].title || boxOptions.title,
+					content: this.endpointKit.getFeatureInfoHtml(feature, val, action !== "info"),
+					confirmButton: action !== "info" ? "Delete" : "Ok",
+					cancelButton: action !== "info" ? "Cancel" : "Dismiss",
+					confirm: function () { self.saveMatrixEdit(ajaxData); },
+					onConfirm: function () { self.saveMatrixEdit(ajaxData); },
+					onOpen: function () { jT.ui.attachEditors(self.endpointKit, this.content, ajaxData); }
+				});
+			} else { // i.e. info
+				$.extend(boxOptions, {
+					target: el,
+					overlay: false,
+					outside: 'xy',
+					title: this.matrixKit.feature[mainFeature] && this.matrixKit.feature[mainFeature].title || boxOptions.title,
+					content: this.endpointKit.getFeatureInfoHtml(feature, val, action !== "info"),
+				});
+			}
 		}
 
 		// Finally - open it!
@@ -4562,6 +4569,8 @@
 			// Matrix / read across selection related
 			openPopup: function (e) { 
 				var el = $(e.currentTarget);
+				e.preventDefault();
+				e.stopPropagation();
 				this.openFeatureBox(el.data('action'), el.closest('.feature-entry'));
 			},
 			matrixMode: function (e) { this.queryMatrix($(e.currentTarget).attr('id').substr(1)); },
