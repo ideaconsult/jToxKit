@@ -3038,22 +3038,13 @@
 		// TODO: !!!
 	},
 
-	MatrixKit.prototype.updateTaggedEntry = function (row, data, index) {
-		var tag$ = $('td button.jt-toggle', row),
-			note$ = $('td textarea.remark', row),
-			bInfo = data.bundles[this.bundleUri];
-
-		tag$.removeClass('active');
-		if (bInfo && bInfo.tag) {
-			tag$.filter('.' + bInfo.tag).addClass('active');
-			note$.prop('disabled', false).val(bInfo.remarks);
-		} else
-			note$.prop('disabled', true).val(' ');
-	};
-
 	MatrixKit.prototype.getTagButtonsRenderer = function (subject) {
+		var self = this;
 		return function (data, type, full) {
-			return (type !== 'display') ? data : jT.ui.fillHtml('matrix-tag-buttons', { subject: subject });
+			return (type !== 'display') ? data : jT.ui.fillHtml('matrix-tag-buttons', { 
+				subject: subject,
+				tag: (data[self.bundleUri] || {}).tag || ''
+			 });
 		};
 	};
 
@@ -3272,7 +3263,6 @@
 				handlers: this.reboundHandlers,
 				formatters: this.settings.formatters,
 				columns: this.settings.columns,
-				onRow: _.bind(this.updateTaggedEntry, this),
 				onLoaded: function (dataset) {
 					if (self.queryKit.getQueryType() === 'selected') {
 						self.bundleSummary.compound = dataset.dataEntry.length;
@@ -3414,16 +3404,12 @@
 				method: 'PUT', 
 				data: toAdd, 
 				contentType: 'application/json' 
-			};
+			},
+			service = '/matrix' + ('effects_to_delete' in edit ? '/deleted' : '');
 
 		// make two nested calls - for adding and for deleting
-		this.pollAmbit('/matrix', ajax, $(this), function (result) {
-			if (!result) {
-				self.queryMatrix('working');
-			} else
-				self.pollAmbit('/matrix/deleted', ajax, $(this), function () {
-					self.queryMatrix('working');
-				});
+		this.pollAmbit(service, ajax, $(this), function (result) {
+			self.queryMatrix('working');
 		});
 	},
 
@@ -3688,7 +3674,8 @@
 
 	MatrixKit.prototype.getMatrixFeatures = function() {
 		var self = this,
-			matrixFeatures = {};
+			matrixFeatures = {},
+			tagRenderer = this.getTagButtonsRenderer('substance');
 
 		matrixFeatures['#IdRow'] = {
 			primary: true,
@@ -3700,7 +3687,7 @@
 				if (type !== 'display')
 					return data;
 				if (self.matrixEditable)
-					return jT.ui.fillHtml('matrix-tag-buttons', { subject: 'substance' });
+					return tagRenderer(data, type, full);
 				else
 					return self.settings.baseFeatures['#TagCol'].render(data, type, full);
 			}
@@ -4418,8 +4405,7 @@
 		var tag = el$.data('tag'),
 			row$ = el$.closest('tr'),
 			full = jT.tables.getRowData(row$),
-			note$ = $('td textarea.remark', row$),
-			toAdd = !el$.hasClass('active'),
+			toAdd = !full.bundles[this.bundleUri] || full.bundles[this.bundleUri].tag != tag,
 			self = this;
 
 		this.pollAmbit('/compound', { 
@@ -4427,8 +4413,7 @@
 			data: {
 				compound_uri: full.compound.URI,
 				command: toAdd ? 'add' : 'delete',
-				tag: tag,
-				remarks: toAdd ? note$.val() : ''
+				tag: tag
 			}
 		}, el$, function (result) {
 			if (result) {
@@ -4438,14 +4423,20 @@
 				}
 				else if (self.bundleUri in full.bundles) {
 					full.bundles[self.bundleUri].tag = tag;
-					self.bundleSummary.compound++;
+					full.bundles[self.bundleUri].remarks = '';
 				}
 				else {
-					full.bundles[self.bundleUri] = { tag: tag, }
+					full.bundles[self.bundleUri] = { 
+						tag: tag, 
+						remarks: ''
+					};
 					self.bundleSummary.compound++;
 				}
-					
-				self.updateTaggedEntry(row$[0], full, full.index);
+
+				var row = jT.tables.getTable(el$).row(full.index);
+				row.invalidate().draw();
+				jT.ui.installHandlers(self.browserKit, row.node());
+				jT.tables.getTable(self.browserKit.varTable).row(full.index).invalidate().draw();
 				self.updateTabs();
 			}
 		});
@@ -4470,7 +4461,9 @@
 			}, el$, function (result) {
 				if (result) {
 					full.bundles[self.bundleUri].remarks = el$.val();
-					self.updateTaggedEntry(el$.closest('tr')[0], full, full.index);	
+					var row = jT.tables.getTable(self.browserKit.varTable).row(full.index);
+					row.invalidate().draw();
+					jT.ui.installHandlers(self.browserKit, row.node());
 				}
 			});
 	};
@@ -4506,13 +4499,35 @@
 			}
 		}, el$, function (result) {
 			if (!result)  // i.e. need to revert on failure
-				el$.prop('checked', toAdd);
+				el$.prop('checked', !toAdd);
 			else if (toAdd)
 				self.bundleSummary.property++;
 			else
 				self.bundleSummary.property--;
 			self.featuresInitialized = false;
 			self.updateTabs();
+		});
+	};
+
+	MatrixKit.prototype.tagSubstance = function (el) {
+		var tag = $(el).data('tag'),
+			data = jT.tables.getRowData(el),
+			table = jT.tables.getTable(el),
+			self = this;
+
+		this.pollAmbit('/substance', { 
+			method: 'PUT', 
+			data: { 
+				substance_uri: data.compound.URI, 
+				command: 'add', 
+				tag : tag 
+			}
+		}, el, function (result) {
+			if (result)
+				data.bundles[self.bundleUri].tag = tag;
+			var row = table.row(data.index);
+			row.invalidate().draw();
+			jT.ui.installHandlers(self.matrixKit, row.node());
 		});
 	};
 
@@ -4692,9 +4707,13 @@
 				column: { width: "300px", className: "paddingless" },
 				render : function(data, type, full) {
 					// This `this` is available due to rebinding in the initialization step.
-					var bundleInfo = full.bundles[this.bundleUri] || {};
-					data = bundleInfo.tag && bundleInfo.remarks || '';
-					return (type != 'display') ? data : '<textarea class="remark jtox-handler" data-handler="structureReason" placeholder="Reason for selection_" disabled="true">' + data + '</textarea>';
+					var bInfo = full.bundles[this.bundleUri] || {};
+					data = bInfo.tag && bInfo.remarks || '';
+					return (type != 'display') 
+						? data 
+						: '<textarea class="remark jtox-handler" data-handler="structureReason" placeholder="Reason for selection_"' + 
+							(!bInfo.tag ? ' disabled="true"': '') + '">' + 
+							data + '</textarea>';
 				}
 			},
 			"http://www.opentox.org/api/1.1#CompositionInfo" : {
@@ -7238,9 +7257,11 @@ jT.ui.templates['all-matrix']  =
 ""; // end of all-matrix 
 
 jT.ui.templates['matrix-tag-buttons']  = 
+"<div class=\"{{ tag }}\">" +
 "<button class=\"jt-toggle jtox-handler target\" data-handler=\"{{subject}}Tag\" data-tag=\"target\" title=\"Select the {{subject}} as Target\">T</button><br/>" +
 "<button class=\"jt-toggle jtox-handler source\" data-handler=\"{{subject}}Tag\" data-tag=\"source\" title=\"Select the {{subject}} as Source\">S</button><br/>" +
 "<button class=\"jt-toggle jtox-handler cm\" data-handler=\"{{subject}}Tag\" data-tag=\"cm\" title=\"Select the {{subject}} as Category Member\">CM</button><br/>" +
+"</div>" +
 ""; // end of matrix-tag-buttons 
 
 jT.ui.templates['matrix-tag-indicator']  = 

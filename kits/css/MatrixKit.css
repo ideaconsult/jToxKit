@@ -24,6 +24,13 @@
   min-width: 24px;
 }
 
+div.target button.jt-toggle.jtox-handler.target,
+div.source button.jt-toggle.jtox-handler.source,
+div.cm button.jt-toggle.jtox-handler.cm {
+  background: #aaa;
+  opacity: 1.0;
+}
+
 #jtox-identifiers form div.actions {
 	margin-top: 15px;
 	font-size: 80%;

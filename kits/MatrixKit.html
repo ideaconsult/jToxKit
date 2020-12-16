@@ -215,9 +215,11 @@
     </div>
 <!-- // end of all-matrix ]]-->
 <!--[[ jT.ui.templates['matrix-tag-buttons'] -->
+  <div class="{{ tag }}">
     <button class="jt-toggle jtox-handler target" data-handler="{{subject}}Tag" data-tag="target" title="Select the {{subject}} as Target">T</button><br/>
     <button class="jt-toggle jtox-handler source" data-handler="{{subject}}Tag" data-tag="source" title="Select the {{subject}} as Source">S</button><br/>
     <button class="jt-toggle jtox-handler cm" data-handler="{{subject}}Tag" data-tag="cm" title="Select the {{subject}} as Category Member">CM</button><br/>
+  </div>
 <!-- // end of matrix-tag-buttons ]]-->
 <!--[[ jT.ui.templates['matrix-tag-indicator'] -->
 <button class="jt-toggle {{tag}} active" data-tag="{{tag}}" title="Select the {{subject}} as {{name}}">{{code}}</button>
