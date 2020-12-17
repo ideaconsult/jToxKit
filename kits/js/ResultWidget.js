@@ -148,12 +148,12 @@ jT.ItemListWidget.prototype = {
         '<a href="#" class="more">more</a>' +
         '<div class="more-less" style="display:none;">' + summaryRender(summarylist) + '</div>';
 
-    return jT.ui.fillTemplate("result-item", $.extend(item, this.renderLinks(doc)));
+    return jT.ui.getTemplate("result-item", $.extend(item, this.renderLinks(doc)));
   },
   
   getBaseUrl: function(doc) {
     return jT.fixBaseUrl(this.tagDbs[doc.dbtag_hss] && this.tagDbs[doc.dbtag_hss].server || 
-        this.settings.baseUrl || this.baseUrl);
+        this.settings && this.settings.baseUrl || this.baseUrl);
   },
 	
   renderComposition: function (doc, defValue) {

@@ -6,7 +6,7 @@
 
 
 // Define this as a main object to put everything in
-var jToxKit = { version: "2.3.3" };
+var jToxKit = { version: "2.4.0" };
 
 (function (jT, a$, Solr) {
   // Now import all the actual skills ...
@@ -188,6 +188,26 @@ jT = a$.extend(jT, {
       ret = (typeof callone == 'function') ? (callone.apply((self !== undefined && self != null) ? self : document, Array.prototype.slice.call(arguments, 2))) : undefined;
     }
     return ret;
+  },
+
+  validateForm: function (form, cb) {
+    cb = cb || function () {
+      if ('checkValidity' in this)
+        return this.checkValidity();
+      else {
+        var valid = (this.value.length > 0);
+        if (!valid)
+          this.placeholder = 'You need to fill this box';
+        return valid;
+      }
+    };
+
+	  var ok = true;
+	  $('input,textarea,select', form).each(function () {
+      ok = ok && (!!cb.call(this));
+	  });
+
+	  return ok;
   },
 
   activateDownload: function (aEl, blob, destName, autoRemove) {

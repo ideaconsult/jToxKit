@@ -59,6 +59,10 @@
   transition: opacity ease 300ms;
 }
 
+.jtox-template {
+  display: none !important;
+}
+
 .jtox-toolkit {
   clear: both;
 }
@@ -71,7 +75,7 @@
   opacity: 0.7;
 }
 
-.jtox-toolkit sup.helper span.ui-icon {
+.jtox-toolkit sup.helper .icon {
   vertical-align: top !important;
   display: inline-block;
 }
@@ -90,8 +94,11 @@
   text-decoration: none;
 }
 
-.jtox-template {
-  display: none !important;
+.jtox-toolkit label {
+  margin-left: .4rem;
+  margin-right: .4rem;
+  display: inline-block;
+  font-weight: normal;
 }
 
 .jtox-toolkit .size-quarter {
@@ -172,11 +179,6 @@
   border-bottom: 0px !important;
 }
 
-.cc-flex, cc-fixed {
-  box-sizing: border-box;
-  position: relative;
-}
-
 /* Make table helper elements, like paging, filter, etc. in one line...
 */
 .jtox-toolkit .dataTables_filter label input,
@@ -188,12 +190,17 @@
 .jtox-toolkit table.dataTable td,
 .jtox-toolkit table.dataTable th {
   border:1px solid #ccc;
+  border-collapse: collapse;
   overflow: hidden;
-  padding: 3px;
+  padding: 2px 4px;
 }
 
 .jtox-toolkit .shortened {
   max-height: 25px;
+  overflow: hidden;
+}
+
+.jtox-toolkit .shortened span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -232,6 +239,7 @@
 
 .jtox-diagram img {
   border: 0px;
+  max-width: initial;
 }
 
 .jtox-toolkit a.select-all,
@@ -286,14 +294,15 @@ select {
   background-color: #fefefe;
 }
 
-.jtox-diagram span.ui-icon {
+.jtox-diagram .icon {
   position: absolute;
   bottom: 0px;
   right: 0px;
   display: none;
+  opacity: .8;
 }
 
-.jtox-diagram:hover span.ui-icon {
+.jtox-diagram:hover .icon {
   display: block;
 }
 
@@ -410,233 +419,14 @@ td.jtox-multi table {
 .jtox-required:after {
   content: ' *';
 }
-/* toxtstudy.css - Styling for toxstudy engine
-*/
-
-.jtox-search input[type="text"] {
-  min-width: 380px;
-  height: 20px;
-  -moz-transition: width 0.3s ease-out;
-  -webkit-transition: width 0.3s ease-out;
-  transition: width 0.3s ease-out;
-  margin-bottom: 0px;
-}
-
-.jtox-search label {
-  display: inline-block;
-  font-weight: normal;
-  font-size: 1rem;
-}
-
-#searchcontext input {
-  height: auto;
-  width: 99%;
-  box-sizing: border-box;
-}
-
-.jtox-search .search-pane .jtox-inline input,
-.jtox-search .search-pane .jtox-inline select {
-  font-size: 1.1em;
-  margin-top: 2px;
-  display: inline-block;
-  vertical-align: baseline;
-}
-
-.jtox-search .search-pane .jtox-inline select {
-  margin: 6px;
-  height: 26px;
-}
-
-.jtox-search form {
-  margin: 0px;
-}
-
-.jtox-search form>div {
-  margin: 2px 4px 4px 4px;
-  box-sizing: border-box;
-}
-
-.jtox-search form div.jq-buttonset {
-  margin-top: 6px;
-}
-
-.jtox-search .search-pane button {
-  vertical-align: top;
-  margin-bottom: 0px;
-}
-
-.jtox-search .searchsimilarity select {
-  width: 5em;
-}
-
-.jtox-search .searchauto.dynamic>div {
-  white-space: nowrap;
-  padding-top: 10px;
-}
-
-.jtox-search .search-pane div.dynamic {
-  min-height: 40px;
-  float: left;
-}
-
-.jtox-search .search-pane .dynamic.hidden {
-  display: none;
-}
-
-.jtox-search .ketcher {
-  display: block;
-  height: auto;
-  position: relative;
-  left: 0px;
-  -moz-transition: all 0.5s ease, opacity 0.2s;
-  -webkit-transition: all 0.5s ease, opacity 0.2s;
-  transition: all 0.5s ease, opacity 0.2s;
-}
-
-.jtox-search .ketcher.shrinken {
-  left: 100%;
-/*   opacity: 0.0; */
-}
-
-.jtox-search .ketcher .toolEmptyCell {
-  vertical-align: middle;
-}
-
-.jtox-search .ketcher .toolEmptyCell button {
-  margin: 0px;
-  padding: 4px 8px;
-}
-
-.jtox-search .ketcher .toolEmptyCell button span {
-  display: inline-block;
-}
-/* toxtcompound.css - Styling for tox-compound engine
-*/
-
-.jtox-ds-fixed,
-.jtox-ds-variable {
-  border: 0px;
-  padding: 0px;
-  margin: 0px;
-  vertical-align: top;
-  overflow-x: scroll;
-  overflow-y: hidden;
-}
-
-.jtox-ds-fixed {
-  display: inline-block;
-  width: 450px;
-  float: left;
-  overflow-x: hidden;
-}
-
-.jtox-ds-feature {
-  display: inline-block;
-  width: 250px;
-  border: 0px;
-  padding: 0px;
-  margin: 2px 15px 2px 2px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.jtox-selection {
-  font-size: 80%;
-  float: right;
-  vertical-align: top;
-}
-
-.jtox-ds-tables {
-  position: relative;
-}
-
-.jtox-ds-tables .jt-processing,
-.jtox-ds-tables .jt-error {
-  text-align: center;
-  display: none;
-}
-
-.jtox-ds-tables .jt-processing .message {
-  background: url("../img/waiting_big.gif") left center no-repeat;
-  background-size: 30px 30px;
-  width: auto;
-  min-height: 30px;
-  padding-left: 35px;
-  padding-top: 8px;
-  overflow: visible;
-  display: inline-block;
-}
-
-.jtox-ds-tables .jt-error .message {
-  color: red;
-}
-
-.jtox-ds-tables .jtox-details-box {
-  position: absolute;
-  margin: 0px;
-  left: 0px;
-  top: 0px;
-  padding: 0px;
-  z-index: 10;
-  height: auto;
-}
-h6{
-  margin-top: 10px;
-}
-.jtox-ds-tables .jtox-inline,
-.jtox-ds-tables td {
-  vertical-align: top;
-}
-
-.jtox-ds-tables td .shortened {
-  max-width: 75px;
-}
-
-.jtox-ds-export {
-  float: right !important;
-}
-
-.data_formats.disabled .jtox-ds-download,
-.data_formats .jtox-ds-download a.disabled{
-  opacity:0.4;
-}
-
-.data_formats.selected .jtox-ds-download{
-  transform: scale(0.9);
-}
-.data_formats .jtox-ds-download.selected{
-  transform: scale(1.1);
-}
-.data_formats .jtox-ds-download:hover{
-  transform: scale(1.1);
-}
-.jtox-ds-download {
-  padding:0px 5px 0px 5px;
-}
-
-.jtox-ds-details * {
-  font-size: small;
-}
-
-.jtox-ds-details .ui-tabs {
-  padding: 0px;
-  border: 0px;
-  margin: 0px;
-}
-
-div.jtox-details-table {
-  padding: 12px 0px 0px 0px !important;
-}
-
-.jtox-details-table table {
-  width: 100%;
-  height: auto;
-  vertical-align: baseline;
-}
 
 .jtox-controls {
   padding: 10px;
   vertical-align: baseline;
+}
+
+.jtox-controls>* {
+  margin-left: .4rem;
 }
 
 .jtox-controls .paginate_disabled_previous,
@@ -665,87 +455,4 @@ div.jtox-details-table {
 .jtox-controls span.high {
   font-weight: bold;
   font-size: 1.1em;
-}
-.jtox-substance table td div.shortened {
-  width: 120px;
-}
-.jtox-toolkit table.composition-info.dataTable td,
-.jtox-toolkit table.composition-info.dataTable th {
-  border: 0px;
-  padding-bottom: 0px;
-  padding-top: 0px;
-}
-
-.jtox-toolkit table.composition-info.dataTable th {
-  width: 20%;
-  text-align: right;
-}
-
-.jtox-toolkit table.composition-table td {
-  vertical-align: top;
-}
-/* toxtstudy.css - Styling for toxstudy engine
-*/
-
-div.jtox-study,
-div.jtox-compo-tab,
-div.jtox-substance {
-  display: block;
-  font-size: small;
-  border-radius: 5px;
-  padding: 5px 5px 35px 5px;
-}
-
-.jtox-compo-tab {
-  margin-top: 25px;
-  margin-bottom: 45px;  
-}
-
-div.jtox-study-tab.unloaded  {
-  background: url(../img/waiting_big.gif) center center no-repeat;
-  background-size: 30px 30px;
-}
-
-div.jtox-study-tab.unloaded div.jtox-study {
-  display: none;
-}
-
-div.jtox-study.folded {
-  padding-bottom: 5px;
-}
-
-div.jtox-study .title {
-  font-weight: bold;
-  clear: both;
-  padding: 0px;
-  margin: 0px;
-  border: 0px;
-  width: 100%;
-}
-
-div.jtox-foldable.jtox-study.unloaded>.title {
-  background: url(../img/waiting_small.png) right top no-repeat;
-  background-size: 16px 16px;
-}
-
-div.jtox-study-tab.ui-tabs-panel {
-  padding-left: 0px;
-  padding-bottom: 0px;
-  padding-right: 0px;
-  width: 100%;
-  height: 100%;
-}
-
-div.jtox-study-tab div button {
-	font-size: 80%;
-	padding:4px 8px 4px 8px;
-}
-
-div.jtox-study-tab .dataTables_wrapper {
-  overflow: hidden;  
-  width: 100%;
-}
-
-.jtox-toolkit .jtox-study table td {
-  word-wrap: break-word;
 }

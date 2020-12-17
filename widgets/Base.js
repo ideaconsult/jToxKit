@@ -9,12 +9,6 @@
     // Define more tools here
     jT.ui = $.extend(jT.ui, {
         templates: {},
-        /** Gets a template with given selector and replaces the designated
-         * {{placeholders}} from the provided `info`.
-         */
-        fillHtml: function (html, info, def) {
-            return $(jT.formatString(html, info, def));
-        },
 
         bakeTemplate: function (html, info, def) {
             var all$ = $(html);
@@ -46,6 +40,11 @@
             return all$;
         },
 
+        putTemplate: function (id, info, root) {
+            var html = jT.ui.bakeTemplate(jT.ui.templates[id], info);
+            return !root ? html : $(root).append(html);
+        },
+
         updateTree: function (root, info, def) {
             $('.jtox-live-data', root).each(function (i, el) {
                 $.each($(el).data('jtox-live-data'), function (k, v) {
@@ -58,8 +57,12 @@
             });
         },
 
-        fillTemplate: function (id, info, def) {
-            return jT.ui.fillHtml(jT.ui.templates[id], info, def);
+        fillHtml: function (id, info, def) {
+            return jT.formatString(jT.ui.templates[id], info, def);
+        },
+
+        getTemplate: function (id, info, def) {
+            return $(jT.ui.fillHtml(id, info, def));
         },
 
         updateCounter: function (str, count, total) {
@@ -97,9 +100,10 @@
             if (data.toString().length <= 5) {
                 res += content;
             } else {
-                res += '<div class="shortened">' + content + '</div>';
+                res += '<div class="shortened"><span>' + content + '</div><i class="icon fa fa-copy"';
                 if (message != null)
-                    res += '<span class="ui-icon ui-icon-copy" title="' + message + '" data-uuid="' + data + '"></span>';
+                    res +=  ' title="' + message + '"';
+                res += ' data-uuid="' + data + '"></i>';
             }
             return res;
         },
@@ -199,8 +203,21 @@
                 out += '-';
             }
             return out;
-        }
+        },
 
+        putInfo: function (href, title) {
+            return '<sup class="helper"><a target="_blank" href="' + (href || '#') + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
+        },
+
+        renderRelation: function (data, type, full) {
+            if (type != 'display')
+                return _.map(data, 'relation').join(',');
+
+            var res = '';
+            for (var i = 0, il = data.length; i < il; ++i)
+                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
+            return res;
+        }
     });
 
 // Now import all the actual skills ...
@@ -213,6 +230,7 @@ import "AutocompleteWidget";
 import "SimpleItemWidget";
 import "AccordionExpansion";
 import "SliderWidget";
+import "CurrentSearchWidget";
 import "Switching";
 import "Running";
 import "TableTools";

@@ -467,7 +467,7 @@
             });
             
             this.queries.renderItem = function (query) {
-                el$ = jT.ui.fillTemplate("query-item", query);
+                el$ = jT.ui.getTemplate("query-item", query);
                 el$.data("query", query.filters);
                 el$.on('click', function (e) {
                     self.executeQuery($(this).data('query'));
@@ -687,7 +687,7 @@
                 self = this;
 
             for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.fillTemplate("export-format", this.exportFormats[i]);
+                var el = jT.ui.getTemplate("export-format", this.exportFormats[i]);
                 el.data("index", i);
                 exportEl.append(el);
 
@@ -728,9 +728,9 @@
                 };
 
             for (var i = 0, elen = this.exportTypes.length; i < elen; ++i)
-                exportEl.append(jT.ui.fillTemplate("export-type", $.extend({ 
-                    index: i,
-                    selected: (i == 0) ? 'checked="checked"' : ''
+                exportEl.append(jT.ui.getTemplate("select-one-option", $.extend({ 
+                    value: i,
+                    selected: (i == 0) ? 'selected' : ''
                 }, this.exportTypes[i])));
             
             exportEl.on("change", function (e) { 

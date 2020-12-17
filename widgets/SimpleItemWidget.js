@@ -16,6 +16,6 @@ jT.SimpleItemWidget.prototype = {
   classes: null,
   
   renderItem: function (info) {
-    return jT.ui.fillTemplate(template, info).addClass(this.classes);
+    return jT.ui.getTemplate(template, info).addClass(this.classes);
   }
 };

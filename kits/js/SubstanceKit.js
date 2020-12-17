@@ -29,7 +29,7 @@
 				};
 			}
 
-			$(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-substance'], ' ? '));
+			jT.ui.putTemplate('all-substance', ' ? ', this.rootElement);
 			this.init(settings);
 		}
 
@@ -53,15 +53,13 @@
 			return (type != 'display') ? data : '<a target="_blank" href="' + self.settings.baseUrl + 'substanceowner/' + full.ownerUUID + '/substance">' + data + '</a>';
 		};
 
-		var opts = {
-			"sDom": "rti"
-		};
+		var opts = { "dom": "rti" };
 		if (self.settings.showControls) {
 			jT.tables.bindControls(self, {
 				nextPage: function () { self.nextPage(); },
 				prevPage: function () { self.prevPage(); },
 				sizeChange: function () { self.queryEntries(self.pageStart, parseInt($(this).val())); },
-				filter: function () { $(self.table).DataTable().filter($(this).val()).draw(); }
+				filter: function () { $(self.table).dataTable().filter($(this).val()).draw(); }
 			});
 
 			opts['infoCallback'] = function (oSettings, iStart, iEnd, iMax, iTotal, sPre) {
@@ -72,9 +70,6 @@
 		} else
 			$('.jtox-controls', self.rootElement).remove();
 
-		// again , so that changed defaults can be taken into account.
-		self.settings.configuration = $.extend(true, self.settings.configuration, settings.configuration);
-
 		// READYY! Go and prepare THE table.
 		self.table = jT.tables.putTable(self, $('table', self.rootElement)[0], 'substance', opts);
 	};
@@ -84,15 +79,11 @@
 		if (!size || size < 0) size = this.pageSize;
 
 		var qStart = Math.floor(from / size),
-			qUri = jT.addParameter(self.substanceUri, "page=" + qStart + "&pagesize=" + size),
+			qUri = jT.addParameter(this.substanceUri, "page=" + qStart + "&pagesize=" + size),
 			self = this;
 
-		jT.ambit.call(self, qUri, function (result, jhr) {
-			if (!result && jhr.status != 200)
-				result = {
-					substabce: []
-				}; // empty one
-			if (!!result) {
+		jT.ambit.call(this, qUri, function (result, jhr) {
+			if (!!result && jhr.status == 200) {
 				self.pageSize = size;
 				self.pageStart = from;
 
@@ -107,8 +98,8 @@
 				// time to call the supplied function, if any.
 				jT.fireCallback(self.settings.onLoaded, self, result);
 				if (!self.settings.noInterface) {
-					$(self.table).DataTable().clear();
-					$(self.table).DataTable().add(result.substance).draw();
+					$(self.table).dataTable().fnClearTable();
+					$(self.table).dataTable().fnAddData(result.substance);
 
 					self.updateControls(from, result.substance.length);
 				}

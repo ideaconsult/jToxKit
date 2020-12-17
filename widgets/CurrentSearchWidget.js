@@ -1,4 +1,10 @@
-(function (Solr, a$, $, jT) {
+/** jToxKit - chem-informatics multi-tool-kit.
+  * A generic widget for managing current search results
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2020, IDEAConsult Ltd. All rights reserved.
+  *
+  */
 
 CurrentSearchWidgeting = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
@@ -93,5 +99,3 @@ CurrentSearchWidgeting.prototype = {
 };
 
 jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
-
-})(Solr, asSys, jQuery, jToxKit);

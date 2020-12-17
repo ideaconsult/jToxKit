@@ -21,7 +21,7 @@
 
 		// get the main template, add it (so that jQuery traversal works) and THEN change the ids.
 		// There should be no overlap, because already-added instances will have their IDs changed already...
-		var tree$ = $(this.rootElement).append(jT.ui.bakeTemplate(jT.ui.templates['all-studies'], ' ? ')),
+		var tree$ = jT.ui.putTemplate('all-studies', ' ? ', this.rootElement),
 			self = this;
 
 		jT.ui.changeTabsIds(tree$[0], '_' + this.instanceNo);
@@ -76,7 +76,7 @@
 	StudyKit.prototype.createCategory = function (tab, category) {
 		var theCat$ = $('.' + category + '.jtox-study', tab);
 		if (!theCat$.length) {
-			var aStudy = jT.ui.bakeTemplate(jT.ui.templates['one-study'], {})
+			var aStudy = jT.ui.putTemplate('one-study', {})
 				.addClass(category);
 			theCat$ = $(tab).append(aStudy);
 		}
@@ -256,7 +256,7 @@
 			var tabInfo = jT.ui.addTab(self.tabs, 
 				(knownNames[top] || sum.topcategory.title), 
 				"jtox-" + top.toLowerCase() + '_' + self.instanceNo, 
-				jT.ui.fillTemplate('one-category', self.substance));
+				jT.ui.getTemplate('one-category', self.substance));
 
 			tabInfo.tab.data('type', top);
 			tabInfo.content.addClass(top).data('jtox-uri', sum.topcategory.uri);
@@ -492,8 +492,8 @@
 		onComposition: null,	// invoked when the
 		onStudy: null,			// invoked for each loaded study
 		onLoaded: null,			// invoked when the substance general info is loaded
-		configuration: {
-			columns: {
+		columns: {
+			study: {
 				"_": {
 					"main": {},
 					"parameters": {},

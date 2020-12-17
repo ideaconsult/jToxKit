@@ -163,7 +163,7 @@
           if (target.children().length > 1) // the input field.
             cont$ = $("#" + fid, target[0]).show();
           else {
-				    cont$ = jT.ui.fillTemplate("tag-facet", faceter).attr("id", fid);
+				    cont$ = jT.ui.getTemplate("tag-facet", faceter).attr("id", fid);
             
     				f.title = f.val;
     				f.onMain = this.clickHandler(faceter.id + ":" + f.val);

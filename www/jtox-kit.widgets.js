@@ -9,12 +9,6 @@
     // Define more tools here
     jT.ui = $.extend(jT.ui, {
         templates: {},
-        /** Gets a template with given selector and replaces the designated
-         * {{placeholders}} from the provided `info`.
-         */
-        fillHtml: function (html, info, def) {
-            return $(jT.formatString(html, info, def));
-        },
 
         bakeTemplate: function (html, info, def) {
             var all$ = $(html);
@@ -46,6 +40,11 @@
             return all$;
         },
 
+        putTemplate: function (id, info, root) {
+            var html = jT.ui.bakeTemplate(jT.ui.templates[id], info);
+            return !root ? html : $(root).append(html);
+        },
+
         updateTree: function (root, info, def) {
             $('.jtox-live-data', root).each(function (i, el) {
                 $.each($(el).data('jtox-live-data'), function (k, v) {
@@ -58,8 +57,12 @@
             });
         },
 
-        fillTemplate: function (id, info, def) {
-            return jT.ui.fillHtml(jT.ui.templates[id], info, def);
+        fillHtml: function (id, info, def) {
+            return jT.formatString(jT.ui.templates[id], info, def);
+        },
+
+        getTemplate: function (id, info, def) {
+            return $(jT.ui.fillHtml(id, info, def));
         },
 
         updateCounter: function (str, count, total) {
@@ -97,9 +100,10 @@
             if (data.toString().length <= 5) {
                 res += content;
             } else {
-                res += '<div class="shortened">' + content + '</div>';
+                res += '<div class="shortened"><span>' + content + '</div><i class="icon fa fa-copy"';
                 if (message != null)
-                    res += '<span class="ui-icon ui-icon-copy" title="' + message + '" data-uuid="' + data + '"></span>';
+                    res +=  ' title="' + message + '"';
+                res += ' data-uuid="' + data + '"></i>';
             }
             return res;
         },
@@ -199,8 +203,21 @@
                 out += '-';
             }
             return out;
-        }
+        },
 
+        putInfo: function (href, title) {
+            return '<sup class="helper"><a target="_blank" href="' + (href || '#') + '" title="' + (title || href) + '"><span class="ui-icon ui-icon-info"></span></a></sup>';
+        },
+
+        renderRelation: function (data, type, full) {
+            if (type != 'display')
+                return _.map(data, 'relation').join(',');
+
+            var res = '';
+            for (var i = 0, il = data.length; i < il; ++i)
+                res += '<span>' + data[i].relation.substring(4).toLowerCase() + '</span>' + jT.ui.putInfo(full.URI + '/composition', data[i].compositionName + '(' + data[i].compositionUUID + ')');
+            return res;
+        }
     });
 
 // Now import all the actual skills ...
@@ -311,12 +328,12 @@ jT.ui = a$.extend(jT.ui, {
 
   	if (!root) {
       // make this handler for UUID copying. Once here - it's live, so it works for all tables in the future
-      $(document).on('click', '.jtox-kit span.ui-icon-copy', function () { jT.copyToClipboard($(this).data('uuid')); return false;});
+      $(document).on('click', '.jtox-kit div.shortened + .icon', function () { jT.copyToClipboard($(this).data('uuid')); return false;});
       // install the click handler for fold / unfold
       $(document).on('click', '.jtox-foldable>.title', function(e) { $(this).parent().toggleClass('folded'); });
       // install diagram zooming handlers
-      $(document).on('click', '.jtox-diagram span.ui-icon', function () {
-        $(this).toggleClass('ui-icon-zoomin').toggleClass('ui-icon-zoomout');
+      $(document).on('click', '.jtox-diagram .icon', function () {
+        $(this).toggleClass('fa-search-plus fa-search-minus');
         $('img', this.parentNode).toggleClass('jtox-smalldiagram');
       });
 
@@ -659,7 +676,7 @@ jT.SimpleItemWidget.prototype = {
   classes: null,
   
   renderItem: function (info) {
-    return jT.ui.fillTemplate(template, info).addClass(this.classes);
+    return jT.ui.getTemplate(template, info).addClass(this.classes);
   }
 };
 /** jToxKit - chem-informatics multi-tool-kit.
@@ -689,7 +706,7 @@ jT.AccordionExpansion.prototype = {
   before: null,
   
   renderExpansion: function (info) {
-    return jT.ui.fillTemplate(this.expansionTemplate, info).addClass(this.classes);
+    return jT.ui.getTemplate(this.expansionTemplate, info).addClass(this.classes);
   },
   
   makeExpansion: function (before, info) {
@@ -821,6 +838,107 @@ jT.SliderWidget.prototype = {
     return this.target.jRange(settings);
   }
 };
+/** jToxKit - chem-informatics multi-tool-kit.
+  * A generic widget for managing current search results
+  *
+  * Author: Ivan (Jonan) Georgiev
+  * Copyright © 2020, IDEAConsult Ltd. All rights reserved.
+  *
+  */
+
+CurrentSearchWidgeting = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+  
+  this.target = settings.target;
+  this.id = settings.id;
+  
+  this.manager = null;
+  this.facetWidgets = {};
+  this.fqName = this.useJson ? "json.filter" : "fq";
+};
+
+CurrentSearchWidgeting.prototype = {
+  useJson: false,
+  renderItem: null,
+  
+  init: function (manager) {
+    a$.pass(this, CurrentSearchWidgeting, "init", manager);
+        
+    this.manager = manager;
+  },
+  
+  registerWidget: function (widget, pivot) {
+    this.facetWidgets[widget.id] = pivot;
+  },
+  
+  afterTranslation: function (data) {
+    var self = this,
+        links = [],
+        q = this.manager.getParameter('q'),
+        fq = this.manager.getAllValues(this.fqName);
+        
+    // add the free text search as a tag
+    if (!!q.value && !q.value.match(/^(\*:)?\*$/)) {
+        links.push(self.renderItem({ title: q.value, count: "x", onMain: function () {
+          q.value = "";
+          self.manager.doRequest();
+          return false;
+        } }).addClass("tag_fixed"));
+    }
+
+    // now scan all the filter parameters for set values
+    for (var i = 0, l = fq != null ? fq.length : 0; i < l; i++) {
+	    var f = fq[i],
+          vals = null,
+          w;
+	    
+      for (var wid in self.facetWidgets) {
+  	    w = self.manager.getListener(wid);
+        vals = w.fqParse(f);
+  	    if (!!vals)
+  	      break;
+  	  }
+  	  
+  	  if (vals == null) continue;
+  	    
+  	  if (!Array.isArray(vals))
+  	    vals = [ vals ];
+  	        
+      for (var j = 0, fvl = vals.length; j < fvl; ++j) {
+        var v = vals[j], el, 
+            info = (typeof w.prepareTag === "function") ? 
+              w.prepareTag(v) : 
+              {  title: v,  count: "x",  color: w.color, onMain: w.unclickHandler(v) };
+        
+    		links.push(el = self.renderItem(info).addClass("tag_selected " + (!!info.onAux ? "tag_open" : "tag_fixed")));
+
+    		if (fvl > 1)
+    		  el.addClass("tag_combined");
+      }
+      
+      if (fvl > 1)
+		    el.addClass("tag_last");
+    }
+    
+    if (links.length) {
+      links.push(self.renderItem({ title: "Clear", onMain: function () {
+        q.value = "";
+        for (var wid in self.facetWidgets)
+    	    self.manager.getListener(wid).clearValues();
+    	    
+        self.manager.doRequest();
+        return false;
+      }}).addClass('tag_selected tag_clear tag_fixed'));
+      
+      this.target.empty().addClass('tags').append(links);
+    }
+    else
+      this.target.removeClass('tags').html('<li>No filters selected!</li>');
+  }
+
+};
+
+jT.CurrentSearchWidget = a$(CurrentSearchWidgeting);
 /** jToxKit - chem-informatics multi-tool-kit.
   * A very simple, widget add-on for wiring the ability to change
   * certain property of the agent, based on a provided UI element.
@@ -1040,18 +1158,15 @@ jT.tables = {
 			root = kit.rootElement;
 
 		$('.jtox-handler', root).each(function () {
-			var name = $(this).data('handler');
-			var handler = null;
-			if (kit.settings.configuration != null && kit.settings.configuration != null)
-				handler = kit.settings.handlers[name];
-			handler = handler || window[name];
+			var name = $(this).data('handler'),
+				handler = _.get(kit.settings, [ 'configuration', 'handlers', name ], null) || window[name];
 
 			if (!handler)
 				console.log("jToxQuery: referring unknown handler: " + name);
 			else if (this.tagName == "INPUT" || this.tagName == "SELECT" || this.tagName == "TEXTAREA")
-				$(this).on('change', handler).on('keydown', jT.ui.enterBlur);
+				$(this).on('change', _.bind(handler, kit)).on('keydown', jT.ui.enterBlur);
 			else // all the rest respond on click
-				$(this).on('click', handler);
+				$(this).on('click', _.bind(handler, kit));
 		});
 	},
 
@@ -1123,9 +1238,7 @@ jT.tables = {
 				if (!!kit.settings.onDetails) {
 					$('.jtox-details-toggle', nRow).on('click', function (e) {
 						var root = jT.tables.toggleDetails(e, nRow);
-						if (!!root) {
-							jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
-						}
+						root && jT.fireCallback(kit.settings.onDetails, kit, root, aData, this);
 					});
 				}
 			}
@@ -1297,6 +1410,21 @@ jT.ambit = {
 		};
 
 		return data;
+	},
+
+	parseFeatureId: function (featureId) {
+		var parse = featureId.match(/https?\:\/\/(.*)\/property\/([^\/]+)\/([^\/]+)\/.+/);
+		if (parse == null)
+			return null;
+		else
+			return {
+				topcategory: parse[2].replace("+", " "),
+				category: parse[3].replace("+", " ")
+			};
+	},
+
+	diagramUri: function (uri) {
+		return !!uri && (typeof uri == 'string') ? uri.replace(/(.+)(\/conformer.*)/, "$1") + "?media=image/png" : '';
 	},
 
 	enumSameAs: function (fid, features, callback) {
@@ -1490,7 +1618,7 @@ jT.ambit = {
 		"http://www.opentox.org/api/1.1#Diagram": {
 			title: "Diagram", search: false, visibility: "main", primary: true, data: "compound.URI", 
 			column: {
-				'class': "paddingless",
+				'className': "paddingless",
 				'width': "125px"
 			},
 			render: function (data, type, full) {
