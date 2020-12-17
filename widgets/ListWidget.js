@@ -20,9 +20,11 @@ jT.ListWidget.prototype = {
   	this.items = docs;
   	this.length = docs.length;
   	
-  	this.target.empty();
+  	this.target.empty().hide(); // Hiding for performnance improvements.
   	for (var i = 0, l = docs.length; i < l; i++)
       this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
+
+    this.target.show();
   },
   
   addItem: function (doc) {

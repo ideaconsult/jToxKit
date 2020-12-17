@@ -418,9 +418,11 @@ jT.ListWidget.prototype = {
   	this.items = docs;
   	this.length = docs.length;
   	
-  	this.target.empty();
+  	this.target.empty().hide(); // Hiding for performnance improvements.
   	for (var i = 0, l = docs.length; i < l; i++)
       this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
+
+    this.target.show();
   },
   
   addItem: function (doc) {
@@ -504,7 +506,8 @@ jT.TagWidget.prototype = {
       
       if (!preserve)
         this.target.empty();
-        
+      
+      this.target.hide(); // Hiding for performance improvement
       for (var i = 0, l = objectedItems.length; i < l; i++) {
         item = objectedItems[i];
         value = item.value || item.val;
@@ -523,6 +526,8 @@ jT.TagWidget.prototype = {
         if (selected)
           el.addClass("selected");
       }
+
+      this.target.show();
     }
       
     a$.act(this, this.onUpdated, total);

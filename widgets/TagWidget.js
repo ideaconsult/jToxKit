@@ -48,7 +48,8 @@ jT.TagWidget.prototype = {
       
       if (!preserve)
         this.target.empty();
-        
+      
+      this.target.hide(); // Hiding for performance improvement
       for (var i = 0, l = objectedItems.length; i < l; i++) {
         item = objectedItems[i];
         value = item.value || item.val;
@@ -67,6 +68,8 @@ jT.TagWidget.prototype = {
         if (selected)
           el.addClass("selected");
       }
+
+      this.target.show();
     }
       
     a$.act(this, this.onUpdated, total);

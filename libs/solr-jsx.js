@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.15.11" };
+  Solr = { version: "0.16.0" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -403,6 +403,35 @@ Solr.Configuring.prototype = {
 
     return val;
   },
+
+  /**
+   * Exports the parameters with given names in the format that {@see importParameters} can use directly.
+   * @param {Array<String>} names The list of parameter names to be exported.
+   * @param {Function} cb An optional callback for custom formatting of each parameter.
+   */
+  exportParameters: function (names, cb) {
+    var state = {},
+      store = this.parameterStore;
+
+    a$.each(names, function (one) {
+      if (!store[one])
+        ;
+      else if (typeof cb === 'function')
+        state[one] = cb(one, store[one]);
+      else
+        state[one] = store[one];
+    })
+
+    return state;
+  },
+
+  /**
+   * Import the state of parameters, as exported via {@see exportParameters}.
+   * @param {Object} state The parameter state to be merged into the parameters' store.
+   */
+  importParameters: function (state) {
+    this.parameterStore = a$.extend(this.parameterStore, state);
+  },
   
   /** Merge the parameters from the given map into the current ones
     */
@@ -411,7 +440,7 @@ Solr.Configuring.prototype = {
     a$.each(parameters, function (p, name) {
       if (typeof p === 'string')
         self.addParameter(Solr.parseParameter(name + '=' + p));
-      else
+      else 
         self.addParameter(name, p);
     });
   },
@@ -634,44 +663,124 @@ Solr.QueryingJson.prototype = {
   
 };
 /** SolrJsX library - a neXt Solr queries JavaScript library.
-  * Persistentcy for configured parameters skills.
-  *
-  * Author: Ivan Georgiev
-  * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
-  */
-  
-Solr.Persistency = function (obj) {
-  a$.extend(true, this, obj);
-  this.storage = {};
+ * Persistentcy of configured parameters in URL
+ *
+ * Author: Ivan Georgiev
+ * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
+ */
+
+Solr.UrlPersistency = function (settings) {
+  a$.extend(true, this, a$.common(settings, this));
+  this.id = settings.id;
 };
 
-Solr.Persistency.prototype = {
-  __depends: [ Solr.Configuring ],
-  
-  persistentParams: [],   // Parameters that need to stay persistent between calls.
+Solr.UrlPersistency.prototype = {
+	urlParam: 'sel',
+	storedParams: [], // Parameters that need to stay persistent between calls.
 
-  addParameter: function (param, value, domain) {
-    // TODO Check if the parameter is persistent and store it.
-    
-    // And make the call to the "super".
-    a$.pass(this, "addParameter", Solf.Configuring, param, value, domain);
-    return param;
-  },
-  
-  /** Remove parameters. If needle is an array it is treated as an idices array,
-    * if not - it is first passed to findParameters() call.
+  /** Make the initial setup of the manager.
     */
-  removeParameters: function (indices) {
-    // TODO Check if the parameter is persistent and store it.
-    
-    // And make the call to the "super".
-    a$.pass(this, "removeParameters", Solf.Configuring, indices);
+  init: function (manager) {
+    a$.pass(this, Solr.UrlPersistency, "init", manager);
+    this.manager = manager;
   },
-  
-  /** The method that is invoked just before making the actual request.
-    */
-  onPrepare: function (settings) {
-    
+
+  /**
+   * Restore into the manager the given state, i.e. - set of srotred parameters.
+   * @param {state} state An array of stored Solr parameters to be restored
+   * @description The array of parameters should either be raw Solr { name, value, domain? }, 
+   * or it can be { id, value } pair, where `id` refers to the appropriate manger's listener.
+   */
+  restore: function (state) {
+    if (!state)
+      state = this.getUrlParam(document.location.href, this.urlParam);
+    if (state)
+      this.manager.importParameters(state);
+  },
+
+  /**
+   * Adds a given parameter to the current url.
+   * @param {string} url The url to be added the parameter to.
+   * @param {string} name Name of the parameter to be added to the URL.
+   * @param {string|object} value The value to be stored. If object - stringified first.
+   * @returns {string} The new URL.
+   */
+  addUrlParam: function (url, name, value) {
+    value = JSON.stringify(value);
+
+    var a = document.createElement('a'),
+      str = !!value ? name + "=" + encodeURIComponent(value) : "",
+      mbs, q;
+
+    a.href = url;
+    q = a.search;
+
+    mbs = q.match(new RegExp(name + "=[\\S^&]+"))
+
+    if (!!mbs)
+      q = q.replace(mbs[0], str);
+    else if (!str)
+      return;
+    else if (q.charAt(0) == '?')
+      q = "?" + str;
+    else
+      q += (q.slice(-1) == "&" ? "" : "&") + str;
+
+    a.search = q;
+    return a.href;
+  },
+
+  /**
+   * 
+   * @param {string} url The url to get the addres from
+   * @param {*} name 
+   */
+  getUrlParam: function (url, name) {
+    var a = document.createElement('a');
+    a.href = url;
+    var par = (function () {
+      var ret = {},
+        seg = a.search.replace(/^\?/, '').split('&'),
+        len = seg.length,
+        i = 0,
+        s, v, arr;
+      for (; i < len; i++) {
+        if (!seg[i]) {
+          continue;
+        }
+        s = seg[i].split('=');
+        v = (s.length > 1) ? decodeURIComponent(s[1].replace(/\+/g, " ")) : '';
+        if (s[0].indexOf('[]') == s[0].length - 2) {
+          arr = ret[s[0].slice(0, -2)];
+          if (arr === undefined)
+            ret[s[0].slice(0, -2)] = [v];
+          else
+            arr.push(v);
+        } else
+          ret[s[0]] = v;
+      }
+      return ret;
+    })()[name];
+
+    return par && JSON.parse(par);
+  },
+
+  /**
+   * Pushes the provided persistency state into the browser history store.
+   * @param {Object} state The persistancy state object
+   */
+  pushToHistory: function (state) {
+    return window.history.pushState(
+      state, 
+      document.title,
+      this.addUrlParam(window.location.href, this.urlParam, state));
+  },
+
+  /**
+   * This Solr manage handler, executed after the request, to store the actual parameters.
+   */
+  afterRequest: function () {
+    this.pushToHistory(this.manager.exportParameters(this.storedParams));
   }
 };
 /** SolrJsX library - a neXt Solr queries JavaScript library.
