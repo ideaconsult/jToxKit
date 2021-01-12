@@ -68,21 +68,21 @@
 		this.onIdentifiers(null, $('#jtox-identifiers', this.rootElement)[0]);
 		
 		// finally, if provided - load the given bundleUri
-		if (this.settings.bundleUri) {
-			this.settings.baseUrl = jT.formBaseUrl(this.settings.bundleUri);
+		if (this.settings.bundleUri)
 			this.loadBundle(this.settings.bundleUri);
-		}
 
 		return this;
 	};
 
 	MatrixKit.prototype.loadBundle = function(bundleUri) {
 		var self = this;
+
 		jT.ambit.call(self, bundleUri, function (bundle) {
 			if (!!bundle) {
 				bundle = bundle.dataset[0];
 				self.bundleUri = bundle.URI;
 				self.bundle = bundle;
+				self.settings.baseUrl = jT.formBaseUrl(self.bundleUri);
 
 				if (!!self.createForm) {
 					jT.ui.updateTree(self.createForm, bundle, _.defaults(self.settings.formatters, jT.ambit.formatters));
@@ -147,7 +147,7 @@
 		console.warn("Polling ambit: " + JSON.stringify(ajax));
 		var callId = this.beginAmbitCall(service),
 			self = this;
-		jT.ambit.call(this, this.bundleUri + service, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
+		jT.ambit.call(this, (this.bundleUri || '') + service, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
 			self.endAmbitCall(callId, jhr);
 
@@ -223,27 +223,20 @@
 			e.stopPropagation();
 
 			if (jT.validateForm(self.createForm)) {
-				$(e.currentTarget).addClass('loading');
-				jT.ambit.call(self, self.settings.baseUrl + 'bundle', { method: 'POST', data: $(self.createForm).serializeArray()}, function (bundleUri, jhr) {
-					$(e.currentTarget).removeClass('loading');
-					if (!!bundleUri) {
-						self.load(bundleUri);
-						var url = jT.parseURL( window.location.href );
-						if (url.query != '' )
-							url.query += '&bundleUri=' + bundleUri;
-						else
-							url.query = '?bundleUri=' + bundleUri;
-						var href = url.protocol + '://' + url.host + ( (url.port != '') ? ':' + url.port : '' ) + url.path + url.query + ( (url.hash != '') ? '#' + url.hash : '' );
-						if ( 'pushState' in window.history )
-							window.history.pushState(null, '', href );
-						else
-							document.location = href;
+				this.bundleUri = null;
+				self.pollAmbit(self.settings.baseUrl + 'bundle', 
+					{ method: 'POST', data: $(self.createForm).serializeArray()}, 
+					$(e.currentTarget),
+					function (result, jhr) {
+						if (!!result) {
+							jT.addHistory(jT.addParameter(window.location.href, 'bundleUri=' + encodeURIComponent(result.uri)), 'Bundle editing');
+							self.loadBundle(result.uri);
+						} else {
+							// TODO: report an error
+							console.log("Error on creating bundle [" + jhr.status + "]: " + jhr.statusText);
+						}
 					}
-					else {
-						// TODO: report an error
-						console.log("Error on creating bundle [" + jhr.status + "]: " + jhr.statusText);
-					}
-				});
+				);
 			}
 		};
 
@@ -817,7 +810,6 @@
 	MatrixKit.prototype.onMatrix = function (mode, panel) {
 		if (!this.matrixKit) {
 			var self = this,
-				CompoundKit = jT.ui.Compound,
 				self = this,
 				matrixRoot = $('#matrix-table');
 
@@ -826,19 +818,20 @@
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				hasDetails: false,
+				groups: this.settings.groups.matrix,
 				featureUri: this.bundleUri + '/property',
 				baseFeatures: this.getMatrixFeatures(),
 				groups: this.getMatrixGrouper(),
 				onLoaded: function (dataset) {
 					// Because of the nested data, we need to have manual processing here
-					CompoundKit.processFeatures(dataset.feature, this.feature);
+					jT.ui.Compound.processFeatures(dataset.feature, this.feature);
 	
 					// we need to process
 					for (var i = 0, dl = dataset.dataEntry.length; i < dl; ++i) {
 						var data = dataset.dataEntry[i];
 						if (data.composition != null) {
 							for (var j = 0;j < data.composition.length; ++j) {
-								CompoundKit.processEntry(data.composition[j].component, dataset.feature);
+								jT.ui.Compound.processEntry(data.composition[j].component, dataset.feature);
 							}
 						}
 					}

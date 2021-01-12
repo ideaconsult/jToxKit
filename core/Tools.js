@@ -79,6 +79,13 @@ jT = a$.extend(jT, {
     return url.replace(new RegExp('(.*\?.*)(' + param + '=[^\&\s$]*\&?)(.*)'), '$1$3');
   },
 
+  addHistory: function (url, description) {
+    if ( 'pushState' in window.history )
+      window.history.pushState(null, description || '', url );
+    else
+      document.location = url;
+  },
+
   parseURL: function (url) {
     var a = document.createElement('a');
     a.href = url;

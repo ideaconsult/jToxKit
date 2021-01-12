@@ -381,7 +381,7 @@
   */
 
 jT.ui = a$.extend(jT.ui, {
-  rootSettings: {}, // These can be modified from the URL string itself.
+  querySettings: {}, // These can be modified from the URL string itself.
 	templateRoot: null,
 	callId: 0,
 
@@ -390,8 +390,7 @@ jT.ui = a$.extend(jT.ui, {
     var self = this,
         dataParams = element.data(),
         kit = dataParams.kit,
-        topSettings = $.extend(true, {}, self.rootSettings, opts),
-        parent = null;
+        topSettings = { baseUrl: jT.formBaseUrl(document.location.href) };
 
     // first - skip, if we're manual...
     if (!!dataParams.manualInit)
@@ -401,14 +400,11 @@ jT.ui = a$.extend(jT.ui, {
   	a$.each(element.parents('.jtox-kit,.jtox-widget').toArray().reverse(), function(el) {
   	  parent = self.kit(el);
     	if (parent != null)
-      	topSettings = $.extend(true, topSettings, parent);
+      	topSettings = $.extend(topSettings, parent.settings, { baseUrl: parent.baseUrl });
   	});
 
-  	// make us ultimate parent of all
-  	if (!parent)
-  	  parent = self;
-
-    dataParams = $.extend(true, topSettings, dataParams);
+    // This should be priority from low to high: inherited -> data-* provided -> programmatically provided -> query string provided
+    dataParams = $.extend(_.cloneDeep(topSettings), dataParams, opts, self.querySettings);
     dataParams.baseUrl = jT.fixBaseUrl(dataParams.baseUrl);
     dataParams.target = element;
     
@@ -465,7 +461,7 @@ jT.ui = a$.extend(jT.ui, {
 
       delete dataParams.configuration;
 
-      var kitObj = realInit(dataParams, element);
+      var kitObj = realInit(dataParams);
       element.data('jtKit', kitObj);
       return kitObj;
 	  }
@@ -487,15 +483,12 @@ jT.ui = a$.extend(jT.ui, {
       });
 
       // scan the query parameter for settings
-  		var url = jT.parseURL(document.location),
-  		    queryParams = url.params;
-  		
-  		if (!self.rootSettings.baseUrl)
-  		  queryParams.baseUrl = jT.formBaseUrl(document.location.href);
-  		else if (!!queryParams.baseUrl)
-    		queryParams.baseUrl = jT.fixBaseUrl(queryParams.baseUrl);
+      var url = jT.parseURL(document.location);
+      
+      self.querySettings = url.params;
+      if (!!self.querySettings.baseUrl)
+        self.querySettings.baseUrl = jT.fixBaseUrl(self.querySettings.baseUrl);
 
-      self.rootSettings = $.extend(true, self.rootSettings, queryParams); // merge with defaults
       self.fullUrl = url;
       root = document;
   	}
