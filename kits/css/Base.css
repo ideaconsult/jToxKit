@@ -71,6 +71,10 @@
   transition: transform ease 200ms;
 }
 
+.jtox-fadable a.disabled {
+  opacity: 0.3;
+}
+
 .jtox-template {
   display: none !important;
 }

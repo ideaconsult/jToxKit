@@ -711,7 +711,7 @@ jT.AutocompleteWidget.prototype = {
   },
 
   resetValue: function(val) {
-    this.findBox.val(val)[this.controlMode]("enable");
+    this.findBox.val(val)[this.tokenMode ? 'tokenfield' : 'autocomplete']("enable");
     this.requestSent = false;
   },
   

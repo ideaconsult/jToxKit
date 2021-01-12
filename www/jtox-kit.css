@@ -99,6 +99,10 @@ div.tippy-box .go-right {
   transition: transform ease 200ms;
 }
 
+.jtox-fadable a.disabled {
+  opacity: 0.3;
+}
+
 .jtox-template {
   display: none !important;
 }
@@ -737,7 +741,6 @@ article.item footer.remove .command.remove,
 article.item footer.none .command.none {
 	display: inline-block;
 }
-
 
 #wrap {
   width: 1000px;
