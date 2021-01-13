@@ -20,6 +20,11 @@
 			code: 'CM',
 			tag: 'cm',
 			name: 'Category Member'
+		},
+		'?': {
+			code: '?',
+			tag: 'ukn',
+			name: 'Unspecified'
 		}
 	};
 
@@ -1725,7 +1730,7 @@
 				primary: false,
 				render: function (data, type, full) {
 					var bInfo = data[this.bundleUri],
-						bTag = bInfo && bInfo.tag || "target",
+						bTag = bInfo && bInfo.tag || "?",
 						bDef = defTagButtons[bTag];
 
 					return !bDef || type !== 'display'
