@@ -56,7 +56,7 @@
 
 		// initialize the tab structure for several versions of dataTables.
 		$(this.rootElement).tabs({
-			// disabled: [1, 2, 3, 4], // TODO: remove this comment!
+			disabled: [1, 2, 3, 4, 5],
 			heightStyle: "content",
 			select: function(event, ui) { loadPanel(ui.panel); },
 			activate: function(event, ui) { ui.newPanel && loadPanel(ui.newPanel[0]); },
@@ -1449,12 +1449,8 @@
 		$(this.rootElement).tabs(this.bundleSummary.compound > 0 ? 'enable' : 'disable', 2);
 		$(this.rootElement).tabs(this.bundleSummary.substance > 0 ? 'enable' : 'disable', 3);
 		$(this.rootElement).tabs(this.bundleSummary.property > 0 ? 'enable' : 'disable', 4);
-		if (this.bundleSummary.matrix > 0) {
-			$('#xfinal').button('enable');
-			$(this.rootElement).tabs('enable', 5);
-		}
-		else
-			$('#xfinal').button('disable');
+		$(this.rootElement).tabs(this.bundleSummary.matrix > 0 ? 'enable' : 'disable', 5);
+		$('#xfinal').button(this.bundleSummary.matrix > 0 ? 'enable' : 'disable');
 	};
 
 	/********************** Some check/tag/etc. handlers */
