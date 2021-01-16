@@ -196,7 +196,8 @@ div.jBox-Confirm.jtox-toolkit.delete .jBox-Confirm-button-submit:hover {
   text-align: left;
 }
 
-#jtox-report .shortened {
+#jtox-report .shortened,
+#jtox-report .shortened * {
   width: auto;
   max-width: none;
   max-height: none;
@@ -333,14 +334,6 @@ dd {
 
   #jtox-report th, #jtox-report td {
     width: auto !important;
-  }
-
-  #jtox-report-matrix .jtox-ds-variable {
-    display: none;
-  }
-
-  #jtox-report-final table {
-    table-layout: fixed !important;
   }
 
 }

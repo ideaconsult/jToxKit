@@ -3778,10 +3778,16 @@
 			var theTables = $('table.dataTable', kit.rootElement);
 
 			if (entity == 'matrix') {
-				loadedTables.composition = jT.tables.extractTable(theTables[0], false).html();
-				loadedTables.matrix = jT.tables.extractTable(theTables[1], true).html();
+				var compTable = jT.tables.extractTable(theTables[0]);
+				loadedTables.composition = compTable.html();
+				
+				loadedTables.matrix = jT.tables.extractTable(theTables, { 
+					transpose: true,
+					stripSizes: true,
+					ignoreCols: [6, 11]
+				}).html();
 			} else
-				loadedTables[entity] = jT.tables.extractTable(theTables, false).html();
+				loadedTables[entity] = jT.tables.extractTable(theTables).html();
 
 			datasets[entity] = dataset;
 			if (_.keys(loadedTables).length >= 3)
@@ -6695,7 +6701,7 @@ jT.ui.templates['matrix-full-report']  =
 "<section id=\"jtox-report-structlist\">" +
 "<h2>List of structures for assessment</h2>" +
 "<p>In the assessment, similar structures were selected from exact structure, substructure and/or similarity searches, or were added manually. The rationale for the selection is given in the table.</p>" +
-"<div class=\"jtox-ds-variable\">" +
+"<div class=\"jtox-ds-variable dataTables_wrapper dt-jqueryui no-footer\">" +
 "<table class=\"table-box dataTable\">{{ dataTables.structure }}</table>" +
 "</div>" +
 "</section>" +
@@ -6703,7 +6709,7 @@ jT.ui.templates['matrix-full-report']  =
 "<section id=\"jtox-report-substances\">" +
 "<h2>List of substances related to the structures</h2>" +
 "<p>In the following, for each structure listed in chapter 2, substances were selected and the rationale is given.</p>" +
-"<div class=\"jtox-ds-variable\">" +
+"<div class=\"jtox-ds-variable dataTables_wrapper dt-jqueryui no-footer\">" +
 "<table class=\"table-box dataTable\">{{ dataTables.substance }}</table>" +
 "</div>" +
 "</section>" +
@@ -6711,7 +6717,7 @@ jT.ui.templates['matrix-full-report']  =
 "<section id=\"jtox-report-matrix\">" +
 "<h2>Substance composition matrix</h2>" +
 "<p>In the following, for each substance, the associated structure(s) and the composition are given.</p>" +
-"<div class=\"jtox-ds-variable\">" +
+"<div class=\"jtox-ds-variable dataTables_wrapper dt-jqueryui no-footer\">" +
 "<table class=\"table-box dataTable\">{{ dataTables.composition }}</table>" +
 "</div>" +
 "</section>" +

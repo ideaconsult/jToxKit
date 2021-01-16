@@ -909,10 +909,16 @@
 			var theTables = $('table.dataTable', kit.rootElement);
 
 			if (entity == 'matrix') {
-				loadedTables.composition = jT.tables.extractTable(theTables[0], false).html();
-				loadedTables.matrix = jT.tables.extractTable(theTables[1], true).html();
+				var compTable = jT.tables.extractTable(theTables[0]);
+				loadedTables.composition = compTable.html();
+				
+				loadedTables.matrix = jT.tables.extractTable(theTables, { 
+					transpose: true,
+					stripSizes: true,
+					ignoreCols: [6, 11]
+				}).html();
 			} else
-				loadedTables[entity] = jT.tables.extractTable(theTables, false).html();
+				loadedTables[entity] = jT.tables.extractTable(theTables).html();
 
 			datasets[entity] = dataset;
 			if (_.keys(loadedTables).length >= 3)

@@ -238,10 +238,12 @@ jT.tables = {
 
 	// Extract the table's contents (i.e. HTML), and glue them into a single table,
 	// optionally transposing it.
-	extractTable: function (tables, transpose) {
+	extractTable: function (tables, opts) {
 		var colsCnt = 0,
 			mergedTable = $('<table>'),
 			mergedRows = null;
+
+		opts = opts || {};
 
 		// go through all provided tables and extract and merge the cell contents.
 		$(tables).map(function (i, root) {
@@ -252,18 +254,25 @@ jT.tables = {
 			else 
 				newRows.each(function (idx, row) {
 					$(row).children().clone().appendTo(mergedRows[idx]);
-					colsCnt = Math.max(colsCnt, mergedRows[idx].children.length);
 				});
 		});
 
 
 		// Clear the table from non-important stuff.
-		$('.fa.jtox-handler,.ui-icon,.jtox-hidden', mergedTable).remove();
-		$('td,th', mergedTable).css('width', 'auto').css('height', 'auto');
-		if (transpose === true) {
-			if (colsCnt == 0) // i.e. - we have one table...
-				mergedRows.each(function (i, r) { colsCnt = Math.max(colsCnt, r.children.length); });
+		$('.fa,.ui-icon,.jtox-hidden', mergedTable).remove();
+		if (opts.keepSizes !== true)
+			$('td,th', mergedTable).css('width', 'auto').css('height', 'auto');
 
+		// In order to remove cols AND calculate their number, if needed for 
+		if (opts.transpose || opts.ignoreCols) {
+			mergedRows.each(function (i, row) { 
+				if (opts.ignoreCols)
+					$(row).children().slice(opts.ignoreCols[0], opts.ignoreCols[1]).remove();
+				colsCnt = Math.max(colsCnt, row.children.length);
+			});
+		}
+
+		if (opts.transpose === true) {
 			var resRows = _.times(colsCnt, function (i) { return document.createElement('tr'); });
 			mergedRows.each(function (_i, row) {
 				$(row).children().each(function (i, cell) {
