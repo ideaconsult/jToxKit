@@ -1130,7 +1130,7 @@
 				// ok - go and update the table, filtering the entries, if needed
 				self.updateTables();
 				if (self.settings.showControls) {
-					// finally - go and update controls if they are visible
+					// go and update controls if they are visible
 					jT.tables.updateControls.call(self, qStart, dataset.dataEntry.length);
 				}
 			} else {
@@ -1365,32 +1365,32 @@
 	};
 
 	CompoundKit.defaults = { // all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
-		"showTabs": true, // should we show tabs with groups, or not
-		"tabsFolded": false, // should present the feature-selection tabs folded initially
-		"showExport": true, // should we add export tab up there
-		"showControls": true, // should we show the pagination/navigation controls.
-		"showUnits": true, // should we show units in the column title.
-		"hideEmpty": false, // whether to hide empty groups instead of making them inactive
-		"groupSelection": true, // wether to show select all / unselect all links in each group
-		"hasDetails": true, // whether browser should provide the option for per-item detailed info rows.
-		"hideEmptyDetails": true, // hide feature values, when they are empty (only in detailed view)
-		"detailsHeight": "fill", // what is the tabs' heightStyle used for details row
-		"fixedWidth": null, // the width (in css units) of the left (non-scrollable) part of the table
-		"pageSize": 20, // what is the default (startint) page size.
-		"pageStart": 0, // what is the default startint point for entries retrieval
-		"rememberChecks": false, // whether to remember feature-checkbox settings between queries
-		"featureUri": null, // an URI for retrieving all feature for the dataset, rather than 1-sized initial query, which is by default
-		"defaultService": "query/compound/search/all", // The default service (path) to be added to baseUrl to form datasetUri, when it is not provided
-		"initialQuery": true, // Whether to directly make a query, upon initialization, if provided with datasetUri
-		"metricFeature": "http://www.opentox.org/api/1.1#Similarity", // This is the default metric feature, if no other is specified
-		"onTab": null, // invoked after each group's tab is created - function (element, tab, name, isMain);
-		"onLoaded": null, // invoked when a set of compounds is loaded.
-		"onComplete": null, // invoked when the component is all ready.
-		"onPrepared": null, // invoked when the initial call for determining the tabs/columns is ready
-		"onDetails": null, // invoked when a details pane is openned
-		"preDetails": null, // invoked prior of details pane creation to see if it is going to happen at all
-		"language": {}, // some default language settings, which apply to first (static) table only
-		"fnAccumulate": function (fId, oldVal, newVal, features) {
+		showTabs: true, // should we show tabs with groups, or not
+		tabsFolded: false, // should present the feature-selection tabs folded initially
+		showExport: true, // should we add export tab up there
+		showControls: true, // should we show the pagination/navigation controls.
+		showUnits: true, // should we show units in the column title.
+		hideEmpty: false, // whether to hide empty groups instead of making them inactive
+		groupSelection: true, // wether to show select all / unselect all links in each group
+		hasDetails: true, // whether browser should provide the option for per-item detailed info rows.
+		hideEmptyDetails: true, // hide feature values, when they are empty (only in detailed view)
+		detailsHeight: "fill", // what is the tabs' heightStyle used for details row
+		fixedWidth: null, // the width (in css units) of the left (non-scrollable) part of the table
+		pageSize: 20, // what is the default (startint) page size.
+		pageStart: 0, // what is the default startint point for entries retrieval
+		rememberChecks: false, // whether to remember feature-checkbox settings between queries
+		featureUri: null, // an URI for retrieving all feature for the dataset, rather than 1-sized initial query, which is by default
+		defaultService: "query/compound/search/all", // The default service (path) to be added to baseUrl to form datasetUri, when it is not provided
+		initialQuery: true, // Whether to directly make a query, upon initialization, if provided with datasetUri
+		metricFeature: "http://www.opentox.org/api/1.1#Similarity", // This is the default metric feature, if no other is specified
+		onTab: null, // invoked after each group's tab is created - function (element, tab, name, isMain);
+		onLoaded: null, // invoked when a set of compounds is loaded.
+		onComplete: null, // invoked when the component is all ready.
+		onPrepared: null, // invoked when the initial call for determining the tabs/columns is ready
+		onDetails: null, // invoked when a details pane is openned
+		preDetails: null, // invoked prior of details pane creation to see if it is going to happen at all
+		language: {}, // some default language settings, which apply to first (static) table only
+		fnAccumulate: function (fId, oldVal, newVal, features) {
 			if (newVal == null)
 				return oldVal;
 			newVal = newVal.toString();
@@ -3295,10 +3295,10 @@
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				columns: this.settings.columns,
-				onComplete: function () {
-					if (typeof self.loadedMonitor === 'function')
-						self.loadedMonitor('substance', self.substanceKit);
-				},
+				// onComplete: function () {
+				// 	if (typeof self.loadedMonitor === 'function')
+				// 		self.loadedMonitor('substance', self.substanceKit);
+				// },
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri),
 						substanceUri = baseUrl + 'substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + 
@@ -3317,8 +3317,6 @@
 						onLoaded: function (dataset) { 
 							// The actual counting happens in the onRow, because it is conditional.
 							self.updateTabs();
-							if (typeof self.loadedMonitor === 'function')
-								self.loadedMonitor('composition', this, dataset);
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -3362,10 +3360,6 @@
 				columns: $.extend({  
 					endpoint: { 'Id': idCol } 
 				},this.settings.columns),
-				onLoaded: function (dataset) {
-					if (typeof self.loadedMonitor === 'function')
-						self.loadedMonitor('endpoint', self.endpointKit, dataset);
-				},
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
@@ -3781,7 +3775,14 @@
 
 
 		self.loadedMonitor = function (entity, kit, dataset) {
-			loadedTables[entity] = jT.tables.extractTable($('table.dataTable', kit.rootElement), true).html();
+			var theTables = $('table.dataTable', kit.rootElement);
+
+			if (entity == 'matrix') {
+				loadedTables.composition = jT.tables.extractTable(theTables[0], false).html();
+				loadedTables.matrix = jT.tables.extractTable(theTables[1], true).html();
+			} else
+				loadedTables[entity] = jT.tables.extractTable(theTables, false).html();
+
 			datasets[entity] = dataset;
 			if (_.keys(loadedTables).length >= 3)
 				reportMaker();
@@ -3795,7 +3796,6 @@
 		// Initiate a query - in a very specific way for each one!
 		this.queryKit.queryType('selected').query();
 		this.substanceKit.query(this.bundleUri + '/compound');
-		// TODO: Initiate openning of composition tabs.
 		this.queryMatrix('final');
 
 		// TODO: Work on the DOCX preparation, using datasets

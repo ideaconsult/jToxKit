@@ -426,10 +426,10 @@
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				columns: this.settings.columns,
-				onComplete: function () {
-					if (typeof self.loadedMonitor === 'function')
-						self.loadedMonitor('substance', self.substanceKit);
-				},
+				// onComplete: function () {
+				// 	if (typeof self.loadedMonitor === 'function')
+				// 		self.loadedMonitor('substance', self.substanceKit);
+				// },
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri),
 						substanceUri = baseUrl + 'substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + 
@@ -448,8 +448,6 @@
 						onLoaded: function (dataset) { 
 							// The actual counting happens in the onRow, because it is conditional.
 							self.updateTabs();
-							if (typeof self.loadedMonitor === 'function')
-								self.loadedMonitor('composition', this, dataset);
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -493,10 +491,6 @@
 				columns: $.extend({  
 					endpoint: { 'Id': idCol } 
 				},this.settings.columns),
-				onLoaded: function (dataset) {
-					if (typeof self.loadedMonitor === 'function')
-						self.loadedMonitor('endpoint', self.endpointKit, dataset);
-				},
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
@@ -912,7 +906,14 @@
 
 
 		self.loadedMonitor = function (entity, kit, dataset) {
-			loadedTables[entity] = jT.tables.extractTable($('table.dataTable', kit.rootElement), true).html();
+			var theTables = $('table.dataTable', kit.rootElement);
+
+			if (entity == 'matrix') {
+				loadedTables.composition = jT.tables.extractTable(theTables[0], false).html();
+				loadedTables.matrix = jT.tables.extractTable(theTables[1], true).html();
+			} else
+				loadedTables[entity] = jT.tables.extractTable(theTables, false).html();
+
 			datasets[entity] = dataset;
 			if (_.keys(loadedTables).length >= 3)
 				reportMaker();
@@ -926,7 +927,6 @@
 		// Initiate a query - in a very specific way for each one!
 		this.queryKit.queryType('selected').query();
 		this.substanceKit.query(this.bundleUri + '/compound');
-		// TODO: Initiate openning of composition tabs.
 		this.queryMatrix('final');
 
 		// TODO: Work on the DOCX preparation, using datasets

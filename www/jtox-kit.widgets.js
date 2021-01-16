@@ -1295,27 +1295,27 @@ jT.tables = {
 
 	// Extract the table's contents (i.e. HTML), and glue them into a single table,
 	// optionally transposing it.
-	extractTable: function (jTables, transpose) {
+	extractTable: function (tables, transpose) {
 		var colsCnt = 0,
-			mergedTable = null,
+			mergedTable = $('<table>'),
 			mergedRows = null;
 
 		// go through all provided tables and extract and merge the cell contents.
-		jTables.map(function (i, root) {
-			if (mergedTable == null) {
-				mergedTable = $(root).clone();
-				mergedRows = $('tr', mergedTable);
-				return;
-			}
+		$(tables).map(function (i, root) {
+			var newRows = $(root).children().children();
 
-			$('tr', root).each(function (idx, row) {
-				$(row).children().clone().appendTo(mergedRows[idx]);
-				colsCnt = Math.max(colsCnt, mergedRows[idx].children.length);
-			});
+			if (mergedRows == null)
+				mergedRows = newRows.clone().appendTo(mergedTable);
+			else 
+				newRows.each(function (idx, row) {
+					$(row).children().clone().appendTo(mergedRows[idx]);
+					colsCnt = Math.max(colsCnt, mergedRows[idx].children.length);
+				});
 		});
 
+
 		// Clear the table from non-important stuff.
-		$('.fa.jtox-handler,.ui-icon', mergedTable).remove();
+		$('.fa.jtox-handler,.ui-icon,.jtox-hidden', mergedTable).remove();
 		$('td,th', mergedTable).css('width', 'auto').css('height', 'auto');
 		if (transpose === true) {
 			if (colsCnt == 0) // i.e. - we have one table...
@@ -1325,13 +1325,13 @@ jT.tables = {
 			mergedRows.each(function (_i, row) {
 				$(row).children().each(function (i, cell) {
 					var c$ = $(cell),
-						cRowSpan = c$.attr('rowspan'),
-						cColSpan = c$.attr('colspan');
+						cRowSpan = c$.prop('rowspan'),
+						cColSpan = c$.prop('colspan');
 
 					c$.appendTo(resRows[i]);
-					if (cRowSpan)
+					if (cRowSpan > 1)
 						c$.attr('colspan', cRowSpan);
-					if (cColSpan)
+					if (cColSpan > 1)
 						c$.attr('rowspan', cColSpan);
 				});
 			});
