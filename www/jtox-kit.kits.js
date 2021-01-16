@@ -2910,6 +2910,8 @@
 			jT.tables.commonHandlers);
 		jT.ui.installHandlers(this, this.rootElement, this.reboundHandlers);
 
+		_.defaults(this.settings.formatters, jT.ambit.formatters)		
+
 		this.bundleSummary = {
 			compound: 0,
 			substance: 0,
@@ -2956,10 +2958,10 @@
 				bundle = bundle.dataset[0];
 				self.bundleUri = bundle.URI;
 				self.bundle = bundle;
-				self.settings.baseUrl = jT.formBaseUrl(self.bundleUri);
+				self.baseUrl = self.settings.baseUrl = jT.formBaseUrl(self.bundleUri);
 
 				if (!!self.createForm) {
-					jT.ui.updateTree(self.createForm, bundle, _.defaults(self.settings.formatters, jT.ambit.formatters));
+					jT.ui.updateTree(self.createForm, bundle, self.settings.formatters);
 
 					$('#status-' + bundle.status).prop('checked', true);
 
@@ -3739,577 +3741,21 @@
 		this.onEndpoints();
 	};
 
-	MatrixKit.prototype.onReport = function(id, panel){
-		var self = this;
-
-		if (!$(panel).hasClass('initialized')) {
-
-			jT.ui.updateTree(panel, self.bundle, self.settings.formatters);
-
-			$('#generate-doc').on('click', function(){
-				var loadFile = function(url, callback){
-					JSZipUtils.getBinaryContent(url, callback);
-				}
-
-				function get(url) {
-					// Return a new promise.
-					return new Promise(function(resolve, reject) {
-						// Do the usual XHR stuff
-						var req = new XMLHttpRequest();
-						req.open('GET', url);
-						req.responseType = 'arraybuffer';
-
-						req.onload = function() {
-							// This is called even on 404 etc
-							// so check the status
-							if (req.status == 200) {
-								// Resolve the promise with the response text
-								resolve(req.response);
-							}
-							else {
-								// Otherwise reject with the status text
-								// which will hopefully be a meaningful error
-								reject(Error(req.statusText));
-							}
-						};
-
-						// Handle network errors
-						req.onerror = function() {
-							reject(Error("Network Error"));
-						};
-
-						// Make the request
-						req.send();
-					});
-				}
-
-				function getData() {
-
-					return new Promise(function(resolve, reject){
-
-						var data = $.extend(true, {}, self.bundle);
-						data.created = formatDate(self.bundle.created);
-						data.updated = formatDate(self.bundle.updated);
-						data.structures = [];
-
-						var imagePromises = [];
-
-						var structuresFixRows = $('#jtox-report-query .jtox-ds-fixed tbody tr');
-						var structuresVarRows = $('#jtox-report-query .jtox-ds-variable tbody tr');
-						structuresFixRows.each(function(index){
-							var structure = {"index": index + 1}, fr = $(this), vr = $(structuresVarRows[index]);
-							structure.tag = fr.find('td:first-child button.active').text();
-
-							var image = fr.find('img.jtox-smalldiagram')[0];
-
-							var imagePromise = get(image.src).then(function(data){
-									structure.image = {
-										"data": data.slice(0),
-										"size": [image.width, image.height]
-									}
-								});
-
-							imagePromises.push(imagePromise);
-
-							var cells = vr.find('td:not(.jtox-hidden)');
-							structure.casrn = $(cells[0]).text();
-							structure.ecnum = $(cells[1]).text();
-							structure.names = $(cells[2]).text();
-							structure.rationale = $(cells[3]).find('textarea').val();
-							structure.substances = [];
-							data.structures.push(structure);
-						});
-
-						var substanceContainers = $('#jtox-report-substance-query .jtox-substance');
-						substanceContainers.each(function(index){
-							var structure = data.structures[index],
-									substanceRows = $(this).find('tbody tr');
-							substanceRows.each(function(i){
-								var cells = $(this).find('td'),
-										substance = {};
-								substance.i = i + 1;
-								substance.name = $(cells[1]).text();
-								substance.uuid = $(cells[2]).text();
-								substance.type = $(cells[3]).text();
-								substance.pubname = $(cells[4]).text();
-								substance.refuuid = $(cells[5]).text();
-								substance.owner = $(cells[6]).text();
-								substance.info = $(cells[7]).text();
-								substance.contained = $(cells[8]).text();
-								structure.substances.push(substance);
-							});
-						});
-
-						data.matrix = [];
-						var matrixRows = $('#jtox-report-matrix .jtox-ds-fixed .dataTable > tbody > tr');
-						matrixRows.each(function(){
-							var rowData = {};
-							var cells = $(this).find('> td:not(.jtox-hidden)');
-							rowData.cas = $(cells[1]).text();
-							rowData.substancename = $(cells[2]).text();
-							rowData.i5uuid = $(cells[3]).text();
-							rowData.datasource = $(cells[4]).text();
-							rowData.tag = $(cells[5]).text();
-							rowData.constituentname = $(cells[7]).text();
-							rowData.content = $(cells[8]).text();
-							rowData.containedas = $(cells[9]).text();
-							data.matrix.push(rowData);
-						});
-
-						var structuresCount = data.matrix.length;
-						var groups = Math.ceil(structuresCount/3);
-
-						data.dataMatrix = [];
-						var structureRows = $('#jtox-report-final thead tr');
-						var dataRows = $('#jtox-report-final tbody tr');
-						var tagCells = $(structureRows[0]).find('th');
-						var nameCells = $(structureRows[1]).find('th');
-						var casCells = $(structureRows[2]).find('th');
-						for (var i = 0; i < groups; i++) {
-							var dataGroup = {
-								tag1: '',
-								tag2: '',
-								tag3: '',
-								name1: '',
-								name2: '',
-								name3: '',
-								cas1: '',
-								cas2: '',
-								cas3: '',
-								data: []
-							};
-							for (var c = 1, cl = Math.min(3, tagCells.length - 3*i); c <= cl; c++) {
-								dataGroup['tag' + c] = $(tagCells[3*i + c]).text();
-							}
-							for (var c = 1, cl = Math.min(3, nameCells.length - 3*i); c <= cl; c++) {
-								dataGroup['name' + c] = $(nameCells[3*i + c]).text();
-							}
-							for (var c = 1, cl = Math.min(3, casCells.length - 3*i); c <= cl; c++) {
-								dataGroup['cas' + c] = $(casCells[3*i + c]).text();
-							}
-							dataRows.each(function(){
-								var cells = $(this).find('th, td');
-								var row = { title: '', value1: '', value2: '', value3: ''};
-								var prefix = '';
-								row.title = $(cells[0]).text();
-								for (var c = 1, cl = Math.min(3, nameCells.length - 3*i); c <= cl; c++) {
-									var parts = [];
-									if (cells[3*i + c] !== undefined) {
-										$(cells[3*i + c].childNodes).each(function(){
-											if ( $('.fa-calculator', this).length > 0 ) {
-												prefix = '<w:r><w:rPr><w:color w:val="FF0000" /></w:rPr><w:t xml:space="preserve">';
-											}
-											else {
-												prefix = '<w:r><w:rPr><w:color w:val="0000FF" /></w:rPr><w:t xml:space="preserve">';
-											}
-											parts.push( prefix + _.escape($(this).text()) + '</w:t></w:r>' );
-										});
-									}
-									row['value' + c] = '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>';
-								}
-								dataGroup.data.push(row);
-							});
-							data.dataMatrix.push(dataGroup);
-						}
-
-						data.adstructures = [];
-						var adstructureEls = $('#jtox-report-gap-filling section');
-						adstructureEls.each(function(){
-
-							var structure = {name: $('h3', this).text(), features: []}
-
-							$(this).children('div').each(function(){
-								var feature = {name: $('h4', this).html(), data: []};
-								$('div.popup-box', this).each(function(){
-									var entry = {
-										endpoint: $('td.the-endpoint', this).text(),
-										value: $('td.the-value', this).text(),
-										guidance: $('td.postconditions', this).text(),
-										rationaleTitle: $('h5', this).text(),
-										rationale: $('p.justification', this).text(),
-										conditions: []
-									};
-									var dch = $('th.dynamic-condition', this);
-									var dcd = $('td.dynamic-condition', this);
-									dch.each(function(i){
-										entry.conditions.push({
-											condition: this.innerHTML,
-											value: dcd[i].innerHTML
-										});
-									});
-									feature.data.push(entry);
-								});
-								structure.features.push(feature);
-							});
-
-							data.adstructures.push(structure);
-
-						});
-
-						data.ddstructures = [];
-						var ddstructureEls = $('#jtox-report-deleting-data section');
-						ddstructureEls.each(function(){
-
-							var structure = {name: $('h3', this).text(), features: []}
-
-							$(this).children('div').each(function(){
-								var feature = {name: $('h4', this).html(), data: []};
-								$('div.popup-box', this).each(function(){
-									var entry = {
-										endpoint: $('td.the-endpoint', this).text(),
-										value: $('td.the-value', this).text(),
-										guidance: $('td.postconditions', this).text(),
-										rationale: $('p.justification', this).text(),
-										conditions: []
-									};
-									var dch = $('th.dynamic-condition', this);
-									var dcd = $('td.dynamic-condition', this);
-									dch.each(function(i){
-										entry.conditions.push({
-											condition: this.innerHTML,
-											value: dcd[i].innerHTML
-										});
-									});
-									feature.data.push(entry);
-								});
-								structure.features.push(feature);
-							});
-
-							data.ddstructures.push(structure);
-
-						});
-
-
-						// We use Promose.all to wait for the images to load
-						// and then resolve with data
-						return Promise.all(imagePromises).then(function(){
-							resolve(data);
-						}, reject);
-
-					});
-
-				} // End getData function
-
-				getData().then(function(data){
-
-					loadFile("../report/assessment-report.docx", function(err, content){
-						if (err) { throw err };
-
-						var doc = new Docxgen();
-
-						var imageModule = new ImageModule({centered:false});
-						imageModule.getSizeFromData=function(imgData) {
-							return [imgData.size[0] / 2, imgData.size[1] / 2];
-						}
-						imageModule.getImageFromData=function(imgData) {
-							return imgData.data.slice(0);
-						}
-						doc.attachModule(imageModule);
-
-						doc.load(content);
-
-						doc.setData( data ); //set the templateVariables
-						doc.render(); //apply them (replace all occurences of {first_name} by Hipp, ...)
-						var output = doc.getZip().generate({type:"blob", compression: 'DEFLATE'}); //Output the document using Data-URI
-						saveAs(output, "report.docx");
-					});
-
-				}, function(error){
-					console.log('Error', error);
-				});
-
-			});
-
-			$(panel).addClass('initialized');
-
-		}
-
-		if (!self.reportQueryKit) {
-			self.reportQueryKit = jT.ui.kit($('#jtox-report-query')[0]);
-			self.reportQueryKit.setWidget("bundle", self.rootElement);
-			self.reportQueryKit.kit().settings.fixedWidth = '200px';
-			// provid onRow function so the buttons can be se properly...
-			self.reportQueryKit.kit().settings.onRow = function (row, data, index) {
-				if (!data.bundles)
-					return;
-
-				var bundleInfo = data.bundles[self.bundleUri] || {};
-				if (!!bundleInfo.tag) {
-					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
-				}
-				if (!!bundleInfo.remarks) {
-					$('textarea.remark', row).val(bundleInfo.remarks).prop('readonly', true);
-				}
-			};
-
-		}
-		self.reportQueryKit.kit().queryDataset(self.bundleUri + '/compound');
-
-		if (!self.reportSubstancesQueryKit) {
-
-			// self.reportSubstancesQueryKit = self.prepareSubstanceKit($('#jtox-report-substance-query')[0]);
-
-			self.reportSubstancesQueryKit.kit().settings.onRow = function (row, data, index) {
-				if (!data.bundles){
-					return;
-				}
-				var bundleInfo = data.bundles[self.bundleUri] || {};
-				$('textarea.remark', row).val(bundleInfo.remarks).prop('readonly', true);
-				if (!!bundleInfo.tag) {
-					$('button.jt-toggle.' + bundleInfo.tag.toLowerCase(), row).addClass('active');
-				}
-			};
-
-		}
-
-		self.reportSubstancesQueryKit.kit().queryDataset(self.bundleUri + '/compound');
-
-
-		if (!self.reportMatrixKit) {
-
-			self.reportMatrixKit = self.prepareMatrixKit($('#jtox-report-matrix .jtox-toolkit')[0]);
-
-			self.reportMatrixKit.settings.showTabs = false;
-			self.reportMatrixKit.settings.showControls = false;
-			self.reportMatrixKit.settings.fixedWidth = "100%";
-
-			self.reportMatrixKit.settings.onComplete = function () {
-				var self = this,
-					table = $('<table class="dataTable"><thead></thead><tbody></tbody></table>'),
-					head = table.find('thead'),
-					body = table.find('tbody');
-
-				var ntr = $('<tr><th>Substance name</th></tr>');
-				var ttr = $('<tr><th>Tag</th></tr>');
-				var ctr = $('<tr><th>CAS No.</th></tr>');
-				$(self.fixTable).find('> tbody > tr').each(function(){
-					var cth = $('<th></th>').html( $(this).find('td')[2].innerHTML );
-					ctr.append(cth);
-					var nth = $('<th></th>').html( $(this).find('td')[3].innerHTML );
-					ntr.append(nth);
-					var tth = $('<th></th>').append( $($(this).find('td')[6]).find('button.active').clone() );
-					ttr.append(tth);
-				});
-				head.append(ttr).append(ntr).append(ctr);
-
-				$(self.varTable).find('thead th').each(function(index){
-					if (this.innerHTML == '') return;
-					var $this = $(this);
-					var tr = $('<tr></tr>').append('<th>' + $this.html() + '</th>');
-					$(self.varTable).find('tbody > tr').each(function(){
-						tr.append( '<td>' + $(this).find('td:nth-child(' + (index+1) + ')').html() + '</td>' );
-					});
-					body.append(tr);
-				});
-
-				$('#jtox-report-final > div').html('').append(table);
-
-				$(self.varTable).remove();
-				self.equalizeTables();
-
-				// Generate appendixes 2 and 3
-
-				var substanceSection = $('#jtox-report-substance'),
-					featureSection = $('#jtox-report-feature'),
-					infoDiv = $('#info-box'),
-					addedData = [],
-					deletedData = [];
-
-				for ( var i = 0, sl = self.dataset.dataEntry.length; i < sl; i++ ) {
-					var substance = self.dataset.dataEntry[i];
-					for ( var theId in substance.values ) {
-						if( $.isArray(substance.values[theId]) ){
-							var feature = self.dataset.feature[theId];
-							for ( var j = 0, vl = substance.values[theId].length; j < vl; j++ ) {
-								var value = substance.values[theId][j];
-								if (feature.isModelPredictionFeature || value.deleted ) {
-
-									for ( var fId in self.feature ) {
-										var f = self.feature[fId];
-										if ( f.sameAs == feature.sameAs ) {
-											var featureId = f.URI;
-										}
-									}
-
-									if ( feature.isModelPredictionFeature ) {
-										// Append data to Appendix 2
-										if( !addedData[i] ) {
-											addedData[i] = {};
-										}
-										if( !addedData[i][featureId] ){
-											addedData[i][featureId] = [];
-										}
-										addedData[i][featureId].push( {
-											feature: feature,
-											value: value
-										} );
-									}
-									if ( value.deleted ) {
-										// Append data to Appendix 3
-										if( !deletedData[i] ) {
-											deletedData[i] = {};
-										}
-										if( !deletedData[i][featureId] ){
-											deletedData[i][featureId] = [];
-										}
-										deletedData[i][featureId].push( {
-											feature: feature,
-											value: value
-										} );
-									}
-								}
-							}
-						}
-					}
-				}
-
-				for( var i = 0, al = addedData.length; i < al; i++ ){
-					if( !addedData[i] ) continue;
-					var newSection = substanceSection.clone().removeAttr('id');
-					var substance = self.dataset.dataEntry[i];
-					jT.ui.updateTree(newSection[0], {
-						name: (substance.compound.name || substance.compound.tradename), 
-						number: substance.number
-					}, self.settings.formatters);
-
-					for(fId in addedData[i]){
-						var set = addedData[i][fId];
-
-						var newFeature = featureSection.clone().removeAttr('id');
-						jT.ui.updateTree(newFeature[0], { title: self.dataset.feature[fId].title }, self.settings.formatters);
-
-						for ( var j = 0, sl = set.length; j < sl; j++ ) {
-
-							var newInfo = infoDiv.clone().removeAttr('id');
-							var feature = set[j].feature;
-							var value = set[j].value;
-
-							$('.dynamic-condition', newInfo).remove();
-							var dynHead = $('tr.conditions', newInfo)[0];
-							var postCell = $('td.postconditions', newInfo)[0];
-
-							for (var k = 0, cl = feature.annotation.length; k < cl; ++k) {
-								var ano = feature.annotation[k];
-								// first add the column
-								var el = document.createElement('th');
-								el.className = 'dynamic-condition';
-								el.innerHTML = ano.p;
-								dynHead.appendChild(el);
-								// now add the value
-								el = document.createElement('td');
-								el.className = 'dynamic-condition';
-								el.innerHTML = ano.o;
-								postCell.parentNode.insertBefore(el, postCell);
-							}
-
-							// make sure there is at least one cell.
-							if (cl < 1) {
-								el = document.createElement('td');
-								el.className = 'dynamic-condition';
-								el.innerHTML = '-';
-								postCell.parentNode.insertBefore(el, postCell);
-							}
-
-							$('th.conditions', newInfo).attr('colspan', cl);
-
-							jT.ui.updateTree(newInfo, {
-								endpoint: feature.title,
-								guidance: '',
-								value: jT.ui.renderRange(value, feature.units, 'display'),
-								remarks: feature.creator,
-								studyType: feature.source.type
-							}, self.settings.formatters);
-
-							newFeature.append( newInfo );
-						}
-
-						newSection.append( newFeature );
-					}
-
-					$('#jtox-report-gap-filling').append( newSection );
-				}
-
-				for( var i = 0, al = deletedData.length; i < al; i++ ){
-					if( !deletedData[i] ) continue;
-					var newSection = substanceSection.clone().removeAttr('id');
-					var substance = self.dataset.dataEntry[i];
-					jT.ui.updateTree(newSection[0], {
-						name: (substance.compound.name || substance.compound.tradename),
-						number: substance.number
-					}, self.settings.formatters);
-
-					for(fId in deletedData[i]){
-
-						var set = deletedData[i][fId];
-						var newFeature = featureSection.clone().removeAttr('id');
-						jT.ui.updateTree(newFeature[0], { title: self.dataset.feature[fId].title }, self.settings.formatters);
-
-						for ( var j = 0, sl = set.length; j < sl; j++ ) {
-
-							var newInfo = infoDiv.clone().removeAttr('id');
-							var feature = set[j].feature;
-							var value = set[j].value;
-
-							$('.dynamic-condition', newInfo).remove();
-							var dynHead = $('tr.conditions', newInfo)[0];
-							var postCell = $('td.postconditions', newInfo)[0];
-
-							for (var k = 0, cl = feature.annotation.length; k < cl; ++k) {
-								var ano = feature.annotation[k];
-								// first add the column
-								var el = document.createElement('th');
-								el.className = 'dynamic-condition';
-								el.innerHTML = ano.p;
-								dynHead.appendChild(el);
-								// now add the value
-								el = document.createElement('td');
-								el.className = 'dynamic-condition';
-								el.innerHTML = ano.o;
-								postCell.parentNode.insertBefore(el, postCell);
-							}
-
-							// make sure there is at least one cell.
-							if (cl < 1) {
-								el = document.createElement('td');
-								el.className = 'dynamic-condition';
-								el.innerHTML = '-';
-								postCell.parentNode.insertBefore(el, postCell);
-							}
-
-							$('th.conditions', newInfo).attr('colspan', cl);
-
-							jT.ui.updateTree(newInfo, {
-								endpoint: feature.title,
-								guidance: feature.creator,
-								value: jT.ui.renderRange(value, feature.units, 'display'),
-								remarks: value.remarks
-							}, self.settings.formatters);
-
-							newInfo.find('h5').remove();
-
-							newFeature.append( newInfo );
-						}
-
-						newSection.append( newFeature );
-					}
-
-					$('#jtox-report-deleting-data').append( newSection );
-				}
-			};
-
-			self.reportMatrixKit.settings.onRow = function (row, data, index) {
-
-				// equalize multi-rows, if there are any
-				setTimeout(function () {
-					jT.tables.equalizeHeights.apply(window, $('td.jtox-multi table tbody', row).toArray());
-				}, 50);
-			};
-		}
-
-		var queryUri = self.bundleUri + '/matrix/final';
-		if (!!queryUri) {
-			self.reportMatrixKit.query(queryUri);
-		}
+	MatrixKit.prototype.onReport = function(id, panel) {
+		var structuresTable = jT.tables.extractTables(true, $('table.dataTable', this.browserKit.rootElement)),
+			substancesTable = jT.tables.extractTables(true, $('table.dataTable', this.substanceKit.rootElement)),
+			compositionsTable = jT.tables.extractTables(true, $('table.dataTable', this.substanceKit.rootElement)),
+			matrixTable = jT.tables.extractTables(true, $('table.dataTable', this.matrixKit.rootElement));
+
+		$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
+			baseUrl: this.settings.baseUrl,
+			bundleUri: this.bundleUri,
+			bundleId: this.bundle.id,
+			structuresTable: structuresTable,
+			substancesTable: substancesTable,
+			compositionsTable: compositionsTable,
+			matrixTable: matrixTable
+		}, this.bundle), this.settings.formatters));
 	};
 
 	MatrixKit.prototype.updateTabs = function () {
@@ -7141,23 +6587,10 @@ jT.ui.templates['all-matrix']  =
 "data-fixed-width=\"650px\">" +
 "</div>" +
 "</div>" +
-"<div id=\"jtox-report\" class=\"jtox-report\">" +
-"<p>" +
-"<a href=\"${ambit_root}/ui/assessment_report?bundleUri=${ambit_root}/bundle/${bundleid}\"" +
-"id=\"open-report\">Create assessment report</a>" +
-"</p>" +
-"<p>" +
-"<a href=\"${ambit_root}/bundle/${bundleid}/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"" +
-"id=\"export-substance\">Create Excel file with all used experimental data</a>" +
-"</p>" +
-"<p>" +
-"<a href=\"${ambit_root}/bundle/${bundleid}/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"" +
-"id=\"export-initial-matrix\">Create Excel file with the initial matrix</a>" +
-"</p>" +
-"<p>" +
-"<a href=\"${ambit_root}/bundle/${bundleid}/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"" +
-"id=\"export-working-matrix\">Create Excel file with the working matrix</a>" +
-"</p>" +
+"<div id=\"jtox-report\" class=\"jtox-report\" data-loader=\"onReport\">" +
+"<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
+"<div class=\"report-box\"></div>" +
+"<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
 "</div>" +
 "</div>" +
 ""; // end of all-matrix 
@@ -7177,6 +6610,108 @@ jT.ui.templates['matrix-tag-indicator']  =
 jT.ui.templates['matrix-sel-arrow']  = 
 "<i class=\"jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler\" data-handler=\"substanceMove\" data-direction=\"{{direction}}\" title=\"Move the {{subject}} up in the list\"></i>" +
 ""; // end of matrix-sel-arrow 
+
+jT.ui.templates['matrix-full-report']  = 
+"<div id=\"jtox-report-cover\">" +
+"<h1>Ambit Assessment Report</h1>" +
+"<h2>{{ title }}</h2>" +
+"<dl>" +
+"<dt>Author:</dt><dd>{{ maintainer }}</dd>" +
+"<dt>Date:</dt><dd>{{ created|formatDate }}</dd>" +
+"<dt>Assessment code:</dt><dd>{{ number }}</dd>" +
+"<dt>Purpose:</dt><dd>{{ description }}</dd>" +
+"</dl>" +
+"</div>" +
+"" +
+"<section id=\"jtox-report-identifiers\">" +
+"<h2>Assessment Identifiers</h2>" +
+"" +
+"<table class=\"dataTable\">" +
+"<thead>" +
+"<tr><th class=\"right size-third\">Assessment title:</th><td>{{ title }}</td></tr>" +
+"<tr><th class=\"right size-third\">Owner:</th><td>{{ maintainer }}</td></tr>" +
+"" +
+"<tr><th class=\"right top size-third\">Purpose:</th><td>{{ description }}</td></tr>" +
+"<tr><th class=\"right size-third\">Version:</th><td>{{ version }}</td></tr>" +
+"<tr><th class=\"right size-third\">Status:</th><td>{{ status|formatStatus }}</td></tr>" +
+"<tr><th class=\"right size-third\">Version start date:</th><td>{{ created|formatDate }}</td></tr>" +
+"<tr><th class=\"right size-third\">Version last modified on:</th><td>{{ updated|formatDate }}</td></tr>" +
+"<tr><th class=\"right size-third\">Published:</th><td>{{ published|formatDate }}</td></tr>" +
+"<tr><th class=\"right size-third\">Assessment code:</th><td>{{ seeAlso }}</td></tr>" +
+"<tr><th class=\"right size-third\">Assessment DocLink:</th><td>{{ source|formatLink }}</td></tr>" +
+"<tr><th class=\"right size-third\">Assessment ID:</th><td>{{ number }}</td></tr>" +
+"</thead>" +
+"</table>" +
+"" +
+"<p>The original assessment in Ambit can be found via <a href=\"{{baseUrl}}ui/assessment?bundle_uri={{bundleUri}}\">Assessment ID</a></p>" +
+"" +
+"</section>" +
+"" +
+"<section id=\"jtox-report-structlist\">" +
+"<h2>List of structures for assessment</h2>" +
+"<p>In the assessment, similar structures were selected from exact structure, substructure and/or similarity searches, or were added manually. The rationale for the selection is given in the table.</p>" +
+"<div class=\"jtox-ds-variable\">" +
+"<table class=\"table-box dataTable\">{{ structuresTable }}</table>" +
+"</div>" +
+"</section>" +
+"" +
+"<section id=\"jtox-report-substances\">" +
+"<h2>List of substances related to the structures</h2>" +
+"<p>In the following, for each structure listed in chapter 2, substances were selected and the rationale is given.</p>" +
+"<div class=\"jtox-ds-variable\">" +
+"<table class=\"table-box dataTable\">{{ substancesTable }}</table>" +
+"</div>" +
+"</section>" +
+"" +
+"<section id=\"jtox-report-matrix\">" +
+"<h2>Substance composition matrix</h2>" +
+"<p>In the following, for each substance, the associated structure(s) and the composition are given.</p>" +
+"<div class=\"jtox-ds-variable\">" +
+"<table class=\"table-box dataTable\">{{ compositionsTable }}</table>" +
+"</div>" +
+"</section>" +
+"" +
+"<section id=\"jtox-report-final\">" +
+"<h2>Assessment data matrix</h2>" +
+"<p>In the following, for each substance, the associated endpoint data are given, either experimental data, waiving or read-across.</p>" +
+"<p>For detailed data or rationale for waiving and read-across, click hyperlinks in the table. These data or rationales can also be found in the annex of the report.</p>" +
+"<div class=\"jtox-ds-variable\">" +
+"<table class=\"table-box dataTable\">{{ matrixTable }}</table>" +
+"</div>" +
+"</section>" +
+"" +
+"<section id=\"jtox-report-justification\">" +
+"<h2>Justification for read-across / category</h2>" +
+"<div>" +
+"<textarea id=\"report-justification\" name=\"report-justification\">{{ reportJustification }}</textarea>" +
+"</div>" +
+"</section>" +
+"" +
+"<section class=\"annex\" id=\"jtox-report-experimental-data\">" +
+"<h2>Experimental data</h2>" +
+"<p><a href=\"{{bundleUri}}/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\" id=\"export-substance\">Create Excel file with all used experimental data</a></p>" +
+"</section>" +
+"" +
+"<section class=\"annex\" id=\"jtox-report-gap-filling\">" +
+"<h2>Rationale for gap filling</h2>" +
+"<!-- <table class=\"table-box\"></div>table>" +
+"</section>" +
+"" +
+"<section class=\"annex\" id=\"jtox-report-deleting-data\">" +
+"<h2>Rationale for deleting experimental data</h2>" +
+"<!-- <table class=\"table-box\"></div>table>" +
+"</section>" +
+"" +
+"<section class=\"annex\" id=\"jtox-report-initial-matrix\">" +
+"<h2>Initial matrix</h2>" +
+"<p><a href=\"{{bundleUri}}/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\" id=\"export-initial-matrix\">Create Excel file with the initial matrix</a></p>" +
+"</section>" +
+"" +
+"<section class=\"annex\" id=\"jtox-report-working-matrix\">" +
+"<h2>Working matrix</h2>" +
+"<p><a href=\"{{bundleUri}}/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\" id=\"export-working-matrix\">Create Excel file with the working matrix</a></p>" +
+"</section>" +
+""; // end of matrix-full-report 
 
 jT.ui.templates['kit-query-all']  = 
 "<div class=\"jtox-query\">" +

@@ -1293,6 +1293,58 @@ jT.tables = {
 		}
 	},
 
+	// Extract the table's contents (i.e. HTML), and glue them into a single table,
+	// optionally transposing it.
+	extractTables: function (par, jTables) {
+		var opts = { transpose: false, ignoreCols: null },
+			colsCnt = 0,
+			mergedTable = null,
+			mergedRows = null;
+
+		if (opts instanceof $)
+			jTables = par;
+		else if (typeof par === 'boolean')
+			opts.transpose = par;
+		else // it is a full object
+			opts = par;
+
+		// go through all provided tables and extract and merge the cell contents.
+		jTables.map(function (i, root) {
+			if (mergedTable == null) {
+				mergedTable = $(root).clone();
+				mergedRows = $('tr', mergedTable);
+				if (opts.ignoreCols != null)
+					$(opts.ignoreCols, mergedTable).remove();
+				return;
+			}
+
+			$('tr', root).each(function (idx, row) {
+				var allCells = $(row).children();
+				if (opts.ignoreCols != null)
+					allCells = allCells.not(opts.ignoreCols);
+				allCells.clone().appendTo(mergedRows[idx]);
+				colsCnt = Math.max(colsCnt, mergedRows[idx].children.length);
+			});
+		});
+
+		$('.fa.jtox-handler', mergedTable).remove();
+		if (opts.transpose) {
+			if (colsCnt == 0) // i.e. - we have one table...
+				mergedRows.each(function (i, r) { colsCnt = Math.max(colsCnt, r.children.length); });
+
+			var resRows = _.times(colsCnt, function (i) { return document.createElement('tr'); });
+			mergedRows.each(function (_i, row) {
+				$(row).children().each(function (i, cell) {
+					$(cell).appendTo(resRows[i]); 
+				});
+			});
+
+			mergedTable.empty().append(resRows);
+		}
+
+		return mergedTable.html();
+	},
+
 	commonHandlers: {
 		nextPage: function () {
 			if (this.entriesCount == null || this.pageStart + this.pageSize < this.entriesCount)

@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="../tests/skeleton-fluid.css" />
   <link rel="stylesheet" href="../tests/layout.css" />
   <link rel="stylesheet" href="../tests/jquery-ui.css" />
-  <link rel="stylesheet" href="../tests/jquery.dataTables.css" />
+  <link rel="stylesheet" href="../tests/jquery.dataTable.css" />
   <link rel="stylesheet" href="../tests/jBox.css" />
   <link rel="stylesheet" href="../tests/ambit2.css" />
 
@@ -31,7 +31,7 @@
   <script src="../tests/jquery.js"></script>
   <script src="../tests/jquery-migrate-1.2.1.min.js"></script>
   <script src="../tests/jquery-ui.min.js"></script>
-  <script src="../tests/jquery.dataTables-1.9.4.min.js"></script>
+  <script src="../tests/jquery.dataTable-1.9.4.min.js"></script>
   <script src="../tests/jBox.js"></script>
 
   <script src="es6-shim.js"></script>
@@ -193,23 +193,10 @@
           data-fixed-width="650px">
         </div>
       </div>
-      <div id="jtox-report" class="jtox-report">
-        <p>
-          <a href="${ambit_root}/ui/assessment_report?bundleUri=${ambit_root}/bundle/${bundleid}"
-            id="open-report">Create assessment report</a>
-        </p>
-        <p>
-          <a href="${ambit_root}/bundle/${bundleid}/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            id="export-substance">Create Excel file with all used experimental data</a>
-        </p>
-        <p>
-          <a href="${ambit_root}/bundle/${bundleid}/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            id="export-initial-matrix">Create Excel file with the initial matrix</a>
-        </p>
-        <p>
-          <a href="${ambit_root}/bundle/${bundleid}/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            id="export-working-matrix">Create Excel file with the working matrix</a>
-        </p>
+      <div id="jtox-report" class="jtox-report" data-loader="onReport">
+        <p><a href="#" class="jtox-handler" data-handler="reportWord">Download Word file with the report</a></p>
+        <div class="report-box"></div>
+        <p><a href="#" class="jtox-handler" data-handler="reportWord">Download Word file with the report</a></p>
       </div>
     </div>
 <!-- // end of all-matrix ]]-->
@@ -226,6 +213,107 @@
 <!--[[ jT.ui.templates['matrix-sel-arrow'] -->
 <i class="jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
 <!-- // end of matrix-sel-arrow ]]-->
+<!--[[ jT.ui.templates['matrix-full-report'] -->
+<div id="jtox-report-cover">
+  <h1>Ambit Assessment Report</h1>
+  <h2>{{ title }}</h2>
+  <dl>
+    <dt>Author:</dt><dd>{{ maintainer }}</dd>
+    <dt>Date:</dt><dd>{{ created|formatDate }}</dd>
+    <dt>Assessment code:</dt><dd>{{ number }}</dd>
+    <dt>Purpose:</dt><dd>{{ description }}</dd>
+  </dl>
+</div>
+
+<section id="jtox-report-identifiers">
+  <h2>Assessment Identifiers</h2>
+
+  <table class="dataTable">
+    <thead>
+      <tr><th class="right size-third">Assessment title:</th><td>{{ title }}</td></tr>
+      <tr><th class="right size-third">Owner:</th><td>{{ maintainer }}</td></tr>
+
+      <tr><th class="right top size-third">Purpose:</th><td>{{ description }}</td></tr>
+      <tr><th class="right size-third">Version:</th><td>{{ version }}</td></tr>
+      <tr><th class="right size-third">Status:</th><td>{{ status|formatStatus }}</td></tr>
+      <tr><th class="right size-third">Version start date:</th><td>{{ created|formatDate }}</td></tr>
+      <tr><th class="right size-third">Version last modified on:</th><td>{{ updated|formatDate }}</td></tr>
+      <tr><th class="right size-third">Published:</th><td>{{ published|formatDate }}</td></tr>
+      <tr><th class="right size-third">Assessment code:</th><td>{{ seeAlso }}</td></tr>
+      <tr><th class="right size-third">Assessment DocLink:</th><td>{{ source|formatLink }}</td></tr>
+      <tr><th class="right size-third">Assessment ID:</th><td>{{ number }}</td></tr>
+    </thead>
+  </table>
+
+  <p>The original assessment in Ambit can be found via <a href="{{baseUrl}}ui/assessment?bundle_uri={{bundleUri}}">Assessment ID</a></p>
+
+</section>
+
+<section id="jtox-report-structlist">
+  <h2>List of structures for assessment</h2>
+  <p>In the assessment, similar structures were selected from exact structure, substructure and/or similarity searches, or were added manually. The rationale for the selection is given in the table.</p>
+  <div class="jtox-ds-variable">
+    <table class="table-box dataTable">{{ structuresTable }}</table>
+  </div>
+</section>
+
+<section id="jtox-report-substances">
+  <h2>List of substances related to the structures</h2>
+  <p>In the following, for each structure listed in chapter 2, substances were selected and the rationale is given.</p>
+  <div class="jtox-ds-variable">
+    <table class="table-box dataTable">{{ substancesTable }}</table>
+  </div>
+</section>
+
+<section id="jtox-report-matrix">
+  <h2>Substance composition matrix</h2>
+  <p>In the following, for each substance, the associated structure(s) and the composition are given.</p>
+  <div class="jtox-ds-variable">
+    <table class="table-box dataTable">{{ compositionsTable }}</table>
+  </div>
+</section>
+
+<section id="jtox-report-final">
+  <h2>Assessment data matrix</h2>
+  <p>In the following, for each substance, the associated endpoint data are given, either experimental data, waiving or read-across.</p>
+  <p>For detailed data or rationale for waiving and read-across, click hyperlinks in the table. These data or rationales can also be found in the annex of the report.</p>
+  <div class="jtox-ds-variable">
+    <table class="table-box dataTable">{{ matrixTable }}</table>
+  </div>
+</section>
+
+<section id="jtox-report-justification">
+  <h2>Justification for read-across / category</h2>
+  <div>
+    <textarea id="report-justification" name="report-justification">{{ reportJustification }}</textarea>
+  </div>
+</section>
+
+<section class="annex" id="jtox-report-experimental-data">
+  <h2>Experimental data</h2>
+  <p><a href="{{bundleUri}}/substance?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="export-substance">Create Excel file with all used experimental data</a></p>
+</section>
+
+<section class="annex" id="jtox-report-gap-filling">
+  <h2>Rationale for gap filling</h2>
+  <!-- <table class="table-box"></div>table>
+</section>
+
+<section class="annex" id="jtox-report-deleting-data">
+  <h2>Rationale for deleting experimental data</h2>
+  <!-- <table class="table-box"></div>table>
+</section>
+
+<section class="annex" id="jtox-report-initial-matrix">
+  <h2>Initial matrix</h2>
+  <p><a href="{{bundleUri}}/dataset?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="export-initial-matrix">Create Excel file with the initial matrix</a></p>
+</section>
+
+<section class="annex" id="jtox-report-working-matrix">
+  <h2>Working matrix</h2>
+  <p><a href="{{bundleUri}}/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="export-working-matrix">Create Excel file with the working matrix</a></p>
+</section>
+<!-- // end of matrix-full-report ]]-->
   </div>
 </body>
 

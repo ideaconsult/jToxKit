@@ -20,7 +20,7 @@ var jToxKit = { version: "2.4.3" };
  */
 
 jT = a$.extend(jT, {
-  templateRegExp: /\{\{([^}|]+)(|[^}]+)?\}\}/,
+  templateRegExp: /\{\{\s*([^}|]+)(|[^}\s]+)?\s*\}\}/,
   /* formats a string, replacing {{number | property}} in it with the corresponding value in the arguments
    */
   formatString: function (str, info, formatters) {
