@@ -221,8 +221,11 @@
 		return this.mainKit;
 	};
 
-	QueryKit.prototype.getQueryType = function () {
-		return this.search.queryType;
+	QueryKit.prototype.queryType = function (newType) {
+		if (newType == null)
+			return this.search.queryType;
+		this.search.queryType = newType;
+		return this;
 	},
 
 	// required from jToxQuery - this is how we add what we've collected

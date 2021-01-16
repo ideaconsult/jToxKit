@@ -1302,6 +1302,7 @@ div.source button.jt-toggle.jtox-handler.source,
 div.cm button.jt-toggle.jtox-handler.cm {
   background: #aaa;
   opacity: 1.0;
+  display: inline-block !important;
 }
 
 #jtox-identifiers form div.actions {
@@ -1482,22 +1483,13 @@ div.jBox-Confirm.jtox-toolkit.delete .jBox-Confirm-button-submit:hover {
   background: none;
 }
 
-#jtox-report .jtox-up, #jtox-report .jtox-down {
+#jtox-report button.jt-toggle {
   display: none;
 }
 
-#jtox-report .fa {
+#jtox-report button.jt-toggle.active {
   display: inline-block;
 }
-
-#jtox-report .jt-toggle {
-  display: none;
-}
-
-#jtox-report .jt-toggle.active {
-  display: inline-block;
-}
-
 
 section {
   clear: both;

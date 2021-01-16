@@ -362,10 +362,14 @@
 				formatters: this.settings.formatters,
 				columns: this.settings.columns,
 				onLoaded: function (dataset) {
-					if (self.queryKit.getQueryType() === 'selected') {
+					if (self.queryKit.queryType() === 'selected') {
 						self.bundleSummary.compound = dataset.dataEntry.length;
 						self.updateTabs();
 					}
+				},
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('structure', self.browserKit, self.browserKit.dataset);
 				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri);
@@ -401,7 +405,9 @@
 			});
 		}
 
-		this.queryKit.query();
+		// Make this query only on organic calls, i.e. - from UI
+		if (panel)
+			this.queryKit.query();
 	};
 
 	// called when a sub-action in endpoint selection tab is called
@@ -420,6 +426,10 @@
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				columns: this.settings.columns,
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('substance', self.substanceKit);
+				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri),
 						substanceUri = baseUrl + 'substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + 
@@ -435,9 +445,11 @@
 						showControls: false,
 						onDetails: null,
 						columns: { substance: { 'Id': idCol } },
-						onLoaded: function () { 
+						onLoaded: function (dataset) { 
 							// The actual counting happens in the onRow, because it is conditional.
-							self.updateTabs(); 
+							self.updateTabs();
+							if (typeof self.loadedMonitor === 'function')
+								self.loadedMonitor('composition', this, dataset);
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -460,8 +472,9 @@
 			});
 		}
 
-		// Make the initial call
-		this.substanceKit.query(this.bundleUri + '/compound');
+		// Make the initial call only on organic calls, i.e. - from UI
+		if (panel)
+			this.substanceKit.query(this.bundleUri + '/compound');
 	};
 
 	MatrixKit.prototype.onEndpoints = function (id, panel) {
@@ -480,6 +493,10 @@
 				columns: $.extend({  
 					endpoint: { 'Id': idCol } 
 				},this.settings.columns),
+				onLoaded: function (dataset) {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('endpoint', self.endpointKit, dataset);
+				},
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
@@ -843,6 +860,10 @@
 						}
 					}
 				},
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('matrix', self.matrixKit, self.matrixKit.dataset);
+				},
 				onRow: function (row, data, index) {
 					// equalize multi-rows, if there are any
 					$('td.jtox-multi .jtox-diagram .jtox-handler', row).on('click', function () {
@@ -873,21 +894,42 @@
 	};
 
 	MatrixKit.prototype.onReport = function(id, panel) {
-		// TODO: Make sure the corresponding kits are openned on the proper page and all necessary stuff - expanded !
-		var structuresTable = jT.tables.extractTables(true, $('table.dataTable', this.browserKit.rootElement)),
-			substancesTable = jT.tables.extractTables(true, $('table.dataTable', this.substanceKit.rootElement)),
-			compositionsTable = jT.tables.extractTables(true, $('table.dataTable', this.substanceKit.rootElement)),
-			matrixTable = jT.tables.extractTables(true, $('table.dataTable', this.matrixKit.rootElement));
+		var self = this,
+			loadedTables = {},
+			datasets = {},
+			reportMaker = function () {
+				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
+					baseUrl: self.settings.baseUrl,
+					bundleUri: self.bundleUri,
+					bundleId: self.bundle.id,
+					dataTables: loadedTables,
+				}, self.bundle), self.settings.formatters));
 
-		$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
-			baseUrl: this.settings.baseUrl,
-			bundleUri: this.bundleUri,
-			bundleId: this.bundle.id,
-			structuresTable: structuresTable,
-			substancesTable: substancesTable,
-			compositionsTable: compositionsTable,
-			matrixTable: matrixTable
-		}, this.bundle), this.settings.formatters));
+				// And clear the handler!
+				self.loadedMonitor = null;
+				loadedTables = null;
+			};
+
+
+		self.loadedMonitor = function (entity, kit, dataset) {
+			loadedTables[entity] = jT.tables.extractTable($('table.dataTable', kit.rootElement), true).html();
+			datasets[entity] = dataset;
+			if (_.keys(loadedTables).length >= 3)
+				reportMaker();
+		};
+
+		// Make sure all kits are initialized!
+		this.onStructures();
+		this.onSubstances();
+		this.onMatrix();
+
+		// Initiate a query - in a very specific way for each one!
+		this.queryKit.queryType('selected').query();
+		this.substanceKit.query(this.bundleUri + '/compound');
+		// TODO: Initiate openning of composition tabs.
+		this.queryMatrix('final');
+
+		// TODO: Work on the DOCX preparation, using datasets
 	};
 
 	MatrixKit.prototype.updateTabs = function () {

@@ -3231,10 +3231,14 @@
 				formatters: this.settings.formatters,
 				columns: this.settings.columns,
 				onLoaded: function (dataset) {
-					if (self.queryKit.getQueryType() === 'selected') {
+					if (self.queryKit.queryType() === 'selected') {
 						self.bundleSummary.compound = dataset.dataEntry.length;
 						self.updateTabs();
 					}
+				},
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('structure', self.browserKit, self.browserKit.dataset);
 				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri);
@@ -3270,7 +3274,9 @@
 			});
 		}
 
-		this.queryKit.query();
+		// Make this query only on organic calls, i.e. - from UI
+		if (panel)
+			this.queryKit.query();
 	};
 
 	// called when a sub-action in endpoint selection tab is called
@@ -3289,6 +3295,10 @@
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				columns: this.settings.columns,
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('substance', self.substanceKit);
+				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri),
 						substanceUri = baseUrl + 'substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + 
@@ -3304,9 +3314,11 @@
 						showControls: false,
 						onDetails: null,
 						columns: { substance: { 'Id': idCol } },
-						onLoaded: function () { 
+						onLoaded: function (dataset) { 
 							// The actual counting happens in the onRow, because it is conditional.
-							self.updateTabs(); 
+							self.updateTabs();
+							if (typeof self.loadedMonitor === 'function')
+								self.loadedMonitor('composition', this, dataset);
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -3329,8 +3341,9 @@
 			});
 		}
 
-		// Make the initial call
-		this.substanceKit.query(this.bundleUri + '/compound');
+		// Make the initial call only on organic calls, i.e. - from UI
+		if (panel)
+			this.substanceKit.query(this.bundleUri + '/compound');
 	};
 
 	MatrixKit.prototype.onEndpoints = function (id, panel) {
@@ -3349,6 +3362,10 @@
 				columns: $.extend({  
 					endpoint: { 'Id': idCol } 
 				},this.settings.columns),
+				onLoaded: function (dataset) {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('endpoint', self.endpointKit, dataset);
+				},
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
@@ -3712,6 +3729,10 @@
 						}
 					}
 				},
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('matrix', self.matrixKit, self.matrixKit.dataset);
+				},
 				onRow: function (row, data, index) {
 					// equalize multi-rows, if there are any
 					$('td.jtox-multi .jtox-diagram .jtox-handler', row).on('click', function () {
@@ -3742,20 +3763,42 @@
 	};
 
 	MatrixKit.prototype.onReport = function(id, panel) {
-		var structuresTable = jT.tables.extractTables(true, $('table.dataTable', this.browserKit.rootElement)),
-			substancesTable = jT.tables.extractTables(true, $('table.dataTable', this.substanceKit.rootElement)),
-			compositionsTable = jT.tables.extractTables(true, $('table.dataTable', this.substanceKit.rootElement)),
-			matrixTable = jT.tables.extractTables(true, $('table.dataTable', this.matrixKit.rootElement));
+		var self = this,
+			loadedTables = {},
+			datasets = {},
+			reportMaker = function () {
+				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
+					baseUrl: self.settings.baseUrl,
+					bundleUri: self.bundleUri,
+					bundleId: self.bundle.id,
+					dataTables: loadedTables,
+				}, self.bundle), self.settings.formatters));
 
-		$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
-			baseUrl: this.settings.baseUrl,
-			bundleUri: this.bundleUri,
-			bundleId: this.bundle.id,
-			structuresTable: structuresTable,
-			substancesTable: substancesTable,
-			compositionsTable: compositionsTable,
-			matrixTable: matrixTable
-		}, this.bundle), this.settings.formatters));
+				// And clear the handler!
+				self.loadedMonitor = null;
+				loadedTables = null;
+			};
+
+
+		self.loadedMonitor = function (entity, kit, dataset) {
+			loadedTables[entity] = jT.tables.extractTable($('table.dataTable', kit.rootElement), true).html();
+			datasets[entity] = dataset;
+			if (_.keys(loadedTables).length >= 3)
+				reportMaker();
+		};
+
+		// Make sure all kits are initialized!
+		this.onStructures();
+		this.onSubstances();
+		this.onMatrix();
+
+		// Initiate a query - in a very specific way for each one!
+		this.queryKit.queryType('selected').query();
+		this.substanceKit.query(this.bundleUri + '/compound');
+		// TODO: Initiate openning of composition tabs.
+		this.queryMatrix('final');
+
+		// TODO: Work on the DOCX preparation, using datasets
 	};
 
 	MatrixKit.prototype.updateTabs = function () {
@@ -4565,8 +4608,11 @@
 		return this.mainKit;
 	};
 
-	QueryKit.prototype.getQueryType = function () {
-		return this.search.queryType;
+	QueryKit.prototype.queryType = function (newType) {
+		if (newType == null)
+			return this.search.queryType;
+		this.search.queryType = newType;
+		return this;
 	},
 
 	// required from jToxQuery - this is how we add what we've collected
@@ -6588,9 +6634,7 @@ jT.ui.templates['all-matrix']  =
 "</div>" +
 "</div>" +
 "<div id=\"jtox-report\" class=\"jtox-report\" data-loader=\"onReport\">" +
-"<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
 "<div class=\"report-box\"></div>" +
-"<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
 "</div>" +
 "</div>" +
 ""; // end of all-matrix 
@@ -6612,6 +6656,7 @@ jT.ui.templates['matrix-sel-arrow']  =
 ""; // end of matrix-sel-arrow 
 
 jT.ui.templates['matrix-full-report']  = 
+"<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
 "<div id=\"jtox-report-cover\">" +
 "<h1>Ambit Assessment Report</h1>" +
 "<h2>{{ title }}</h2>" +
@@ -6651,7 +6696,7 @@ jT.ui.templates['matrix-full-report']  =
 "<h2>List of structures for assessment</h2>" +
 "<p>In the assessment, similar structures were selected from exact structure, substructure and/or similarity searches, or were added manually. The rationale for the selection is given in the table.</p>" +
 "<div class=\"jtox-ds-variable\">" +
-"<table class=\"table-box dataTable\">{{ structuresTable }}</table>" +
+"<table class=\"table-box dataTable\">{{ dataTables.structure }}</table>" +
 "</div>" +
 "</section>" +
 "" +
@@ -6659,7 +6704,7 @@ jT.ui.templates['matrix-full-report']  =
 "<h2>List of substances related to the structures</h2>" +
 "<p>In the following, for each structure listed in chapter 2, substances were selected and the rationale is given.</p>" +
 "<div class=\"jtox-ds-variable\">" +
-"<table class=\"table-box dataTable\">{{ substancesTable }}</table>" +
+"<table class=\"table-box dataTable\">{{ dataTables.substance }}</table>" +
 "</div>" +
 "</section>" +
 "" +
@@ -6667,7 +6712,7 @@ jT.ui.templates['matrix-full-report']  =
 "<h2>Substance composition matrix</h2>" +
 "<p>In the following, for each substance, the associated structure(s) and the composition are given.</p>" +
 "<div class=\"jtox-ds-variable\">" +
-"<table class=\"table-box dataTable\">{{ compositionsTable }}</table>" +
+"<table class=\"table-box dataTable\">{{ dataTables.composition }}</table>" +
 "</div>" +
 "</section>" +
 "" +
@@ -6676,7 +6721,7 @@ jT.ui.templates['matrix-full-report']  =
 "<p>In the following, for each substance, the associated endpoint data are given, either experimental data, waiving or read-across.</p>" +
 "<p>For detailed data or rationale for waiving and read-across, click hyperlinks in the table. These data or rationales can also be found in the annex of the report.</p>" +
 "<div class=\"jtox-ds-variable\">" +
-"<table class=\"table-box dataTable\">{{ matrixTable }}</table>" +
+"<table class=\"table-box dataTable\">{{ dataTables.matrix }}</table>" +
 "</div>" +
 "</section>" +
 "" +
@@ -6694,12 +6739,12 @@ jT.ui.templates['matrix-full-report']  =
 "" +
 "<section class=\"annex\" id=\"jtox-report-gap-filling\">" +
 "<h2>Rationale for gap filling</h2>" +
-"<!-- <table class=\"table-box\"></div>table>" +
+"<!-- <table class=\"table-box\"></div>table> -->" +
 "</section>" +
 "" +
 "<section class=\"annex\" id=\"jtox-report-deleting-data\">" +
 "<h2>Rationale for deleting experimental data</h2>" +
-"<!-- <table class=\"table-box\"></div>table>" +
+"<!-- <table class=\"table-box\"></div>table> -->" +
 "</section>" +
 "" +
 "<section class=\"annex\" id=\"jtox-report-initial-matrix\">" +
@@ -6711,6 +6756,7 @@ jT.ui.templates['matrix-full-report']  =
 "<h2>Working matrix</h2>" +
 "<p><a href=\"{{bundleUri}}/matrix?media=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\" id=\"export-working-matrix\">Create Excel file with the working matrix</a></p>" +
 "</section>" +
+"<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
 ""; // end of matrix-full-report 
 
 jT.ui.templates['kit-query-all']  = 

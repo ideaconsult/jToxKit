@@ -238,54 +238,51 @@ jT.tables = {
 
 	// Extract the table's contents (i.e. HTML), and glue them into a single table,
 	// optionally transposing it.
-	extractTables: function (par, jTables) {
-		var opts = { transpose: false, ignoreCols: null },
-			colsCnt = 0,
+	extractTable: function (jTables, transpose) {
+		var colsCnt = 0,
 			mergedTable = null,
 			mergedRows = null;
-
-		if (opts instanceof $)
-			jTables = par;
-		else if (typeof par === 'boolean')
-			opts.transpose = par;
-		else // it is a full object
-			opts = par;
 
 		// go through all provided tables and extract and merge the cell contents.
 		jTables.map(function (i, root) {
 			if (mergedTable == null) {
 				mergedTable = $(root).clone();
 				mergedRows = $('tr', mergedTable);
-				if (opts.ignoreCols != null)
-					$(opts.ignoreCols, mergedTable).remove();
 				return;
 			}
 
 			$('tr', root).each(function (idx, row) {
-				var allCells = $(row).children();
-				if (opts.ignoreCols != null)
-					allCells = allCells.not(opts.ignoreCols);
-				allCells.clone().appendTo(mergedRows[idx]);
+				$(row).children().clone().appendTo(mergedRows[idx]);
 				colsCnt = Math.max(colsCnt, mergedRows[idx].children.length);
 			});
 		});
 
+		// Clear the table from non-important stuff.
 		$('.fa.jtox-handler,.ui-icon', mergedTable).remove();
-		if (opts.transpose) {
+		$('td,th', mergedTable).css('width', 'auto').css('height', 'auto');
+		if (transpose === true) {
 			if (colsCnt == 0) // i.e. - we have one table...
 				mergedRows.each(function (i, r) { colsCnt = Math.max(colsCnt, r.children.length); });
 
 			var resRows = _.times(colsCnt, function (i) { return document.createElement('tr'); });
 			mergedRows.each(function (_i, row) {
 				$(row).children().each(function (i, cell) {
-					$(cell).appendTo(resRows[i]); 
+					var c$ = $(cell),
+						cRowSpan = c$.attr('rowspan'),
+						cColSpan = c$.attr('colspan');
+
+					c$.appendTo(resRows[i]);
+					if (cRowSpan)
+						c$.attr('colspan', cRowSpan);
+					if (cColSpan)
+						c$.attr('rowspan', cColSpan);
 				});
 			});
 
 			mergedTable.empty().append(resRows);
 		}
 
-		return mergedTable.html();
+		return mergedTable;
 	},
 
 	commonHandlers: {
