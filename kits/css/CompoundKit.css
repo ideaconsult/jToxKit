@@ -55,10 +55,7 @@
 }
 
 .jtox-ds-tables .jtox-details-box {
-  position: absolute;
   margin: 0px;
-  left: 0px;
-  top: 0px;
   padding: 0px;
   z-index: 10;
   height: auto;

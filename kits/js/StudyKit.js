@@ -451,6 +451,12 @@
 				self.insertComposition(substance.URI + "/composition");
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, null);
+
+			jT.fireCallback(self.settings.onComplete, self);
+			jT.ui.notifyParents(self.rootElement, function (kit) {
+				if (typeof kit.equalizeTables === 'function')
+				kit.equalizeTables();
+			});
 		});
 	};
 
@@ -503,6 +509,7 @@
 		onComposition: null,	// invoked when the
 		onStudy: null,			// invoked for each loaded study
 		onLoaded: null,			// invoked when the substance general info is loaded
+		onComplete: null, 		// when all loading, and UI dangling is done.
 		columns: {
 			study: {
 				"_": {

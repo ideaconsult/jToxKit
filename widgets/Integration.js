@@ -25,11 +25,11 @@ jT.ui = a$.extend(jT.ui, {
   	a$.each(element.parents('.jtox-kit,.jtox-widget').toArray().reverse(), function(el) {
   	  parent = self.kit(el);
     	if (parent != null)
-      	topSettings = $.extend(topSettings, parent.settings, { baseUrl: parent.baseUrl });
+      	topSettings = $.extend(true, topSettings, parent.settings, { baseUrl: parent.baseUrl });
   	});
 
     // This should be priority from low to high: inherited -> data-* provided -> programmatically provided -> query string provided
-    dataParams = $.extend(_.cloneDeep(topSettings), dataParams, opts, self.querySettings);
+    dataParams = $.extend(true, topSettings, dataParams, opts, self.querySettings);
     dataParams.baseUrl = jT.fixBaseUrl(dataParams.baseUrl);
     dataParams.target = element;
     
@@ -130,6 +130,16 @@ jT.ui = a$.extend(jT.ui, {
 	
 	attachKit: function (element, kit) {
   	return $(element).data('jtKit', kit);
-	}
-
+  },
+  
+  notifyParents: function (element, cb) {
+    var parArr = $(element).parents('.jtox-kit,.jtox-widget').toArray();
+    for (var i = parArr.length - 1; i >= 0; --i) {
+  	  var parent = this.kit(parArr[i]);
+      if (parent == null)
+        continue;
+      if (cb(parent) === false)
+        break;
+    }
+  }
 });

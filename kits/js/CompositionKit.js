@@ -126,6 +126,12 @@
 				}
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, json.composition);
+
+			jT.fireCallback(self.settings.onComplete, self, json.composition);
+			jT.ui.notifyParents(self.rootElement, function (kit) {
+				if (typeof kit.equalizeTables === 'function')
+				kit.equalizeTables();
+			});
 		});
 	};
 
@@ -146,6 +152,7 @@
 		showDiagrams: false, // whether to show diagram for each compound in the composition
 		dom: "rt<Ffp>", // compounds (ingredients) table's dom
 		onLoaded: null,
+		onComplete: null,
 		handlers: { },
 
 		/* compositionUri */

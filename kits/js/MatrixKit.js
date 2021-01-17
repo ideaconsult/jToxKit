@@ -357,7 +357,7 @@
 			this.browserKit = jT.ui.initKit($('#struct-browser'), {
 				baseUrl: this.settings.baseUrl,
 				baseFeatures: _.defaults({ '#SelectionCol': selColDef }, this.settings.baseFeatures),
-				groups: this.settings.groups.structure,
+				groups: this.settings.groupSets.structure,
 				handlers: this.reboundHandlers,
 				formatters: this.settings.formatters,
 				columns: this.settings.columns,
@@ -373,7 +373,8 @@
 				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri);
-					new jT.ui.Substance($.extend(true, {}, this.settings, {
+					new jT.ui.Substance({
+						baseUrl: this.baseUrl,
 						target: substRoot,
 						substanceUri: baseUrl + 'substance?type=related&compound_uri=' + encodeURIComponent(data.compound.URI),
 						showControls: false,
@@ -381,12 +382,13 @@
 						onRow: null,
 						handlers: self.reboundHandlers,
 						onDetails: function (studyRoot, data) {
-							new jT.ui.Study($.extend({}, this.settings, {
+							new jT.ui.Study({
+								baseUrl: this.settings.baseUrl,
 								target: studyRoot,
-								substanceUri: data.URI
-							}));
+								substanceUri: data.URI,
+							});
 						}
-					}));
+					});
 				}
 			});
 
@@ -422,20 +424,20 @@
 			this.substanceKit = jT.ui.initKit($('#substance-selector'), {
 				baseUrl: this.settings.baseUrl,
 				baseFeatures: this.settings.baseFeatures,
-				groups: this.settings.groups.substance,
+				groups: this.settings.groupSets.substance,
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				columns: this.settings.columns,
-				// onComplete: function () {
-				// 	if (typeof self.loadedMonitor === 'function')
-				// 		self.loadedMonitor('substance', self.substanceKit);
-				// },
+				onComplete: function () {
+					if (typeof self.loadedMonitor === 'function')
+						self.loadedMonitor('substance', self.substanceKit);
+				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri),
 						substanceUri = baseUrl + 'substance?type=related&addDummySubstance=true&compound_uri=' + encodeURIComponent(data.compound.URI) + 
 							'&filterbybundle=' + encodeURIComponent(self.bundleUri) + 
 							'&bundle_uri=' + encodeURIComponent(self.bundleUri);
-					new jT.ui.Substance($.extend(true, {}, this.settings, {
+					new jT.ui.Substance({
 						baseUrl: baseUrl,
 						target: substRoot,
 						substanceUri: substanceUri,
@@ -445,9 +447,12 @@
 						showControls: false,
 						onDetails: null,
 						columns: { substance: { 'Id': idCol } },
-						onLoaded: function (dataset) { 
+						onComplete: function () {
 							// The actual counting happens in the onRow, because it is conditional.
 							self.updateTabs();
+
+							if (typeof self.loadedMonitor === 'function')
+								self.loadedMonitor('relation', self.substanceKit);
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -457,7 +462,7 @@
 
 							$('input.jtox-handler', row).prop('checked', !!bInfo && bInfo.tag == "selected");
 						},
-					}));
+					});
 				}
 			});
 
@@ -484,7 +489,6 @@
 					{ separator: '<br/>', position: 'before' });
 
 			this.endpointKit = jT.ui.initKit($('#endpoint-selector'), {
-				baseUrl: this.settings.baseUrl,
 				handlers: this.reboundHandlers,
 				formatters: this.settings.formatters,
 				showMultiselect: true,
@@ -613,7 +617,7 @@
 		var self = this;
 
 		return function(miniset, kit) {
-			var groups = { "Identifiers" : self.settings.groups.matrix.Identifiers },
+			var groups = { "Identifiers" : self.settings.groupSets.matrix.Identifiers },
 				endpoints = {};
 
 			for (var fId in miniset.feature) {
@@ -832,11 +836,10 @@
 				matrixRoot = $('#matrix-table');
 
 			this.matrixKit = jT.ui.initKit(matrixRoot, {
-				baseUrl: this.settings.baseUrl,
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				hasDetails: false,
-				groups: this.settings.groups.matrix,
+				groups: this.settings.groupSets.matrix,
 				featureUri: this.bundleUri + '/property',
 				baseFeatures: this.getMatrixFeatures(),
 				groups: this.getMatrixGrouper(),
@@ -890,11 +893,11 @@
 	MatrixKit.prototype.onReport = function(id, panel) {
 		var self = this,
 			loadedTables = {},
+			loadingCount = 0,
+			loadingTarget = 3, // structure, substance, composition+matrix
 			datasets = {},
 			reportMaker = function () {
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
-					baseUrl: self.settings.baseUrl,
-					bundleUri: self.bundleUri,
 					bundleId: self.bundle.id,
 					dataTables: loadedTables,
 				}, self.bundle), self.settings.formatters));
@@ -907,7 +910,8 @@
 
 		self.loadedMonitor = function (entity, kit, dataset) {
 			var theTables = $('table.dataTable', kit.rootElement);
-
+			
+			++loadingCount;
 			if (entity == 'matrix') {
 				var compTable = jT.tables.extractTable(theTables[0]);
 				loadedTables.composition = compTable.html();
@@ -917,12 +921,19 @@
 					stripSizes: true,
 					ignoreCols: [6, 11]
 				}).html();
-			} else
+			} else if (entity == 'substance') {
+				var detailsButs = $('.jtox-details-open.jtox-handler', kit.rootElement);
+				loadingTarget += detailsButs.length;
+				setTimeout(function () { detailsButs.trigger('click'); }, 200);
+			} else // i.e. structure
 				loadedTables[entity] = jT.tables.extractTable(theTables).html();
 
 			datasets[entity] = dataset;
-			if (_.keys(loadedTables).length >= 3)
+			if (loadingCount >= loadingTarget) {
+				// get the substance table now... when it's all loaded.
+				loadedTables.substance = jT.tables.extractTable($('table.dataTable', self.substanceKit.rootElement)).html();
 				reportMaker();
+			}
 		};
 
 		// Make sure all kits are initialized!
@@ -1154,7 +1165,7 @@
 				jT.ui.installHandlers(this.matrixKit, varTable.row(otherData.index).node());
 			}
 		},
-		groups: {
+		groupSets: {
 			structure: {
 				Identifiers: [
 					"#SelectionCol",

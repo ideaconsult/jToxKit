@@ -259,7 +259,7 @@ jT.tables = {
 
 
 		// Clear the table from non-important stuff.
-		$('.fa,.ui-icon,.jtox-hidden', mergedTable).remove();
+		$('.fa,.ui-icon,.jtox-hidden,.jtox-selection', mergedTable).remove();
 		if (opts.keepSizes !== true)
 			$('td,th', mergedTable).css('width', 'auto').css('height', 'auto');
 

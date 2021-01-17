@@ -19,13 +19,10 @@
 
 		if (this.settings.embedComposition && this.settings.onDetails == null) {
 			this.settings.onDetails = function (root, data) {
-				new jT.ui.Composition($.extend({},
-					self.settings,
-					(typeof self.settings.embedComposition == 'object' ? self.settings.embedComposition : {}), {
-						target: root,
-						compositionUri: data.URI + '/composition'
-					}
-				));
+				new jT.ui.Composition($.extend({
+					target: root,
+					compositionUri: data.URI + '/composition'
+				}, (typeof self.settings.embedComposition === 'object' ? typeof self.settings.embedComposition : null)));
 			};
 		}
 
@@ -102,6 +99,12 @@
 				jT.tables.updateControls.call(self, from, result.substance.length);
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
+
+			jT.fireCallback(self.settings.onComplete, self, result);
+			jT.ui.notifyParents(self.rootElement, function (kit) {
+				if (typeof kit.equalizeTables === 'function')
+				kit.equalizeTables();
+			});
 		});
 	};
 
@@ -120,6 +123,7 @@
 		embedComposition: null, // embed composition listing as details for each substance - it valid only if onDetails is not given.
 		onDetails: null, // called when a details row is about to be openned. If null - no details handler is attached at all.
 		onLoaded: null, // called when the set of substances (for this page) is loaded.
+		onComplete: null, // called when all loading tasks, including UI, are finished.
 		language: {
 			loadingRecords: "No substances found.",
 			zeroRecords: "No substances found.",

@@ -288,13 +288,6 @@
 		return col;
 	};
 
-	CompoundKit.prototype.getVarRow = function (idx) {
-		if (idx.tagName != null)
-			idx = jT.ui.rowIndex(idx);
-
-		return document.getElementById('jtox-var-' + this.instanceNo + '-' + idx);
-	};
-
 	CompoundKit.prototype.prepareTables = function () {
 		var self = this,
 			varCols = [],
@@ -342,17 +335,6 @@
 			self.equalizeTables();
 		};
 
-		var fnExpandCell = function (cell, expand) {
-			var cnt = 0;
-			for (var c = cell; c; c = c.nextElementSibling, ++cnt)
-				$(c).toggleClass('jtox-hidden');
-
-			if (expand)
-				cell.setAttribute('colspan', '' + cnt);
-			else
-				cell.removeAttribute('colspan');
-		};
-
 		if (self.settings.hasDetails) self.settings.handlers.toggleDetails = function (event) {
 			var row = $(event.target).closest('tr'),
 				idx = row.data('jtox-index'),
@@ -362,42 +344,29 @@
 				return; // the !cell  means you've forgotten to add #DetailedInfoRow feature somewhere.
 			
 			row.toggleClass('jtox-detailed-row');
-			var toShow = row.hasClass('jtox-detailed-row');
-
-			// now go and expand both fixed and variable table details' cells.
-			fnExpandCell(cell, toShow);
-			var varCell = self.getVarRow(idx).firstElementChild;
-			fnExpandCell(varCell, toShow);
-
 			$('.jtox-details-open', row).toggleClass('fa-folder fa-folder-open');
 
-			if (toShow) {
-				// i.e. we need to show it - put the full sized diagram in the fixed part and the tabs in the variable one...
-				var entry = self.dataset.dataEntry[idx];
+			var varCell = $('#jtox-var-' + self.instanceNo + '-' + idx + '>td.jtox-ds-details', self.rootElement)
+				.toggleClass('jtox-hidden');
 
-				var detDiv = document.createElement('div');
-				detDiv.className = 'jtox-details-box jtox-details';
+			// showing up - merge all the cells in the variable part form varCell on.
+			if (row.hasClass('jtox-detailed-row')) {
+				// prepare the cell space...
+				var followingCells = $(varCell).nextAll().detach();
+				varCell.data('removedCells', followingCells);
+				varCell.prop('colspan', followingCells.length + 1);
 
-				var tabRoot = $('.jtox-ds-tables', self.rootElement)[0];
-				var width = $(cell).width() + $('.jtox-ds-variable', tabRoot).width();
-				$(detDiv).width(width);
+				// now, go with the actual content:
+				var detDiv = $('<div></div>').addClass('jtox-details-box jtox-details');
 
-				if (self.settings.detailsHeight == null || self.settings.detailsHeight == 'fill')
-					$(detDiv).height($(cell).height() * 2);
-				else if (parseInt(self.settings.detailsHeight) > 0)
-					$(detDiv).height(self.settings.detailsHeight)
+				if (self.settings.detailsHeight != null)
+					detDiv.height(self.settings.detailsHeight)
 
-				tabRoot.appendChild(detDiv);
-				jT.fireCallback(self.settings.onDetails, self, detDiv, entry, cell);
-
-				$(cell).height(detDiv.offsetHeight);
-				$(cell).data('detailsDiv', detDiv);
-				$(detDiv).data('rootCell', cell);
-			} else {
-				// i.e. we need to hide
-				$(cell).data('detailsDiv').remove();
-				$(cell).data('detailsDiv', null);
-				cell.style.height = '';
+				detDiv.appendTo(varCell);
+				jT.fireCallback(self.settings.onDetails, self, detDiv[0], self.dataset.dataEntry[idx], cell);
+			} else { // i.e. we need to re-append the removed cwlls
+				varCell.prop('colspan', 1);
+				varCell.data('removedCells').appendTo(varCell.parent());
 			}
 
 			self.equalizeTables();
@@ -699,6 +668,10 @@
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
 			}
 			jT.fireCallback(self.settings.onComplete, self);
+			// jT.ui.notifyParents(self.rootElement, function (kit) {
+			// 	if (typeof kit.equalizeTables === 'function')
+			// 	kit.equalizeTables();
+			// });
 		};
 
 		// we may be passed dataset, if the initial, setup query was 404: Not Found - to avoid second such query...
@@ -860,6 +833,7 @@
 	CompoundKit.enumSameAs = function (fid, features, callback) {
 		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
 		// This, final feature should be considered "main" and title and others taken from it.
+		console.log("CompoundKit.sameAs: " + fid);
 		var feature = features[fid],
 			base = fid.replace(/(http.+\/feature\/).*/g, "$1"),
 			retId = fid;
@@ -936,7 +910,7 @@
 		groupSelection: true, // wether to show select all / unselect all links in each group
 		hasDetails: true, // whether browser should provide the option for per-item detailed info rows.
 		hideEmptyDetails: true, // hide feature values, when they are empty (only in detailed view)
-		detailsHeight: "fill", // what is the tabs' heightStyle used for details row
+		detailsHeight: "auto", // what is the tabs' heightStyle used for details row
 		fixedWidth: null, // the width (in css units) of the left (non-scrollable) part of the table
 		pageSize: 20, // what is the default (startint) page size.
 		pageStart: 0, // what is the default startint point for entries retrieval
