@@ -110,6 +110,8 @@
 				if (hasAutocomplete)
 					$(form.searchbox).autocomplete('disable');
 			}
+
+			jT.fireCallback(self.settings.onSelected, self, form, this.value);
 		};
 
 		$('.jq-buttonset input', this.rootElement).on('change', onTypeClicked);
@@ -240,7 +242,7 @@
 
 		if (!(type in queries)) {
 			if (type in this.settings.customSearches)
-				jT.fireCallback(this.settings.customSearches[type].onSelected, null, this, $('form', this.rootElement)[0]);
+				jT.fireCallback(this.settings.customSearches[type].onSelected, this, $('form', this.rootElement)[0]);
 			else
 				console.warn("QueryKit: Unknown query type selected: " + type);
 			return;
@@ -311,6 +313,7 @@
 		slideInput: false, // whether to slide the input, when focussed
 		contextUri: null, // a search limitting contextUri - added as datasetUri parameter
 		initialQuery: false, // whether to perform an initial query, immediatly when loaded.
+		onSelected: null, // a handler to be notified when the query type has changed.
 		handlers: {
 			query: function () {this.query(); }
 		}

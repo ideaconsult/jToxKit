@@ -201,7 +201,8 @@ jT.tables = {
 		return function (data, type, full) {
 			return type !== 'display' 
 				? data 
-				: '<input type="checkbox" value="' + data + '" class="jtox-selection jtox-handler" data-handler="' + (handler || 'toggleSelection') + 
+				: '<input type="checkbox" value="' + data + '" class="jtox-selection jtox-handler" data-subject="' + subject +
+				'" data-handler="' + (handler || 'toggleSelection') + 
 				'" title="Add this ' + (subject || 'entry') + ' to the selection"' + '/>';
 		}
 	},

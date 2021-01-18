@@ -1,4 +1,4 @@
-	/* MatrixKit.js - Read-across multi-purpose, big kit. Migrated from before!
+/* MatrixKit.js - Read-across multi-purpose, big kit. Migrated from before!
  *
  * Copyright 2020, IDEAconsult Ltd. http://www.ideaconsult.net/
  * Created by Ivan (Jonan) Georgiev
@@ -127,36 +127,37 @@
 
 	/************** SOME HELPER ROUTINES ***************/
 	MatrixKit.prototype.beginAmbitCall = function (subject) {
-		subject = subject.replace(/^\W+|\W+$/, '');
-		return {
-			box: new jBox("Notice", {
-				animation: "flip",
-				color: 'green',
-				content: 'Saving ' + subject + ' ...',
-				delayOnHover: true,
-				delayClose: 1000,
-				showCountdown: false,
-				offset: { y: 50 }
-			}),
-			subject: subject
-		};
+		return new jBox("Notice", {
+			animation: "flip",
+			color: 'green',
+			content: this.settings.language.tasks[subject + '.progress'] || subject,
+			delayOnHover: true,
+			delayClose: 1000,
+			showCountdown: false,
+			offset: { y: 50 }
+		});
 	};
 
-	MatrixKit.prototype.endAmbitCall = function (callId, jhr) {
-		callId.box.setContent(jhr.status !== 200 
-			? '<span style="color: #d20">Error saving ' + callId.subject + '!</span>'
-			: callId.subject ? 'The ' + callId.subject + ' saved.' : 'Saved.');
+	MatrixKit.prototype.endAmbitCall = function (subject, box, jhr) {
+		box.setContent(jhr.status !== 200 
+			? '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error on saving " + subject + "!") + '</span>'
+			: (this.settings.language.tasks[subject + '.done'] || (subject + " saved.") | 'Saved.'));
 	};
 
 	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
-		el && $(el).addClass('loading');
-
-		console.warn("Polling ambit: " + JSON.stringify(ajax));
-		var callId = this.beginAmbitCall(service),
+		var subject = 'bundle',
 			self = this;
+		if (!el)
+			;
+		else if (typeof el === 'string')
+			subject = el;
+		else
+			subject = $(el).addClass('loading').data('subject') || 'bundle';
+
+		var box = this.beginAmbitCall(subject);
 		jT.ambit.call(this, (this.bundleUri || '') + service, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
-			self.endAmbitCall(callId, jhr);
+			self.endAmbitCall(subject, box, jhr);
 
 			if (typeof cb === 'function')
 				return cb(result);
@@ -223,6 +224,19 @@
 
 		$(panel).addClass('initialized');
 
+		// Customize the language parts.
+		$('.label-box label', panel).each(function () {
+			var opts = self.settings.language.labels[this.htmlFor];
+
+			if ( opts == null)
+				;
+			else if (typeof opts === 'string')
+				this.innerHTML = opts;
+			else if (typeof opts === 'object') {
+				if (opts.action === 'hide')
+					$(this).closest('.label-box').hide();
+			}
+		});
 		self.createForm = $('form', panel)[0];
 
 		self.createForm.onsubmit = function (e) {
@@ -392,16 +406,23 @@
 				}
 			});
 
+			var customCalled = false;
 			this.queryKit = jT.ui.initKit($('#struct-query'), {
 				mainKit: this.browserKit,
+				onSelected: function (form, type) {
+					if (type == 'selected') { // our custom type
+						$('div.search-pane', form).hide();
+						self.browserKit.query(self.bundleUri + '/compound');
+						customCalled = true;
+					} else if (customCalled) { // the normal queries.
+						this.query();
+						customCalled = false;
+					}
+				},
 				customSearches: {
 					selected: {
 						title: "Selected",
-						description: "List selected structures",
-						onSelected: function (kit, form) {
-							$('div.search-pane', form).hide();
-							self.browserKit.query(self.bundleUri + '/compound');
-						}
+						description: "List selected structures"
 					}
 				}
 			});
@@ -507,21 +528,18 @@
 		// NOTE: This method is invoked from `onMatrix` to make sure `this.endpointKit` is initialized.
 	};
 
-	MatrixKit.prototype.saveMatrixEdit = function (edit) {
+	MatrixKit.prototype.saveMatrixEdit = function (edit, subject) {
 		if (!edit)
 			return;
 
-		var toAdd = JSON.stringify({ study: edit }),
-			self = this,
-			ajax = { 
-				method: 'PUT', 
-				data: toAdd, 
-				contentType: 'application/json' 
-			},
-			service = '/matrix' + ('effects_to_delete' in edit ? '/deleted' : '');
+		var self = this;
 
 		// make two nested calls - for adding and for deleting
-		this.pollAmbit(service, ajax, $(this), function (result) {
+		this.pollAmbit('/matrix' + ('effects_to_delete' in edit ? '/deleted' : ''), { 
+			method: 'PUT', 
+			data: JSON.stringify({ study: edit }),
+			contentType: 'application/json'
+		}, subject, function (result) {
 			self.queryMatrix('working');
 		});
 	},
@@ -708,8 +726,8 @@
 					featureJson.protocol.guideline = [ featureJson.protocol.guideline ];
 
 					if (action === 'add')
-						self.saveMatrixEdit(featureJson);
-					else if (action === 'edit')
+						self.saveMatrixEdit(featureJson, 'annotation-add');
+					else if (action === 'edit') // TODO: !!!
 						self.editMatrixFeature(feature, valueIdx, featureJson);
 				};
 			
@@ -735,7 +753,7 @@
 					});
 				}
 			});
-		} else { //info & delete
+		} else { // info & delete
 			feature.id.suffix = '*';
 			var val = data.values[featureId],
 				mainFeature = jT.ambit.buildFeatureId(feature.id);
@@ -758,8 +776,8 @@
 					content: this.endpointKit.getFeatureInfoHtml(feature, val, action !== "info"),
 					confirmButton: action !== "info" ? "Delete" : "Ok",
 					cancelButton: action !== "info" ? "Cancel" : "Dismiss",
-					confirm: function () { self.saveMatrixEdit(ajaxData); },
-					onConfirm: function () { self.saveMatrixEdit(ajaxData); },
+					confirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
+					onConfirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
 					onOpen: function () { jT.ui.attachEditors(self.endpointKit, this.content, ajaxData); }
 				});
 			} else { // i.e. info
@@ -1223,6 +1241,59 @@
 				return statuses[status];
 			}
 		},
+		language: {
+			labels: {
+				"title": "Assessment title",
+				"maintainer": "Owner",
+				"number": "Assessment ID",
+				"seeAlso": "Assessment code",
+				"source": "Assessment Doclink(s)",
+				"license": { action: 'hide' },
+				"rightsHolder": { action: 'hide' },
+				"stars": { action: 'hide' }
+			},
+			tasks: {
+				'bundle.progress' : "Changing bundle...",
+				'bundle.done' : "Bundle altered.",
+				'bundle.error' : "Error changing the bundle!",
+				'bundle-start.progress': "Creating a new bundle...",
+				'bundle-start.done': "New bundle created.",
+				'bundle-start.error': "Error on creating a new bundle!",
+				'bundle-finalize.progress': "Finalizing the bundle...",
+				'bundle-finalize.done': "Bundle finalized.",
+				'bundle-finalize.error': "Error on bundle finalizing!",
+				'bundle-version.progress': "Making new version of the bundle...",
+				'bundle-version.done': "New version created.",
+				'bundle-version.error': "Error on creating a new version!",
+				'matrix.progress': "Creating matrix working copy...",
+				'matrix.done': "Matrix working copy created.",
+				'matrix.error': "Error on matrix working copy creation!",
+				'structure-reason.progress': "Updating structure selection reason...",
+				'structure-reason.done': "Updated structure selection reason.",
+				'structure-reason.error': "Error on updating structure selection reason!",
+				'structure-tag.progress': "Tagging the selected structure...",
+				'structure-tag.done': "Structured tagged.",
+				'structure-tag.error': "Error on structure tagging!",
+				'annotation-add.progress': "Adding a study annotation...",
+				'annotation-add.done': "Added study annotation.",
+				'annotation-add.error': "Error on adding study annotation!",
+				'annotation-delete.progress': "Deleting a study annotation...",
+				'annotation-delete.error': "Error on deleting study annotation!",
+				'annotation-delete.done': "Study annotation deleted.",
+				'substance.progress': "Updating substance selection...",
+				'substance.done': "Substance selection updated.",
+				'substance.error': "Error updating substance selection!",
+				'substance-tag.progress': "Tagging substance...",
+				'substance-tag.done': "Substance tagged.",
+				'substance-tag.error': "Error on tagging substance!",
+				'substance-reason.progress': "Saving substance selection reason...",
+				'substance-reason.done': "Substance selection reason saved.",
+				'substance-reason.error': "Error saving substance selection reason!",
+				'endpoint.progress': "Updating endpoint selection...",
+				'endpoint.done': "Endpoint selection updated.",
+				'endpoint.error': "Error updating endpoint selection!",
+			}
+		},
 		baseFeatures: {
 			"#SelectionCol" : {
 				data: "bundles",
@@ -1258,7 +1329,7 @@
 					data = bInfo.tag && bInfo.remarks || '';
 					return (type != 'display') 
 						? data 
-						: '<textarea class="remark jtox-handler" data-handler="structureReason" placeholder="Reason for selection_"' + 
+						: '<textarea class="remark jtox-handler" data-handler="structureReason" data-subject="structure-reason" placeholder="Reason for selection_"' + 
 							(!bInfo.tag ? ' disabled="true"': '') + '">' + 
 							data + '</textarea>';
 				}
