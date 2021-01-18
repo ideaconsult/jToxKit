@@ -406,23 +406,25 @@
 				}
 			});
 
-			var customCalled = false;
+			var customSelected = false;
 			this.queryKit = jT.ui.initKit($('#struct-query'), {
 				mainKit: this.browserKit,
 				onSelected: function (form, type) {
-					if (type == 'selected') { // our custom type
-						$('div.search-pane', form).hide();
-						self.browserKit.query(self.bundleUri + '/compound');
-						customCalled = true;
-					} else if (customCalled) { // the normal queries.
+					if (type == 'selected')
+						customSelected = true;
+					else if (customSelected) { // the normal queries.
 						this.query();
-						customCalled = false;
+						customSelected = false;
 					}
 				},
 				customSearches: {
 					selected: {
 						title: "Selected",
-						description: "List selected structures"
+						description: "List selected structures",
+						onSelected: function (form) {
+							$('div.search-pane', form).hide();
+							self.browserKit.query(self.bundleUri + '/compound');
+						}
 					}
 				}
 			});
@@ -956,6 +958,7 @@
 			}
 		};
 
+		$('.report-box', panel).html('<h2>Preparing the report...</h2>');		
 		// Make sure all kits are initialized!
 		this.onStructures();
 		this.onSubstances();
