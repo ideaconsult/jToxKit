@@ -667,11 +667,11 @@
 			} else {
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
 			}
-			jT.fireCallback(self.settings.onComplete, self);
 			// jT.ui.notifyParents(self.rootElement, function (kit) {
 			// 	if (typeof kit.equalizeTables === 'function')
 			// 	kit.equalizeTables();
 			// });
+			jT.fireCallback(self.settings.onComplete, self);
 		};
 
 		// we may be passed dataset, if the initial, setup query was 404: Not Found - to avoid second such query...
@@ -833,7 +833,6 @@
 	CompoundKit.enumSameAs = function (fid, features, callback) {
 		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
 		// This, final feature should be considered "main" and title and others taken from it.
-		console.log("CompoundKit.sameAs: " + fid);
 		var feature = features[fid],
 			base = fid.replace(/(http.+\/feature\/).*/g, "$1"),
 			retId = fid;

@@ -452,11 +452,12 @@
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, null);
 
-			jT.fireCallback(self.settings.onComplete, self);
 			jT.ui.notifyParents(self.rootElement, function (kit) {
 				if (typeof kit.equalizeTables === 'function')
 				kit.equalizeTables();
 			});
+
+			jT.fireCallback(self.settings.onComplete, self);
 		});
 	};
 

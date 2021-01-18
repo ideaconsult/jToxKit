@@ -924,14 +924,16 @@
 			} else if (entity == 'substance') {
 				var detailsButs = $('.jtox-details-open.jtox-handler', kit.rootElement);
 				loadingTarget += detailsButs.length;
-				setTimeout(function () { detailsButs.trigger('click'); }, 200);
+				// Save the tables now, because otherwise it'll take into account the nested ones as well.
+				loadedTables.substance = $('table.dataTable', self.substanceKit.rootElement);
+				setTimeout(function () { detailsButs.trigger('click'); }, 50);
 			} else // i.e. structure
 				loadedTables[entity] = jT.tables.extractTable(theTables).html();
 
 			datasets[entity] = dataset;
 			if (loadingCount >= loadingTarget) {
 				// get the substance table now... when it's all loaded.
-				loadedTables.substance = jT.tables.extractTable($('table.dataTable', self.substanceKit.rootElement)).html();
+				loadedTables.substance = jT.tables.extractTable(loadedTables.substance).html();
 				reportMaker();
 			}
 		};

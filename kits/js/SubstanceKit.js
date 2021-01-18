@@ -100,11 +100,12 @@
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
 
-			jT.fireCallback(self.settings.onComplete, self, result);
 			jT.ui.notifyParents(self.rootElement, function (kit) {
 				if (typeof kit.equalizeTables === 'function')
 				kit.equalizeTables();
 			});
+
+			jT.fireCallback(self.settings.onComplete, self, result);
 		});
 	};
 

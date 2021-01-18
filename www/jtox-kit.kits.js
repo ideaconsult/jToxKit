@@ -337,11 +337,12 @@
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, json.composition);
 
-			jT.fireCallback(self.settings.onComplete, self, json.composition);
 			jT.ui.notifyParents(self.rootElement, function (kit) {
 				if (typeof kit.equalizeTables === 'function')
 				kit.equalizeTables();
 			});
+
+			jT.fireCallback(self.settings.onComplete, self, json.composition);
 		});
 	};
 
@@ -1112,11 +1113,11 @@
 			} else {
 				jT.fireCallback(self.settings.onLoaded, self, dataset);
 			}
-			jT.fireCallback(self.settings.onComplete, self);
 			// jT.ui.notifyParents(self.rootElement, function (kit) {
 			// 	if (typeof kit.equalizeTables === 'function')
 			// 	kit.equalizeTables();
 			// });
+			jT.fireCallback(self.settings.onComplete, self);
 		};
 
 		// we may be passed dataset, if the initial, setup query was 404: Not Found - to avoid second such query...
@@ -1278,7 +1279,6 @@
 	CompoundKit.enumSameAs = function (fid, features, callback) {
 		// starting from the feature itself move to 'sameAs'-referred features, until sameAs is missing or points to itself
 		// This, final feature should be considered "main" and title and others taken from it.
-		console.log("CompoundKit.sameAs: " + fid);
 		var feature = features[fid],
 			base = fid.replace(/(http.+\/feature\/).*/g, "$1"),
 			retId = fid;
@@ -3774,14 +3774,16 @@
 			} else if (entity == 'substance') {
 				var detailsButs = $('.jtox-details-open.jtox-handler', kit.rootElement);
 				loadingTarget += detailsButs.length;
-				setTimeout(function () { detailsButs.trigger('click'); }, 200);
+				// Save the tables now, because otherwise it'll take into account the nested ones as well.
+				loadedTables.substance = $('table.dataTable', self.substanceKit.rootElement);
+				setTimeout(function () { detailsButs.trigger('click'); }, 50);
 			} else // i.e. structure
 				loadedTables[entity] = jT.tables.extractTable(theTables).html();
 
 			datasets[entity] = dataset;
 			if (loadingCount >= loadingTarget) {
 				// get the substance table now... when it's all loaded.
-				loadedTables.substance = jT.tables.extractTable($('table.dataTable', self.substanceKit.rootElement)).html();
+				loadedTables.substance = jT.tables.extractTable(loadedTables.substance).html();
 				reportMaker();
 			}
 		};
@@ -5694,11 +5696,12 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, null);
 
-			jT.fireCallback(self.settings.onComplete, self);
 			jT.ui.notifyParents(self.rootElement, function (kit) {
 				if (typeof kit.equalizeTables === 'function')
 				kit.equalizeTables();
 			});
+
+			jT.fireCallback(self.settings.onComplete, self);
 		});
 	};
 
@@ -5955,11 +5958,12 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 			} else
 				jT.fireCallback(self.settings.onLoaded, self, result);
 
-			jT.fireCallback(self.settings.onComplete, self, result);
 			jT.ui.notifyParents(self.rootElement, function (kit) {
 				if (typeof kit.equalizeTables === 'function')
 				kit.equalizeTables();
 			});
+
+			jT.fireCallback(self.settings.onComplete, self, result);
 		});
 	};
 
