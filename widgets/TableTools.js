@@ -98,6 +98,8 @@ jT.tables = {
 
 	renderMulti: function (data, full, render) {
 		// Make a property getter when passed a string.
+		if (!data)
+			return '<div></div>';
 		if (typeof render === 'string')
 			render = _.property(render);
 		if (data.length < 2)

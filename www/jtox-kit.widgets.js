@@ -1172,6 +1172,8 @@ jT.tables = {
 
 	renderMulti: function (data, full, render) {
 		// Make a property getter when passed a string.
+		if (!data)
+			return '<div></div>';
 		if (typeof render === 'string')
 			render = _.property(render);
 		if (data.length < 2)
@@ -1647,7 +1649,8 @@ jT.ambit = {
 			if (!!task.error)
 				return callback(task, jhr);
 			else if (task.completed > -1) // we're done - get the result.
-				return jT.ambit.call(kit, task.result, { method: 'GET' }, callback);
+				return callback(task.result, jhr);
+				// TODO: Some day make it THIS one: return jT.ambit.call(kit, task.result, { method: 'GET' }, callback);
 			else if (taskStart == null) // first round				
 				taskStart = Date.now();
 			else if (Date.now() - taskStart > timeout) // timedout
