@@ -11,7 +11,7 @@
 		// `findBox` and `target` are here!
 	}
 
-	UserWidget.prototype.__expects = [ "onFound", "onSelect" ];
+	UserWidget.prototype.__expects = [ "resetValue", "onFound" ];
 	UserWidget.defaults = {
 		extraParam: "",
 		baseUrl: "",
@@ -34,27 +34,28 @@
 		this.findBox.addClass('loading');
 		jT.ambit.call(this, uri, data, function(result) {
 			self.findBox.removeClass('loading');
-			self.onFound(_.map(result || [], function (u) {
-				return {
-					value: u.id,
-					label: u.name
-				}
-			}));
+			self.fillData(result);
 		});
 	};
 
 	UserWidget.prototype.doRequest = function (needle) { this.callAmbit('q=' + needle); };
 
-	UserWidget.prototype.onSelect =
-	UserWidget.prototype.onRemoved = 
-	UserWidget.prototype.updateUsers = function () {
-		var self = this,
-			data = _.map(el.val(), function (u) { return self.settings.permission + '=' + u; });
+	UserWidget.prototype.loadUsers = function (params) { this.callAmbit(params); };
 
-		this.settings.extraParam && data.push(this.settings.extraParam);
-		this.callAmbit({ method: 'POST', data: data.join('&') });
-		return true;
+	UserWidget.prototype.fillData = function (result) {
+		var items = _.map(result || [], function (u) {
+			return {
+				value: u.id,
+				label: u.name
+			};
+		});
+
+		return this.reportCallback ? this.onFound(items) : this.resetValue(items);
 	};
+
+	UserWidget.prototype.onChange = function () {
+		return this.settings.onChange && this.settings.onChange.apply(this, arguments);
+	}
 
 	jT.UserWidget = UserWidget;
 

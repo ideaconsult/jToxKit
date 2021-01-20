@@ -665,22 +665,19 @@ jT.AutocompleteWidget = function (settings) {
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "onSelect" ],
+  __expects: [ "doRequest", "onChange" ],
   tokenMode: true,
+  initialState: 'enabled',
 
   init: function (manager) {
     var self = this;
         
     // now configure the "accept value" behavior
     this.findBox = this.target.find('input').addBack('input').on("change", function (e) {
-      if (self.requestSent)
-        return;
-      
-      var thi$ = $(this);
-      if (!self.onSelect(thi$.val()))
-        return;
-        
-      thi$.blur()[self.tokenMode ? 'tokenfield' : 'autocomplete']("disable");
+      if (!self._inChange) {
+        var thi$ = $(this);
+        self.onChange(thi$.val()) && thi$.blur();
+      }
     });
 
     // configure the auto-complete box. 
@@ -691,13 +688,15 @@ jT.AutocompleteWidget.prototype = {
         self.doRequest(request.term);
       },
       'select': function(event, ui) {
-        self.requestSent = false;
         if (!ui.item)
           return;
-        if (self.onSelect)
-          self.requestSent = self.onSelect(ui.item);
-        if (self.onAdded)
-          self.requestSent = self.requestSent || self.onAdded(ui.item);
+        self.onSelect && self.onSelect(ui.item);
+        self.onAdded && self.onAdded(ui.item);
+      },
+      'focus': function (event, ui) {
+        // Make sure the label is shown, not the value.
+        event.preventDefault();
+        $(this).val(ui.item.label);        
       }
     };
 
@@ -705,22 +704,30 @@ jT.AutocompleteWidget.prototype = {
       this.findBox.autocomplete(boxOpts);
     else
       this.findBox
-        .on('tokenfield:removedtoken', function (e) {
-          self.requestSent = self.onRemoved && self.onRemoved(e.attrs.value);
+        .on('tokenfield:removedtoken', function (e) { 
+          self.onRemoved && self.onRemoved(e.attrs.value); 
         })
         .tokenfield({ autocomplete: boxOpts });
+
+    if (this.initialState === 'disabled')
+        this.findBox[this.tokenMode ? 'tokenfield' : 'autocomplete']("disable");
 
     a$.pass(this, jT.AutocompleteWidget, "init", manager);
   },
 
   resetValue: function(val) {
-    this.findBox.val(val)[this.tokenMode ? 'tokenfield' : 'autocomplete']("enable");
-    this.requestSent = false;
+    this._inChange = true;
+    if (this.tokenMode)
+      this.findBox.tokenfield('enable').tokenfield('setTokens', val);
+    else
+      this.findBox.autocomplete('enable').val(val);
+    this._inChange = false;
   },
   
   onFound: function (list) {
+    this.findBox[this.tokenMode ? 'tokenfield' : 'autocomplete']("enable");
     this.reportCallback && this.reportCallback(list);
-    this.requestSent = false;
+    this.reportCallback = null;
   }
 };
 /** jToxKit - chem-informatics multi-tool-kit.
@@ -1600,7 +1607,6 @@ jT.ambit = {
 		if (service.indexOf("http") != 0)
 			service = kit.settings.baseUrl + service;
 
-		var myId = self.callId++;
 		settings = $.extend(settings, {
 			url: service,
 			headers: { Accept: accType },
@@ -1608,16 +1614,16 @@ jT.ambit = {
 			timeout: parseInt(settings.timeout),
 			jsonp: settings.jsonp ? 'callback' : false,
 			error: function (jhr, status, error) {
-				jT.fireCallback(settings.onError, kit, service, status, jhr, myId);
+				jT.fireCallback(settings.onError, kit, service, status, jhr);
 				jT.fireCallback(callback, kit, null, jhr);
 			},
 			success: function (data, status, jhr) {
-				jT.fireCallback(settings.onSuccess, kit, service, status, jhr, myId);
+				jT.fireCallback(settings.onSuccess, kit, service, status, jhr);
 				jT.fireCallback(callback, kit, data, jhr);
 			}
 		})
 
-		jT.fireCallback(settings.onConnect, kit, settings, myId);
+		jT.fireCallback(settings.onConnect, kit, settings);
 
 		// now make the actual call
 		$.ajax(settings);
@@ -1633,28 +1639,24 @@ jT.ambit = {
 			delay = 250;
 
 		handler = function (task, jhr) {
-			if (task == null || task.task == null || task.task.length < 1) {
-				callback(task, jhr);
-				return;
-			}
+			if (task == null || task.task == null || task.task.length < 1)
+				return callback(task, jhr);
+			
 			task = task.task[0];
 			// i.e. - we're ready or we're in trouble.
-			if (task.completed > -1 || !!task.error) {
-				callback(task, jhr);
-				return;
-			}
-			// first round				
-			else if (taskStart == null)
+			if (!!task.error)
+				return callback(task, jhr);
+			else if (task.completed > -1) // we're done - get the result.
+				return jT.ambit.call(kit, task.result, { method: 'GET' }, callback);
+			else if (taskStart == null) // first round				
 				taskStart = Date.now();
-			// timedout
-			else if (Date.now() - taskStart > timeout) {
-				callback(task, jhr);
-				return;
-			}
+			else if (Date.now() - taskStart > timeout) // timedout
+				return callback(task, jhr);
+
 			// time for another call
 			setTimeout(function() { 
 				jT.ambit.call(kit, task.result, { method: 'GET' }, handler);
-			},delay);
+			}, delay);
 		};
 
 		return handler;

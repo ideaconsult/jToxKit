@@ -199,7 +199,6 @@ jT.ambit = {
 		if (service.indexOf("http") != 0)
 			service = kit.settings.baseUrl + service;
 
-		var myId = self.callId++;
 		settings = $.extend(settings, {
 			url: service,
 			headers: { Accept: accType },
@@ -207,16 +206,16 @@ jT.ambit = {
 			timeout: parseInt(settings.timeout),
 			jsonp: settings.jsonp ? 'callback' : false,
 			error: function (jhr, status, error) {
-				jT.fireCallback(settings.onError, kit, service, status, jhr, myId);
+				jT.fireCallback(settings.onError, kit, service, status, jhr);
 				jT.fireCallback(callback, kit, null, jhr);
 			},
 			success: function (data, status, jhr) {
-				jT.fireCallback(settings.onSuccess, kit, service, status, jhr, myId);
+				jT.fireCallback(settings.onSuccess, kit, service, status, jhr);
 				jT.fireCallback(callback, kit, data, jhr);
 			}
 		})
 
-		jT.fireCallback(settings.onConnect, kit, settings, myId);
+		jT.fireCallback(settings.onConnect, kit, settings);
 
 		// now make the actual call
 		$.ajax(settings);
@@ -232,28 +231,24 @@ jT.ambit = {
 			delay = 250;
 
 		handler = function (task, jhr) {
-			if (task == null || task.task == null || task.task.length < 1) {
-				callback(task, jhr);
-				return;
-			}
+			if (task == null || task.task == null || task.task.length < 1)
+				return callback(task, jhr);
+			
 			task = task.task[0];
 			// i.e. - we're ready or we're in trouble.
-			if (task.completed > -1 || !!task.error) {
-				callback(task, jhr);
-				return;
-			}
-			// first round				
-			else if (taskStart == null)
+			if (!!task.error)
+				return callback(task, jhr);
+			else if (task.completed > -1) // we're done - get the result.
+				return jT.ambit.call(kit, task.result, { method: 'GET' }, callback);
+			else if (taskStart == null) // first round				
 				taskStart = Date.now();
-			// timedout
-			else if (Date.now() - taskStart > timeout) {
-				callback(task, jhr);
-				return;
-			}
+			else if (Date.now() - taskStart > timeout) // timedout
+				return callback(task, jhr);
+
 			// time for another call
 			setTimeout(function() { 
 				jT.ambit.call(kit, task.result, { method: 'GET' }, handler);
-			},delay);
+			}, delay);
 		};
 
 		return handler;

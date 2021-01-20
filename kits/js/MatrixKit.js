@@ -146,7 +146,8 @@
 
 	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
 		var subject = 'bundle',
-			self = this;
+			self = this,
+			uri = (service && (this.bundleUri || '') + service) || ajax.uri;
 		if (!el)
 			;
 		else if (typeof el === 'string')
@@ -155,7 +156,7 @@
 			subject = $(el).addClass('loading').data('subject') || 'bundle';
 
 		var box = this.beginAmbitCall(subject);
-		jT.ambit.call(this, (this.bundleUri || '') + service, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
+		jT.ambit.call(this, uri, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
 			self.endAmbitCall(subject, box, jhr);
 
@@ -206,14 +207,13 @@
 
 	MatrixKit.prototype.loadUsers = function () {
 		var self = this;
-			makeReq = function (mode, field) {
-				jT.ambit.call(self, self.settings.baseUrl + "myaccount/users?mode=" + mode + "&bundle_uri=" + encodeURIComponent(self.bundleUri), function (users) {
-					field.tokenfield('setTokens', _.map(users, function (u) { return { value: u.id, label: u.name }; }))
-				});
-			};
+		self.bundle && $('.jtox-users-select', this.rootElement).each(function () {
+			var widget = $(this).data('jtox-widget'),
+				mode = this.id == 'users-read' ? 'R' : 'W';
 
-		makeReq('R', $('#users-read'));
-		makeReq('W', $('#users-write'));
+			widget.settings.baseUrl = self.baseUrl;
+			widget.loadUsers("mode=" + mode + "&bundle_uri=" + encodeURIComponent(self.bundleUri));
+		});
 	};
 
 	/************************ TAB INITIALIZATION ROUTINES **************/
@@ -234,7 +234,7 @@
 				this.innerHTML = opts;
 			else if (typeof opts === 'object') {
 				if (opts.action === 'hide')
-					$(this).closest('.label-box').hide();
+					$(this).closest('.label-box').hide().find('input,select,textarea').removeAttr('required');
 			}
 		});
 		self.createForm = $('form', panel)[0];
@@ -349,13 +349,26 @@
 		// Finally, initialize the users handling part
 		var UserEditor = a$(jT.AutocompleteWidget, jT.UserWidget);
 		$('.jtox-users-select', this.rootElement).each(function () {
-			(new UserEditor({
+			var widget = new UserEditor({
 				target: this,
 				baseUrl: self.settings.baseUrl,
+				initialState: 'disabled',
 				tokenMode: true,
-				extraParam: 'bundle_number=' + (self.bundle && self.bundle.number),
-				permission: $(this).data('permission')
-			})).init();
+				permission: $(this).data('permission'),
+				onChange: function () {
+					var w = this,
+						allUsers = this.findBox.val().split(","),
+						data = _.map(allUsers, function (uId) { return w.settings.permission + '=' + uId; });
+			
+					data.push('bundle_number=' + self.bundle.number);
+					self.pollAmbit(null, { uri: self.settings.baseUrl + 'myaccount/users', method: 'POST', data: data.join('&') }, 'user', function (result) {
+						Array.isArray(result) && w.fillData(result);
+					});
+					return true;
+				}
+			});
+			$(this).data('jtox-widget', widget);
+			widget.init();
 		});
 	};
 
@@ -1295,6 +1308,9 @@
 				'endpoint.progress': "Updating endpoint selection...",
 				'endpoint.done': "Endpoint selection updated.",
 				'endpoint.error': "Error updating endpoint selection!",
+				'user.progress': "Updating user access rights...",
+				'user.done': "User permissions updated.",
+				'user.error': "Error updating user permissions!",
 			}
 		},
 		baseFeatures: {
