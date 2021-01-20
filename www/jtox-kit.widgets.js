@@ -665,7 +665,7 @@ jT.AutocompleteWidget = function (settings) {
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "doRequest", "onChange" ],
+  __expects: [ "doRequest" ],
   tokenMode: true,
   initialState: 'enabled',
 
@@ -674,7 +674,7 @@ jT.AutocompleteWidget.prototype = {
         
     // now configure the "accept value" behavior
     this.findBox = this.target.find('input').addBack('input').on("change", function (e) {
-      if (!self._inChange) {
+      if (!self._inChange && self.onChange) {
         var thi$ = $(this);
         self.onChange(thi$.val()) && thi$.blur();
       }
