@@ -755,7 +755,7 @@
 				confirm: goAction, // NOTE: Due to some bug in jBox, it appears we need to provide this one...
 				onConfirm: goAction, // ... but since the Doc says `onConfirm` -> we need to have that too.
 				onOpen: function () {
-					jT.ui.attachEditors(self.endpointKit, this.content, featureJson, {
+					jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, featureJson, {
 						ajax: {
 							method: "GET",
 							data: {
@@ -793,7 +793,7 @@
 					cancelButton: action !== "info" ? "Cancel" : "Dismiss",
 					confirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
 					onConfirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
-					onOpen: function () { jT.ui.attachEditors(self.endpointKit, this.content, ajaxData); }
+					onOpen: function () { jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, ajaxData); }
 				});
 			} else { // i.e. info
 				$.extend(boxOptions, {

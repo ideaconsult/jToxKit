@@ -1745,15 +1745,6 @@
 
 	EndpointKit.prototype.query = EndpointKit.prototype.loadEndpoints;
 
-	EndpointKit.prototype.modifyUri = function (uri) {
-		$('input[type="checkbox"]', this.rootElement).each(function () {
-			if (this.checked)
-				uri = jT.addParameter(uri, 'feature_uris[]=' + encodeURIComponent(this.value + '/feature'));
-		})
-
-		return uri;
-	};
-
 	EndpointKit.prototype.getFeatureInfoHtml = function (feature, value, canDelete) {
 		var condHeaders = [],
 			condValues = [],
@@ -1781,7 +1772,7 @@
 		});
 	};
 
-	EndpointKit.prototype.getFeatureEditHtml = function (feature, opts) {
+	EndpointKit.prototype.getFeatureEditHtml = function (feature, value, opts) {
 		var config = $.extend(true, {}, this.settings.columns["_"], this.settings.columns[feature.id.category]),
 			editors = _.map(this.settings.editors, function (editor) {
 				var oneCfg = _.defaults(_.get(config, editor.path, {}), editor, { autoClass: "no-auto" });
@@ -1801,6 +1792,85 @@
 			conditionsClass: conditions.length > 0 ? '' : 'jtox-hidden',
 			conditionsHtml: conditions.join('')
 		}, opts));
+	};
+
+	EndpointKit.attachEditors = function (kit, root, data, opts) {
+		var allTags = [].concat(kit.settings.loTags, kit.settings.hiTags, kit.settings.units);
+			field = null;
+	
+		// Make it easier to call with less checks.
+		opts = opts || {};
+	
+		$('.ajax-auto', root).autocomplete({
+			appendTo: root,
+			source: function (request, response) {
+				var field = $(this.element).data('id');
+				_.set(opts.ajax, opts.searchPath, request.term);
+	
+				jT.ambit.call(kit, $(this.element).data('service'), opts.ajax, function (data) {
+					response(!data ? [] : $.map(data.facet, function (item) {
+						var val = item[field] || '';
+						return {
+							label: val + (!item.count ? '' : " [" + item.count + "]"),
+							value: val
+						}
+					}));
+				});	
+			},
+			change: function (e, ui) {
+				var id = $(this).data('id'),
+					path = $(this).data('path') || _.find(kit.settings.editors, { id: id }).path,
+					value = !ui.item ? _.trim(this.value) : ui.item.value;
+				if (!opts.onChange || opts.onChange.call(kit, e, id,  path, value) !== false)
+					_.set(data, path, value);
+			},
+			minLength: kit.settings.minLength || 0
+		});
+	
+		$('.tags-auto', root).autocomplete({
+			appendTo: root,
+			change: function (e, ui) {
+				var id = $(this).data('id'),
+					path = $(this).data('path') || _.find(kit.settings.editors, { id: id }).path,
+					value = parseValue(this.value);
+				if (!opts.onChange || opts.onChange.call(kit, e, id,  path, value) !== false)
+					_.set(data, path, value);
+			},
+			source: function (request, response) {
+				// extract the last term
+				var result = $.ui.autocomplete.filter(allTags, extractLast(request.term));
+				if (request.term == '') {
+					// if term is empty don't show results
+					// avoids IE opening all results after initialization.
+					result = '';
+				}
+				// delegate back to autocomplete
+				response(result);
+			},
+			focus: function () { // prevent value inserted on focus
+				return false;
+			},
+			select: function (event, ui) {
+				var theVal = this.value,
+					last = extractLast(theVal);
+	
+				this.value = theVal.substr(0, theVal.length - last.length) + ui.item.value + ' ';
+				return false;
+			}
+		})
+		.bind('keydown', function (event) {
+			if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
+				event.preventDefault();
+		});
+	
+		// now initialize other fields, marked with '.no-auto''
+		$('.no-auto', root).on('change', function (e) {
+			var id = $(this).data('id'),
+				path = $(this).data('path') || _.find(kit.settings.editors, { id: id }).path,
+				value = $(this).val();
+			if (!opts.onChange || opts.onChange.call(kit, e, id,  path, value) !== false)
+				_.set(data, path, value);
+		});
 	};
 
 	EndpointKit.defaults = { 	// all settings, specific for the kit, with their defaults. These got merged with general (jToxKit) ones.
@@ -3605,7 +3675,7 @@
 				confirm: goAction, // NOTE: Due to some bug in jBox, it appears we need to provide this one...
 				onConfirm: goAction, // ... but since the Doc says `onConfirm` -> we need to have that too.
 				onOpen: function () {
-					jT.ui.attachEditors(self.endpointKit, this.content, featureJson, {
+					jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, featureJson, {
 						ajax: {
 							method: "GET",
 							data: {
@@ -3643,7 +3713,7 @@
 					cancelButton: action !== "info" ? "Cancel" : "Dismiss",
 					confirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
 					onConfirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
-					onOpen: function () { jT.ui.attachEditors(self.endpointKit, this.content, ajaxData); }
+					onOpen: function () { jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, ajaxData); }
 				});
 			} else { // i.e. info
 				$.extend(boxOptions, {
