@@ -426,7 +426,7 @@
 					if (type == 'selected')
 						customSelected = true;
 					else if (customSelected) { // the normal queries.
-						this.query();
+						this.getMainKit().emptyTable();
 						customSelected = false;
 					}
 				},

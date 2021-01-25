@@ -516,6 +516,11 @@
 		$(this.rootElement).empty();
 	};
 
+	CompoundKit.prototype.emptyTable = function () {
+		$(this.fixTable).dataTable().fnClearTable();
+		$(this.varTable).dataTable().fnClearTable();
+	};
+
 	/* make a tab-based widget with features and grouped on tabs. It relies on filled and processed 'self.feature' as well
 	as created 'self.groups'.
 	*/
@@ -862,7 +867,7 @@
 				jT.ui.installHandlers(self, nRow, jT.tables.commonHandlers);
 			},
 			"language": {
-				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.process || self.settings.language.loadingRecords || 'Feeding data...') + '</span>'
+				"emptyTable": '<span class="jt-feeding">' + (self.settings.language.process || self.settings.language.loadingRecords || 'No data yet...') + '</span>'
 			}
 		}))[0];
 
@@ -1147,7 +1152,7 @@
 
 				CompoundKit.processFeatures(self.feature, self.settings.baseFeatures);
 				var miniset = {
-					dataEntry: [],
+					dataEntry: result.dataEntry,
 					feature: self.feature
 				};
 
@@ -3346,7 +3351,7 @@
 					if (type == 'selected')
 						customSelected = true;
 					else if (customSelected) { // the normal queries.
-						this.query();
+						this.getMainKit().emptyTable();
 						customSelected = false;
 					}
 				},
