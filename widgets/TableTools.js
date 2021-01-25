@@ -297,6 +297,28 @@ jT.tables = {
 		return mergedTable;
 	},
 
+	extractData: function (table, colNames, colHandlers) {
+		var data = [];
+
+		if (!colNames)
+			colNames = [];
+
+		$(table).children().children().each(function (i, row) { 
+			var rowData = {};
+
+			$(row).children().each(function (i, cell) {
+				var name = colNames[i] || i,
+					hnd = typeof colHandlers === 'function' ? colHandlers : (colHandlers && colHandlers[name]);
+
+				rowData[name] = hnd ? hnd(cell, name) : $(cell).text();
+			});
+
+			data.push(rowData);
+		});
+
+		return data;
+	},
+
 	commonHandlers: {
 		nextPage: function () {
 			if (this.entriesCount == null || this.pageStart + this.pageSize < this.entriesCount)

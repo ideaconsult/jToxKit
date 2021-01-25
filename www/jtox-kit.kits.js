@@ -471,7 +471,7 @@
 	function CompoundKit(settings) {
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
-		this.settings = _.defaultsDeep(settings,
+		this.settings = _.defaultsDeep({}, settings,
 			CompoundKit.defaults,
 			{ baseFeatures: jT.ambit.baseFeatures });
 
@@ -3316,7 +3316,7 @@
 				},
 				onComplete: function () {
 					if (typeof self.loadedMonitor === 'function')
-						self.loadedMonitor('structure', self.browserKit, self.browserKit.dataset);
+						self.loadedMonitor('structure', self.browserKit);
 				},
 				onDetails: function (substRoot, data) {
 					var baseUrl = jT.formBaseUrl(this.datasetUri);
@@ -3408,7 +3408,7 @@
 							self.updateTabs();
 
 							if (typeof self.loadedMonitor === 'function')
-								self.loadedMonitor('relation', self.substanceKit);
+								self.loadedMonitor('relation', this);
 						},
 						onRow: function (row, data, index) {
 							if (!data.bundles) return;
@@ -3812,7 +3812,7 @@
 				},
 				onComplete: function () {
 					if (typeof self.loadedMonitor === 'function')
-						self.loadedMonitor('matrix', self.matrixKit, self.matrixKit.dataset);
+						self.loadedMonitor('matrix', self.matrixKit);
 				},
 				onRow: function (row, data, index) {
 					// equalize multi-rows, if there are any
@@ -3845,53 +3845,57 @@
 
 	MatrixKit.prototype.onReport = function(id, panel) {
 		var self = this,
-			loadedTables = {},
 			loadingCount = 0,
 			loadingTarget = 3, // structure, substance, composition+matrix
-			datasets = {},
 			reportMaker = function () {
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
 					bundleId: self.bundle.id,
-					dataTables: loadedTables,
+					dataTables: _.mapValues(self.loadedTables, function (el) { return !Array.isArray(el) ? el.html() : null; }),
 				}, self.bundle), self.settings.formatters));
+
+				jT.ui.installHandlers(self, panel);
 
 				// And clear the handler!
 				self.loadedMonitor = null;
-				loadedTables = null;
 			};
 
 
-		self.loadedMonitor = function (entity, kit, dataset) {
+		self.loadedMonitor = function (entity, kit) {
 			var theTables = $('table.dataTable', kit.rootElement);
 			
 			++loadingCount;
 			if (entity == 'matrix') {
-				var compTable = jT.tables.extractTable(theTables[0]);
-				loadedTables.composition = compTable.html();
+				self.loadedTables.composition = jT.tables.extractTable(theTables[0]);
 				
-				loadedTables.matrix = jT.tables.extractTable(theTables, { 
+				self.loadedTables.matrix = jT.tables.extractTable(theTables, { 
 					transpose: true,
 					stripSizes: true,
 					ignoreCols: [6, 11]
-				}).html();
+				});
 			} else if (entity == 'substance') {
 				var detailsButs = $('.jtox-details-open.jtox-handler', kit.rootElement);
 				loadingTarget += detailsButs.length;
 				// Save the tables now, because otherwise it'll take into account the nested ones as well.
-				loadedTables.substance = $('table.dataTable', self.substanceKit.rootElement);
+				self.loadedTables.substance = $('table.dataTable', self.substanceKit.rootElement);
 				setTimeout(function () { detailsButs.trigger('click'); }, 50);
-			} else // i.e. structure
-				loadedTables[entity] = jT.tables.extractTable(theTables).html();
+			} else if (entity == 'relation') {
+				if (!self.loadedTables.relation)
+					self.loadedTables.relation = [];
 
-			datasets[entity] = dataset;
+				self.loadedTables.relation.push(jT.tables.extractTable(theTables));
+			} else  // i.e. structure
+				self.loadedTables[entity] = jT.tables.extractTable(theTables);
+
 			if (loadingCount >= loadingTarget) {
 				// get the substance table now... when it's all loaded.
-				loadedTables.substance = jT.tables.extractTable(loadedTables.substance).html();
+				self.loadedTables.substance = jT.tables.extractTable(self.loadedTables.substance);
 				reportMaker();
 			}
 		};
 
-		$('.report-box', panel).html('<h2>Preparing the report...</h2>');		
+		$('.report-box', panel).html('<h2>Preparing the report...</h2>');
+		this.loadedTables = {},
+
 		// Make sure all kits are initialized!
 		this.onStructures();
 		this.onSubstances();
@@ -3901,9 +3905,56 @@
 		this.queryKit.queryType('selected').query();
 		this.substanceKit.query(this.bundleUri + '/compound');
 		this.queryMatrix('final');
-
-		// TODO: Work on the DOCX preparation, using datasets
 	};
+
+	MatrixKit.prototype.prepareWordReport = function (el) {
+		var imgLinks = [],
+			data = {};
+		
+		// Extract the structures data from the table, stacking images for loading.
+		data.structure = jT.tables.extractData(
+			this.loadedTables.structure, 
+			[ 'number', 'tag', 'image', 'casrn', 'ecnum', 'names', 'rationale' ], 
+			function (cell) {
+				var el = $(cell),
+					imgSrc = el.find('img').prop('src');
+				if (!imgSrc)
+					return el.text();
+				
+				imgLinks.push(imgSrc);
+				return imgLinks.length - 1; // Return the index so, it can be processed later.
+			}).slice(1);
+		
+		// Now, add to every structure the list of substances from it.
+		_.each(this.loadedTables.relation, function (aTable, idx) {
+			data.structure[idx].substances = jT.tables.extractData(
+				aTable, 
+				[ 'number', 'name', 'uuid', 'type', 'pubname', 'refuuid', 'owner', 'info', 'contained' ]).slice(1)
+		});
+
+		// TODO: Do the same for the matrix data
+		data.matrix = jT.tables.extractData(this.loadedTables.matrix, ['title'], function (cell, name) {
+			if (name == 'title')
+				return $(cell).text();
+
+			var parts = [];
+			$('.feature-entry', cell).each(function () {
+				parts.push('<w:r><w:rPr><w:color w:val="' + ($('.ui-icon-calculator', this).length > 0 ? 'FF0000' : '0000FF') + '" /></w:rPr><w:t xml:space="preserve">' +
+					_.escape($(this).text()) + '</w:t></w:r>');
+			});
+			
+			return '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>';
+		});
+
+		$.extend(data, this.bundle);
+
+		// TODO: These stap are to follow:
+		// 1. Make the image loading -> traversing imgLinks, and stacking promises.
+		// 2. Make the DOCX loading - utilize get(), ... other tools. Check the other report tools that are already existing.
+		// 3. Synchronize the property names in data
+		// 4. Make the actual DOCX preparation.
+		// 5. Continue with the rationale data, which is currently missing on the page as well.
+	},
 
 	MatrixKit.prototype.updateTabs = function () {
 		// This routine ensures the wizard-like advacement through the tabs
@@ -4119,7 +4170,8 @@
 				jT.ui.installHandlers(this.matrixKit, theTable.row(otherData.index).node());
 				jT.ui.installHandlers(this.matrixKit, varTable.row(rowData.index).node());
 				jT.ui.installHandlers(this.matrixKit, varTable.row(otherData.index).node());
-			}
+			},
+			reportWord: function (e) { this.prepareWordReport($(e.currentTarget)); }
 		},
 		groupSets: {
 			structure: {
@@ -4132,9 +4184,10 @@
 				],
 				Names: [
 					"http://www.opentox.org/api/1.1#ChemicalName",
-					"http://www.opentox.org/api/1.1#SMILES",
-					"http://www.opentox.org/api/1.1#REACHRegistrationDate"
+					// "http://www.opentox.org/api/1.1#SMILES",
+					// "http://www.opentox.org/api/1.1#REACHRegistrationDate"
 				],
+				Calculated: jT.ui.Compound.defaults.groups.Calculated,
 				Other: [
 					"http://www.opentox.org/api/1.1#Reasoning"
 				]

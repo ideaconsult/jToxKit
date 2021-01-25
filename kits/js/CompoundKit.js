@@ -25,7 +25,7 @@
 	function CompoundKit(settings) {
 		$(this.rootElement = settings.target).addClass('jtox-toolkit'); // to make sure it is there even in manual initialization.
 
-		this.settings = _.defaultsDeep(settings,
+		this.settings = _.defaultsDeep({}, settings,
 			CompoundKit.defaults,
 			{ baseFeatures: jT.ambit.baseFeatures });
 
