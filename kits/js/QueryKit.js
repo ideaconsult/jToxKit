@@ -248,7 +248,6 @@
 			return;
 		}
 
-
 		if (type === "auto" && params.type === 'auto' && form.searchbox.value.indexOf('http') == 0)
 			type = "uri";
 

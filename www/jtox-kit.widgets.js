@@ -1673,11 +1673,7 @@ jT.ambit = {
 			return html;
 		},
 		formatDate: function (timestamp) {
-			var d = new Date(timestamp),
-				day = d.getDate(),
-				month = d.getMonth() + 1;
-
-			return ((day < 10) ? '0' : '') + day + '.' + ((month < 10) ? '0' : '') + month + '.' + d.getFullYear();
+			return new Date(timestamp).toLocaleDateString().replace(/\/|-/g, '.');
 		},
 		formatConcentration: function (data) {
 			var val = data.value;

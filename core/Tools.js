@@ -209,6 +209,9 @@ jT = a$.extend(jT, {
   },
 
   activateDownload: function (aEl, blob, destName, autoRemove) {
+    if (!(blob instanceof Blob))
+      blob = new Blob([blob]);
+
     var url = URL.createObjectURL(blob),
       selfClick = false;
 

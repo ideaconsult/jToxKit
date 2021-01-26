@@ -2605,9 +2605,6 @@
                         false
                         ).getAjax(this.solrUrl),
                     downloadFn = function (blob) {
-                        if (!(blob instanceof Blob))
-                            blob = new Blob([blob]);
-
                         jT.activateDownload(
                             null, 
                             blob, 
@@ -3388,7 +3385,7 @@
 				groups: this.settings.groupSets.substance,
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
-				columns: this.settings.columns,
+				columns: { structure: this.settings.columns.substance },
 				onComplete: function () {
 					if (typeof self.loadedMonitor === 'function')
 						self.loadedMonitor('substance', self.substanceKit);
@@ -3407,7 +3404,7 @@
 						embedComposition: true,
 						showControls: false,
 						onDetails: null,
-						columns: { substance: { 'Id': idCol } },
+						columns: { substance: { 'Id': idCol, '#ConstituentContainedAs': self.settings.baseFeatures['#ConstituentContainedAs'] } },
 						onComplete: function () {
 							// The actual counting happens in the onRow, because it is conditional.
 							self.updateTabs();
@@ -3862,6 +3859,10 @@
 
 				// And clear the handler!
 				self.loadedMonitor = null;
+			},
+			tableCleaner = function (table) {
+				$(table).find('td>.source>button:not(.source),td>.target>button:not(.target),td>.cm>button:not(.cm)').remove();
+				return table;
 			};
 
 
@@ -3870,13 +3871,13 @@
 			
 			++loadingCount;
 			if (entity == 'matrix') {
-				self.loadedTables.composition = jT.tables.extractTable(theTables[0]);
+				self.loadedTables.composition = tableCleaner(jT.tables.extractTable(theTables[0]));
 				
-				self.loadedTables.matrix = jT.tables.extractTable(theTables, { 
+				self.loadedTables.matrix = tableCleaner(jT.tables.extractTable(theTables, { 
 					transpose: true,
 					stripSizes: true,
 					ignoreCols: [6, 11]
-				});
+				}));
 			} else if (entity == 'substance') {
 				var detailsButs = $('.jtox-details-open.jtox-handler', kit.rootElement);
 				loadingTarget += detailsButs.length;
@@ -3887,9 +3888,9 @@
 				if (!self.loadedTables.relation)
 					self.loadedTables.relation = [];
 
-				self.loadedTables.relation.push(jT.tables.extractTable(theTables));
+				self.loadedTables.relation.push(tableCleaner(jT.tables.extractTable(theTables)));
 			} else  // i.e. structure
-				self.loadedTables[entity] = jT.tables.extractTable(theTables);
+				self.loadedTables[entity] = tableCleaner(jT.tables.extractTable(theTables));
 
 			if (loadingCount >= loadingTarget) {
 				// get the substance table now... when it's all loaded.
@@ -3914,50 +3915,135 @@
 
 	MatrixKit.prototype.prepareWordReport = function (el) {
 		var imgLinks = [],
-			data = {};
-		
-		// Extract the structures data from the table, stacking images for loading.
-		data.structure = jT.tables.extractData(
-			this.loadedTables.structure, 
-			[ 'number', 'tag', 'image', 'casrn', 'ecnum', 'names', 'rationale' ], 
-			function (cell) {
+			data = $.extend({}, this.bundle),
+			self = this,
+			imgExtractor = function (cell) {
 				var el = $(cell),
-					imgSrc = el.find('img').prop('src');
+					image = el.find('img'),
+					imgSrc = image.prop('src');
 				if (!imgSrc)
 					return el.text();
 				
-				imgLinks.push(imgSrc);
-				return imgLinks.length - 1; // Return the index so, it can be processed later.
-			}).slice(1);
+				var imgInfo = {
+					url: imgSrc,
+					index: imgLinks.length,
+					width: image[0].width,
+					height: image[0].height
+				};
+				imgLinks.push(imgInfo);
+				return imgInfo;
+			},
+			matrixRowMap = ['number', 'tag', 'cas', 'name', 'i5uuid', 'source'];
+
+		data.created = this.settings.formatters.formatDate(this.bundle.created);
+		data.updated = this.settings.formatters.formatDate(this.bundle.updated);
+		
+		// Extract the structures data from the table, stacking images for loading.
+		data.structures = jT.tables.extractData(
+			this.loadedTables.structure, 
+			[ 'index', 'tag', 'image', 'casrn', 'ecnum', 'names', 'rationale' ], 
+			imgExtractor).slice(1);
 		
 		// Now, add to every structure the list of substances from it.
 		_.each(this.loadedTables.relation, function (aTable, idx) {
-			data.structure[idx].substances = jT.tables.extractData(
+			data.structures[idx].substances = jT.tables.extractData(
 				aTable, 
-				[ 'number', 'name', 'uuid', 'type', 'pubname', 'refuuid', 'owner', 'info', 'contained' ]).slice(1)
+				[ 'i', 'name', 'uuid', 'type', 'pubname', 'refuuid', 'owner', 'info', 'contained' ],
+				imgExtractor).slice(1)
 		});
 
-		// TODO: Do the same for the matrix data
-		data.matrix = jT.tables.extractData(this.loadedTables.matrix, ['title'], function (cell, name) {
+		data.matrix = jT.tables.extractData(
+			this.loadedTables.composition, 
+			['number', 'tag', 'cas', 'substancename', 'i5uuid', 'datasource', 'structuretag', 'image', 'constituentname', 'content', 'containedas'],
+			imgExtractor).slice(1);
+
+		var dataMatrix = jT.tables.extractData(this.loadedTables.matrix, ['title'], function (cell, name) {
 			if (name == 'title')
 				return $(cell).text();
 
-			var parts = [];
+			var parts = []
 			$('.feature-entry', cell).each(function () {
 				parts.push('<w:r><w:rPr><w:color w:val="' + ($('.ui-icon-calculator', this).length > 0 ? 'FF0000' : '0000FF') + '" /></w:rPr><w:t xml:space="preserve">' +
 					_.escape($(this).text()) + '</w:t></w:r>');
 			});
-			
-			return '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>';
+
+			return parts.length > 0 
+				? '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>'
+				: $(cell).text();
 		});
 
-		$.extend(data, this.bundle);
+		// Split the matrix data into several groups of 3.
+		data.matrixGroups = [];
+		var groupSize = 3;
+		for (var indexStart = 0; indexStart < data.matrix.length; indexStart += groupSize) {
+			var group = { values: [] };
+			for (var row = 0; row < dataMatrix.length; ++row) {
+				var prop = matrixRowMap[row], entry = group;
+
+				// we make our mind - where are we going to fill the crap.
+				if (!prop) {
+					prop = 'value';
+					entry = {};
+				}
+		
+				for (var col = 1; col <= groupSize; ++col) // Deep down in the jungle....
+					entry[prop + col] = dataMatrix[row][indexStart + col] || '';
+
+				if (prop == 'value') {
+					entry.title = dataMatrix[row].title;
+					group.values.push(entry);
+				}
+			}
+
+			data.matrixGroups.push(group);
+		}
+
+		// Go, and invoke the image loading (they are loaded, anyways!)
+		var allPromisses = _.map(imgLinks, function (imgInfo) {
+			return jT.promiseXHR($.extend({
+				url: imgInfo.url,
+				settings: { responseType: "arraybuffer" }
+			}, self.settings.ajaxSettings));
+		});
+
+		// Add the actual template loading to the promisses.
+		allPromisses.push(jT.promiseXHR($.extend({
+			url: this.settings.reportTemplate,
+			settings: { responseType: "arraybuffer" }
+		}, self.settings.ajaxSettings)));
+
+		Promise.all(allPromisses).then(function (res) {
+			var doc = new Docxgen();
+
+            var imageModule = new ImageModule({ centered:false });
+            imageModule.getSizeFromData = function(imgInfo) {
+				return [ imgInfo.width / 2, imgInfo.height / 2 ]; 
+			}
+            imageModule.getImageFromData = function(imgInfo) {
+				return res[imgInfo.index];
+			}
+            doc.attachModule(imageModule);
+
+			// Pass the just loaded (template) file contents, set data and render the new file!
+            doc.load(res[res.length - 1]);
+			doc.setData(data); 
+			doc.render();
+			
+			// Output the data as a download
+			jT.activateDownload(
+				null, 
+				doc.getZip().generate({
+					type:"blob", 
+					compression: 'DEFLATE'
+				}), 
+				jT.formatString(self.settings.reportName, {
+					bundleId: self.bundleId,
+					date: new Date().toISOString().replace(":", "_")
+				}, self.settings.formatters),
+				true);
+		});
 
 		// TODO: These stap are to follow:
-		// 1. Make the image loading -> traversing imgLinks, and stacking promises.
-		// 2. Make the DOCX loading - utilize get(), ... other tools. Check the other report tools that are already existing.
-		// 3. Synchronize the property names in data
-		// 4. Make the actual DOCX preparation.
 		// 5. Continue with the rationale data, which is currently missing on the page as well.
 	},
 
@@ -4111,6 +4197,8 @@
 		rootElement: null,
 		maxStars: 10,
 		studyTypeList: {},
+		reportTemplate: "../../../assets/report_templates/assessment-report.docx",
+		reportName: "report-{{date}}.docx",
 		handlers: {
 			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.currentTarget)); },
@@ -4852,7 +4940,6 @@
 				console.warn("QueryKit: Unknown query type selected: " + type);
 			return;
 		}
-
 
 		if (type === "auto" && params.type === 'auto' && form.searchbox.value.indexOf('http') == 0)
 			type = "uri";

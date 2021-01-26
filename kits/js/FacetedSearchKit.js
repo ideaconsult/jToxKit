@@ -618,9 +618,6 @@
                         false
                         ).getAjax(this.solrUrl),
                     downloadFn = function (blob) {
-                        if (!(blob instanceof Blob))
-                            blob = new Blob([blob]);
-
                         jT.activateDownload(
                             null, 
                             blob, 
