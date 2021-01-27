@@ -134,11 +134,16 @@ button.details-expand-all, button.details-collapse-all {
   vertical-align: middle !important;
 }
 
-#jtox-matrix .unsaved-study,
 #jtox-matrix .deleted {
-  background: #ffcccc;
+  background: #f79d9d;
   border-radius: 3px;
 }
+
+#jtox-matrix .edited {
+  background: #eee78b;
+  border-radius: 3px;
+}
+
 
 #jtox-matrix .jtox-ds-variable .shortened {
   max-width: 180px;

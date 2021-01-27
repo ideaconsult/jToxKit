@@ -629,9 +629,11 @@
 					html += '<div class="feature-entry" data-feature="' + fId + '" data-index="' + i + '">';
 
 					if (self.matrixEditable)
-						html += '<span class="fa ' + (d.deleted ? 'fa-edit' : 'fa-minus-circle')+ ' fa-action jtox-handler" data-handler="openPopup" data-action="delete"></span>&nbsp;';
+						html += '<span class="fa ' + ((d.deleted || d.newentry) ? 'fa-edit' : 'fa-minus-circle') + 
+							' fa-action jtox-handler" data-handler="openPopup" data-action="' + (d.deleted || !d.newentry ? 'delete' : 'edit') + 
+							'"></span>&nbsp;';
 
-					html += '<a class="' + ((d.deleted) ? 'deleted' : '') + ' jtox-handler" data-handler="openPopup" data-action="info" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
+					html += '<a class="' + (d.deleted ? 'deleted' : d.newentry ? 'edited': '') + ' jtox-handler" data-handler="openPopup" data-action="info" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
 						+ studyType
 						+ ' ' + postVal;
 					html += jT.ui.fillHtml('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
@@ -736,14 +738,10 @@
 					}
 				},
 				goAction = function () {
-					// TODO: Clarify this here, regarding EDIT
 					featureJson.effects = [ featureJson.effects ];
 					featureJson.protocol.guideline = [ featureJson.protocol.guideline ];
-
-					if (action === 'add')
-						self.saveMatrixEdit(featureJson, 'annotation-add');
-					else if (action === 'edit') // TODO: !!!
-						self.editMatrixFeature(feature, valueIdx, featureJson);
+					
+					self.saveMatrixEdit(featureJson, 'annotation-' + action);
 				};
 			
 
@@ -751,10 +749,11 @@
 				content: this.endpointKit.getFeatureEditHtml(feature, val, {
 					studyOptionsHtml: this.studyOptionsHtml
 				}),
-				confirmButton: "Add",
+				confirmButton: action === 'add' ? "Add" : "Edit",
 				confirm: goAction, // NOTE: Due to some bug in jBox, it appears we need to provide this one...
 				onConfirm: goAction, // ... but since the Doc says `onConfirm` -> we need to have that too.
 				onOpen: function () {
+					// TODO: Clarify this here, regarding EDIT
 					jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, featureJson, {
 						ajax: {
 							method: "GET",
@@ -922,6 +921,8 @@
 					dataTables: _.mapValues(self.loadedTables, function (el) { return !Array.isArray(el) ? el.html() : null; }),
 				}, self.bundle), self.settings.formatters));
 
+				// clear the table handlers, because they won't work anyways.
+				$('.report-box table .jtox-handler', panel).toggleClass('jtox-handler').data('handler', '');
 				jT.ui.installHandlers(self, panel);
 
 				// And clear the handler!
@@ -1440,6 +1441,9 @@
 				'annotation-delete.progress': "Deleting a study annotation...",
 				'annotation-delete.error': "Error on deleting study annotation!",
 				'annotation-delete.done': "Study annotation deleted.",
+				'annotation-edit.progress': "Submitting the study gap filling...",
+				'annotation-edit.error': "Error on study gap filling!!",
+				'annotation-edit.done': "Study gap filling altered.",
 				'substance.progress': "Updating substance selection...",
 				'substance.done': "Substance selection updated.",
 				'substance.error': "Error updating substance selection!",
