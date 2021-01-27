@@ -552,7 +552,7 @@
 		// make two nested calls - for adding and for deleting
 		this.pollAmbit('/matrix' + ('effects_to_delete' in edit ? '/deleted' : ''), { 
 			method: 'PUT', 
-			data: JSON.stringify({ study: edit }),
+			data: JSON.stringify({ study: [ edit ] }),
 			contentType: 'application/json'
 		}, subject, function () {
 			self.queryMatrix('working');
@@ -629,7 +629,7 @@
 					html += '<div class="feature-entry" data-feature="' + fId + '" data-index="' + i + '">';
 
 					if (self.matrixEditable)
-						html += '<span class="fa ' + (d.deleted ? 'fa-info' : 'fa-minus-circle')+ ' fa-action jtox-handler" data-handler="openPopup" data-action="delete"></span>&nbsp;';
+						html += '<span class="fa ' + (d.deleted ? 'fa-edit' : 'fa-minus-circle')+ ' fa-action jtox-handler" data-handler="openPopup" data-action="delete"></span>&nbsp;';
 
 					html += '<a class="' + ((d.deleted) ? 'deleted' : '') + ' jtox-handler" data-handler="openPopup" data-action="info" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
 						+ studyType
