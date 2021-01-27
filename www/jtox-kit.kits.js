@@ -3007,8 +3007,8 @@
 		var self = this;
 
 		jT.ambit.call(self, bundleUri, function (bundle) {
+			bundle = bundle && bundle.dataset[0];
 			if (!!bundle) {
-				bundle = bundle.dataset[0];
 				self.bundleUri = bundle.URI;
 				self.bundle = bundle;
 				self.baseUrl = self.settings.baseUrl = jT.formBaseUrl(self.bundleUri);
@@ -3083,7 +3083,7 @@
 			self.endAmbitCall(subject, box, jhr);
 
 			if (typeof cb === 'function')
-				return cb(result);
+				return cb(result, jhr);
 		}));
 	},
 
@@ -3172,8 +3172,8 @@
 					$(e.currentTarget),
 					function (result, jhr) {
 						if (!!result) {
-							jT.addHistory(jT.addParameter(window.location.href, 'bundleUri=' + encodeURIComponent(result.uri)), 'Bundle editing');
-							self.loadBundle(result.uri);
+							jT.addHistory(jT.addParameter(window.location.href, 'bundleUri=' + encodeURIComponent(result)), 'Bundle editing');
+							self.loadBundle(result);
 						} else {
 							// TODO: report an error
 							console.log("Error on creating bundle [" + jhr.status + "]: " + jhr.statusText);
@@ -3476,7 +3476,7 @@
 			method: 'PUT', 
 			data: JSON.stringify({ study: edit }),
 			contentType: 'application/json'
-		}, subject, function (result) {
+		}, subject, function () {
 			self.queryMatrix('working');
 		});
 	},
@@ -3825,17 +3825,6 @@
 					});
 				}				
 			});
-
-			// Take care for matrix management buttons!
-			$('.create-button', panel).on('click', function () {
-				self.pollAmbit('/matrix/working', { method: 'POST', data: { deletematrix: false } }, $(this), function (result) {
-					if (!!result) {
-						$('#xfinal').button('enable');
-						self.bundleSummary.matrix++;
-						self.queryMatrix('working')
-					}
-				});
-			});
 		}
 
 		// the actual initial query comes from the handlers, we just need to ask for fature reset
@@ -3911,6 +3900,17 @@
 		this.queryKit.queryType('selected').query();
 		this.substanceKit.query(this.bundleUri + '/compound');
 		this.queryMatrix('final');
+	};
+
+	MatrixKit.prototype.createWorkingCopy = function (el$) {
+		var self = this;
+		this.pollAmbit('/matrix/working', { method: 'POST', data: { deletematrix: false } }, el$, function (result) {
+			if (!!result) {
+				$('#xfinal').button('enable');
+				self.bundleSummary.matrix++;
+				self.queryMatrix('working')
+			}
+		});
 	};
 
 	MatrixKit.prototype.prepareWordReport = function (el) {
@@ -4231,7 +4231,7 @@
 				this.openFeatureBox(el.data('action'), el.closest('.feature-entry'));
 			},
 			matrixMode: function (e) { this.queryMatrix($(e.currentTarget).attr('id').substr(1)); },
-			createWorkingCopy: function (e) { this.createWorkingCopy(); },
+			createWorkingCopy: function (e) { this.createWorkingCopy($(e.currentTarget)); },
 			substanceTag: function (e) { this.tagSubstance($(e.currentTarget)); },
 			substanceMove: function (e) {
 				var el = $(e.currentTarget),
