@@ -3344,6 +3344,7 @@
 			var customSelected = false;
 			this.queryKit = jT.ui.initKit($('#struct-query'), {
 				mainKit: this.browserKit,
+				search: this.settings.defaultNeedle,
 				onSelected: function (form, type) {
 					if (type == 'selected')
 						customSelected = true;
@@ -4200,6 +4201,7 @@
 		studyTypeList: {},
 		reportTemplate: "../../../assets/report_templates/assessment-report.docx",
 		reportName: "report-{{date}}.docx",
+		defaultNeedle: '[Ag]',
 		handlers: {
 			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.currentTarget)); },
@@ -6907,7 +6909,6 @@ jT.ui.templates['all-matrix']  =
 "<div id=\"struct-query\" class=\"jtox-kit\"" +
 "data-kit=\"Query\"" +
 "data-initial-query=\"false\"" +
-"data-search=\"[Ag]\"" +
 "data-hide-options=\"uri,context\">" +
 "</div>" +
 "<div id=\"struct-browser\" class=\"jtox-kit\"" +
