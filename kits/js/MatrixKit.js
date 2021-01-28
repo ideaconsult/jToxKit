@@ -596,7 +596,7 @@
 				var catId = jT.ambit.parseFeatureId(fId).category,
 					config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[catId]),
 					theData = data[fId],
-					preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>" + f.title + "</strong>" : null,
+					preVal = (_.get(config, 'effects.endpoint.visible') !== false) ? "<strong>" + f.title + "</strong>" : null,
 					// preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : '),
 					studyType = "&nbsp;<span class='fa " + (f.isModelPredictionFeature ? "fa-calculator" : "fa-tag") + "' title='" + f.source.type + "'></span>",
 					postVal = '', postValParts = [], parameters = [], conditions = [];
@@ -615,7 +615,7 @@
 				if (conditions.length > 0)
 					postValParts.push('<span>' + conditions.join(', ') + '</span>');
 				if (_.get(config, 'protocol.guideline.inMatrix', false) && !!f.creator && f.creator != 'null' &&  f.creator != 'no data')
-					postValParts.push('<span class="shortened" title="'+f.creator+'">' + f.creator + '</span>');
+					postValParts.push('<span class="shortened" title="' + f.creator + '">' + f.creator + '</span>');
 				
 				postVal = (postValParts.length > 0) ? '(' + postValParts.join(', ') + ')' : '';
 
@@ -701,7 +701,7 @@
 		var featureId = el.data('feature'),
 			valueIdx = el.data('index'),
 			data = jT.tables.getRowData(el),
-			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]);
+			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]),
 			boxOptions = {
 				title: feature.title || feature.id.category || "Endpoint",
 				closeButton: "box",
@@ -716,38 +716,44 @@
 			},
 			self = this;
 
-		if (action === 'add' || action === 'edit') {
+		if (action === 'add') {
 			if (this.studyOptionsHtml == null)
 				this.studyOptionsHtml = _.map(this.settings.studyTypeList, function (val, id) {
 					return '<option value="' + id + '">' + val.title + '</option>';
 				});
 
+			// NOTE: Don't be tempted to remove the empty fields... if they stay like this, the
+			// request to the server will fail.
 			var featureJson = {
-					owner: { substance: { uuid: data.compound.i5uuid } },
+					owner: { 
+						substance: { uuid: data.compound.i5uuid } 
+					},
 					protocol: {
 						topcategory: feature.id.topcategory,
 						category: { code: feature.id.category },
 						endpoint: feature.title,
-						guideline: '' },
-					citation: { year: (new Date()).getFullYear().toString() },
+						guideline: '',
+					},
+					citation: { 
+						year: (new Date()).getFullYear().toString()
+					},
 					parameters: { },
 					interpretation: { },
 					reliability: { },
-					effects: {
+					effects: [{
 						result: { },
 						conditions: { }
-					}
+					}]
 				},
 				goAction = function () {
-					featureJson.effects = [ featureJson.effects ];
-					featureJson.protocol.guideline = [ featureJson.protocol.guideline ];
-					
 					self.saveMatrixEdit(featureJson, 'annotation-' + action);
 				};
-			
+
+			// TODO: If we want real edit - we must traverse the fature.annotation array and fill
+			// the conditions.
 
 			boxOptions = $.extend(boxOptions, {
-				content: this.endpointKit.getFeatureEditHtml(feature, val, {
+				content: this.endpointKit.getFeatureEditHtml(feature, {
 					studyOptionsHtml: this.studyOptionsHtml
 				}),
 				confirmButton: action === 'add' ? "Add" : "Edit",
@@ -776,7 +782,7 @@
 			if (feature.isMultiValue && Array.isArray(val))
 				val = val[valueIdx];
 
-			if (action === 'delete' ) { 
+			if (action === 'delete' || action === 'edit') { 
 				var ajaxData = {
 						owner: { substance: { uuid: data.compound.i5uuid } },
 						effects_to_delete: [{
@@ -1507,7 +1513,7 @@
 				visibility: "details",
 				title: "Composition",
 				data: "compound.URI",
-				column: { bVisible: false },
+				column: { visible: false },
 				basic: true,
 				render : function(data, type, full) {
 			  		return (type != "details") ? "-" : '<span class="jtox-details-composition"></span>';

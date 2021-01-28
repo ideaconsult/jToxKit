@@ -1575,7 +1575,8 @@
 
 			if (endpointParsers[pi].adjust)
 				endpointParsers[pi].adjust(obj, parse);
-			if (!!obj.unit) obj.unit = obj.unit.trim();
+			if (!!obj.unit)
+				obj.unit = obj.unit.trim();
 			break;
 		}
 
@@ -1777,18 +1778,25 @@
 		});
 	};
 
-	EndpointKit.prototype.getFeatureEditHtml = function (feature, value, opts) {
+	EndpointKit.prototype.getFeatureEditHtml = function (feature, opts) {
 		var config = $.extend(true, {}, this.settings.columns["_"], this.settings.columns[feature.id.category]),
 			editors = _.map(this.settings.editors, function (editor) {
-				var oneCfg = _.defaults(_.get(config, editor.path, {}), editor, { autoClass: "no-auto" });
-				return !oneCfg.visible || oneCfg.preloaded ? '' : jT.ui.fillHtml('endpoint-one-editor', oneCfg);
+				var cfgPath = editor.config || editor.path,
+					oneCfg = _.defaults(_.get(config, cfgPath, {}), editor, {
+						editClass: "no-auto"
+					});
+
+				return (oneCfg.preloaded || oneCfg.visible === false || oneCfg.bVisible === false)
+					? ''
+					: jT.ui.fillHtml('endpoint-one-editor', oneCfg);
 			}),
 			conditions = _.map(config.conditions, function (cond, cId) {
+				var valPath = 'effects[0].conditions.' + cId;
 				return typeof cond !== 'object' || cond.visible === false ? '' : jT.ui.fillHtml('endpoint-one-editor', _.defaults({
 					id: cId,
 					title: cond.title || cId,
-					autoClass: "tags-auto",
-					path: 'effects.conditions.' + cId
+					editClass: "tags-auto",
+					path: valPath
 				}, config.conditions[cId]));
 			});
 
@@ -1810,7 +1818,7 @@
 			appendTo: root,
 			source: function (request, response) {
 				var field = $(this.element).data('id');
-				_.set(opts.ajax, opts.searchPath, request.term);
+				_.set(opts.ajax, opts.searchTerm, request.term);
 	
 				jT.ambit.call(kit, $(this.element).data('service'), opts.ajax, function (data) {
 					response(!data ? [] : $.map(data.facet, function (item) {
@@ -1864,7 +1872,7 @@
 			}
 		})
 		.bind('keydown', function (event) {
-			if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
+			if (event.keyCode === $.ui.keyCode.TAB && !!$(this).menu.active)
 				event.preventDefault();
 		});
 	
@@ -1912,30 +1920,28 @@
 		},
 		editors: [{
 			id: 'endpoint',
-			path: 'effects.endpoint', // 'effects[0].endpoint'
+			path: 'effects[0].endpoint',
 			title: 'Endpoint name',
 			service: 'query/experiment_endpoints',
-			autoClass: 'ajax-auto'
+			editClass: 'ajax-auto'
 		}, {
 			id: 'value',
-			path: 'value',
+			path: 'effects[0].result',
+			config: 'effects.result',
 			title: 'Value range',
+			editClass: 'tags-auto'
+		}, {
+			id: 'value',
+			path: 'effects[0].result.textValue',
+			config: 'effects.text',
+			title: 'Effects result',
+			// service: '/query/interpretation_result'
 		}, {
 			id: 'interpretation_result',
 			path: 'interpretation.result',
 			title: 'Intepretation of the results',
 			service: 'query/interpretation_result',
-			autoClass: 'ajax-auto'
-		}, {
-			id: 'value',
-			path: 'effect.result', // 'effects[0].result'
-			title: 'Effects result'
-			// service: '/query/interpretation_result'
-		}, {
-			id: 'value',
-			path: 'effects.text',
-			title: 'Effects result',
-			// service: '/query/interpretation_result'
+			editClass: 'ajax-auto'
 		}, {
 			id: 'type',
 			path: 'reliability.r_studyResultType',
@@ -1949,6 +1955,7 @@
 		}, {
 			id: 'justification',
 			path: 'protocol.guideline[0]',
+			config: 'protocol.guideline',
 			title: "Guideline or Justification",
 			preloaded: true
 		}, {
@@ -3518,7 +3525,7 @@
 				var catId = jT.ambit.parseFeatureId(fId).category,
 					config = $.extend(true, {}, kit.settings.columns["_"], kit.settings.columns[catId]),
 					theData = data[fId],
-					preVal = (_.get(config, 'effects.endpoint.bVisible') !== false) ? "<strong>" + f.title + "</strong>" : null,
+					preVal = (_.get(config, 'effects.endpoint.visible') !== false) ? "<strong>" + f.title + "</strong>" : null,
 					// preVal = [preVal, f.source.type].filter(function(value){return value!==null}).join(' : '),
 					studyType = "&nbsp;<span class='fa " + (f.isModelPredictionFeature ? "fa-calculator" : "fa-tag") + "' title='" + f.source.type + "'></span>",
 					postVal = '', postValParts = [], parameters = [], conditions = [];
@@ -3537,7 +3544,7 @@
 				if (conditions.length > 0)
 					postValParts.push('<span>' + conditions.join(', ') + '</span>');
 				if (_.get(config, 'protocol.guideline.inMatrix', false) && !!f.creator && f.creator != 'null' &&  f.creator != 'no data')
-					postValParts.push('<span class="shortened" title="'+f.creator+'">' + f.creator + '</span>');
+					postValParts.push('<span class="shortened" title="' + f.creator + '">' + f.creator + '</span>');
 				
 				postVal = (postValParts.length > 0) ? '(' + postValParts.join(', ') + ')' : '';
 
@@ -3623,7 +3630,7 @@
 		var featureId = el.data('feature'),
 			valueIdx = el.data('index'),
 			data = jT.tables.getRowData(el),
-			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]);
+			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]),
 			boxOptions = {
 				title: feature.title || feature.id.category || "Endpoint",
 				closeButton: "box",
@@ -3638,38 +3645,44 @@
 			},
 			self = this;
 
-		if (action === 'add' || action === 'edit') {
+		if (action === 'add') {
 			if (this.studyOptionsHtml == null)
 				this.studyOptionsHtml = _.map(this.settings.studyTypeList, function (val, id) {
 					return '<option value="' + id + '">' + val.title + '</option>';
 				});
 
+			// NOTE: Don't be tempted to remove the empty fields... if they stay like this, the
+			// request to the server will fail.
 			var featureJson = {
-					owner: { substance: { uuid: data.compound.i5uuid } },
+					owner: { 
+						substance: { uuid: data.compound.i5uuid } 
+					},
 					protocol: {
 						topcategory: feature.id.topcategory,
 						category: { code: feature.id.category },
 						endpoint: feature.title,
-						guideline: '' },
-					citation: { year: (new Date()).getFullYear().toString() },
+						guideline: '',
+					},
+					citation: { 
+						year: (new Date()).getFullYear().toString()
+					},
 					parameters: { },
 					interpretation: { },
 					reliability: { },
-					effects: {
+					effects: [{
 						result: { },
 						conditions: { }
-					}
+					}]
 				},
 				goAction = function () {
-					featureJson.effects = [ featureJson.effects ];
-					featureJson.protocol.guideline = [ featureJson.protocol.guideline ];
-					
 					self.saveMatrixEdit(featureJson, 'annotation-' + action);
 				};
-			
+
+			// TODO: If we want real edit - we must traverse the fature.annotation array and fill
+			// the conditions.
 
 			boxOptions = $.extend(boxOptions, {
-				content: this.endpointKit.getFeatureEditHtml(feature, val, {
+				content: this.endpointKit.getFeatureEditHtml(feature, {
 					studyOptionsHtml: this.studyOptionsHtml
 				}),
 				confirmButton: action === 'add' ? "Add" : "Edit",
@@ -3698,7 +3711,7 @@
 			if (feature.isMultiValue && Array.isArray(val))
 				val = val[valueIdx];
 
-			if (action === 'delete' ) { 
+			if (action === 'delete' || action === 'edit') { 
 				var ajaxData = {
 						owner: { substance: { uuid: data.compound.i5uuid } },
 						effects_to_delete: [{
@@ -4429,7 +4442,7 @@
 				visibility: "details",
 				title: "Composition",
 				data: "compound.URI",
-				column: { bVisible: false },
+				column: { visible: false },
 				basic: true,
 				render : function(data, type, full) {
 			  		return (type != "details") ? "-" : '<span class="jtox-details-composition"></span>';
@@ -6604,9 +6617,9 @@ jT.ui.templates['all-endpoint']  =
 jT.ui.templates['endpoint-one-editor']  = 
 "<div class=\"jtox-medium-box\">" +
 "<div class=\"jtox-details font-heavy {{ requiredClass }}\">{{ title }}</div>" +
-"<input class=\"{{ autoClass }}\" type=\"text\" data-id=\"{{ id }}\" data-service=\"{{ service }}\" data-path=\"{{ path }}\" placeholder=\"{{ title }}_\" value=\"{{ value }}\"/>" +
+"<input class=\"{{ editClass }}\" type=\"text\" data-id=\"{{ id }}\" data-service=\"{{ service }}\" data-path=\"{{ path }}\" placeholder=\"{{ title }}_\" value=\"{{ value }}\"/>" +
 "</div>" +
-""; // end of endpoint-one-panel 
+""; // end of endpoint-one-editor 
 
 jT.ui.templates['endpoint-info-panel']  = 
 "<div class=\"endpoint-panel\">" +
@@ -6646,19 +6659,19 @@ jT.ui.templates['endpoint-edit-panel']  =
 "</div>" +
 "<div class=\"jtox-medium-box\">" +
 "<div class=\"jtox-details font-heavy jtox-required\">Study type</div>" +
-"<select class=\"type-list no-auto\" data-id=\"type\"><option value=\"-1\"> - Select type - </option>{{ studyOptionsHtml }}</select>" +
+"<select class=\"type-list no-auto\" data-id=\"type\"><option value=\"{{ value.type }}\"> - Select type - </option>{{ studyOptionsHtml }}</select>" +
 "</div>" +
 "<div class=\"jtox-medium-box\">" +
 "<div class=\"jtox-details font-heavy jtox-required\">Reference</div>" +
-"<input type=\"text no-auto\" data-id=\"reference\" placeholder=\"Reference_\" value=\"{{ reference }}\"/>" +
+"<input type=\"text\" class=\"no-auto\" data-id=\"reference\" placeholder=\"Reference_\" value=\"{{ value.reference }}\"/>" +
 "</div>" +
 "<div class=\"jtox-medium-box size-full\">" +
 "<div class=\"jtox-details font-heavy jtox-required\">Guideline or Justification</div>" +
-"<textarea class=\"no-auto\" data-id=\"justification\" placeholder=\"Justification_\">{{ justification }}</textarea>" +
+"<textarea class=\"no-auto\" data-id=\"justification\" placeholder=\"Justification_\">{{ value.justification }}</textarea>" +
 "</div>" +
 "<div class=\"jtox-medium-box size-full\">" +
 "<div class=\"jtox-details font-heavy\">Remarks</div>" +
-"<textarea class=\"no-auto\" data-id=\"remarks\" placeholder=\"Remarks_\">{{ remarks }}</textarea>" +
+"<textarea class=\"no-auto\" data-id=\"remarks\" placeholder=\"Remarks_\">{{ value.remarks }}</textarea>" +
 "</div>" +
 "</div>" +
 ""; // end of endpoint-edit-panel 

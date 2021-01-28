@@ -52,7 +52,8 @@
 
 			if (endpointParsers[pi].adjust)
 				endpointParsers[pi].adjust(obj, parse);
-			if (!!obj.unit) obj.unit = obj.unit.trim();
+			if (!!obj.unit)
+				obj.unit = obj.unit.trim();
 			break;
 		}
 
@@ -254,18 +255,25 @@
 		});
 	};
 
-	EndpointKit.prototype.getFeatureEditHtml = function (feature, value, opts) {
+	EndpointKit.prototype.getFeatureEditHtml = function (feature, opts) {
 		var config = $.extend(true, {}, this.settings.columns["_"], this.settings.columns[feature.id.category]),
 			editors = _.map(this.settings.editors, function (editor) {
-				var oneCfg = _.defaults(_.get(config, editor.path, {}), editor, { autoClass: "no-auto" });
-				return !oneCfg.visible || oneCfg.preloaded ? '' : jT.ui.fillHtml('endpoint-one-editor', oneCfg);
+				var cfgPath = editor.config || editor.path,
+					oneCfg = _.defaults(_.get(config, cfgPath, {}), editor, {
+						editClass: "no-auto"
+					});
+
+				return (oneCfg.preloaded || oneCfg.visible === false || oneCfg.bVisible === false)
+					? ''
+					: jT.ui.fillHtml('endpoint-one-editor', oneCfg);
 			}),
 			conditions = _.map(config.conditions, function (cond, cId) {
+				var valPath = 'effects[0].conditions.' + cId;
 				return typeof cond !== 'object' || cond.visible === false ? '' : jT.ui.fillHtml('endpoint-one-editor', _.defaults({
 					id: cId,
 					title: cond.title || cId,
-					autoClass: "tags-auto",
-					path: 'effects.conditions.' + cId
+					editClass: "tags-auto",
+					path: valPath
 				}, config.conditions[cId]));
 			});
 
@@ -287,7 +295,7 @@
 			appendTo: root,
 			source: function (request, response) {
 				var field = $(this.element).data('id');
-				_.set(opts.ajax, opts.searchPath, request.term);
+				_.set(opts.ajax, opts.searchTerm, request.term);
 	
 				jT.ambit.call(kit, $(this.element).data('service'), opts.ajax, function (data) {
 					response(!data ? [] : $.map(data.facet, function (item) {
@@ -341,7 +349,7 @@
 			}
 		})
 		.bind('keydown', function (event) {
-			if (event.keyCode === $.ui.keyCode.TAB && !!autoEl.menu.active)
+			if (event.keyCode === $.ui.keyCode.TAB && !!$(this).menu.active)
 				event.preventDefault();
 		});
 	
@@ -389,30 +397,28 @@
 		},
 		editors: [{
 			id: 'endpoint',
-			path: 'effects.endpoint', // 'effects[0].endpoint'
+			path: 'effects[0].endpoint',
 			title: 'Endpoint name',
 			service: 'query/experiment_endpoints',
-			autoClass: 'ajax-auto'
+			editClass: 'ajax-auto'
 		}, {
 			id: 'value',
-			path: 'value',
+			path: 'effects[0].result',
+			config: 'effects.result',
 			title: 'Value range',
+			editClass: 'tags-auto'
+		}, {
+			id: 'value',
+			path: 'effects[0].result.textValue',
+			config: 'effects.text',
+			title: 'Effects result',
+			// service: '/query/interpretation_result'
 		}, {
 			id: 'interpretation_result',
 			path: 'interpretation.result',
 			title: 'Intepretation of the results',
 			service: 'query/interpretation_result',
-			autoClass: 'ajax-auto'
-		}, {
-			id: 'value',
-			path: 'effect.result', // 'effects[0].result'
-			title: 'Effects result'
-			// service: '/query/interpretation_result'
-		}, {
-			id: 'value',
-			path: 'effects.text',
-			title: 'Effects result',
-			// service: '/query/interpretation_result'
+			editClass: 'ajax-auto'
 		}, {
 			id: 'type',
 			path: 'reliability.r_studyResultType',
@@ -426,6 +432,7 @@
 		}, {
 			id: 'justification',
 			path: 'protocol.guideline[0]',
+			config: 'protocol.guideline',
 			title: "Guideline or Justification",
 			preloaded: true
 		}, {
