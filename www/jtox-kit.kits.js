@@ -1751,6 +1751,28 @@
 
 	EndpointKit.prototype.query = EndpointKit.prototype.loadEndpoints;
 
+	EndpointKit.enumFeatureValues = function (dataset, cb) {
+		for (var i = 0;i < dataset.dataEntry.length; ++i) {
+			var entry = dataset.dataEntry[i];
+			for (var fId in entry.values) {
+				var value = entry.values[fId],
+					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]),
+					mainFeature = null;
+
+				if (!!feature.id) {
+					feature.id.suffix = '*';
+					mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
+				}
+
+				if (!feature.isMultiValue)
+					cb(value, feature, mainFeature, entry, dataset);
+				else
+					for (var j = 0;j < value.length; ++j) 
+						cb(value[j], feature, mainFeature, entry, dataset);
+			}
+		}
+	};
+
 	EndpointKit.prototype.getFeatureInfoHtml = function (feature, value, canDelete) {
 		var conditionsCount = feature.annotation.length,
 			condHeaders = [], condValues = [];
@@ -3799,6 +3821,52 @@
 		return _.defaultsDeep(matrixFeatures, this.settings.baseFeatures);
 	};
 
+	MatrixKit.prototype.buildEditLists = function (opts) {
+		var result = {
+			addedList: [],
+			deletedList: []
+		};
+
+		jT.ui.Endpoint.enumFeatureValues(this.matrixKit.dataset, function (value, feature, mainFeature, entry) {
+			if (!value.newentry)
+				return ;
+
+			var theList = (value.deleted ? result.deletedList : result.addedList),
+				dataEntry,
+				fEntry;
+			
+			// Respect the new entries...
+			if (theList.length < 1 || theList[theList.length - 1].i5uuid !== entry.compound.i5uuid) {
+				theList.push(dataEntry = {
+					i5uuid: entry.compound.i5uuid,
+					name: entry.compound.name || entry.compound.tradename,
+					features: []
+				});
+
+				if (typeof opts.onEntry === 'function')
+					opts.onEntry(value, entry);
+			} else 
+				dataEntry = theList[theList.length - 1];
+
+			// ... and the new features.
+			if (dataEntry.features.length < 1 || dataEntry.features[dataEntry.features.length - 1].URI !== mainFeature.URI) {
+				dataEntry.features.push(fEntry = {
+					URI: mainFeature.URI,
+					name: mainFeature.title,
+					data: []
+				});
+
+				if (typeof opts.onFeature === 'function')
+					opts.onFeature(value, mainFeature, entry);
+			} else
+				fEntry = dataEntry.features[dataEntry.features.length - 1];
+			
+			fEntry.data.push(opts.onValue(value, feature, entry));
+		});
+
+		return result;
+	};
+
 	// called when a sub-action in bundle details tab is called
 	MatrixKit.prototype.onMatrix = function (mode, panel) {
 		if (!this.matrixKit) {
@@ -3857,13 +3925,21 @@
 			reportMaker = function () {
 				var addRationales = [], delRationales = [];
 
-				MatrixKit.enumFeatureValues(self.matrixKit.dataset, function (value, feature, mainFeature) {
-					if (!value.newentry)
-						return ;
-
-					(value.deleted ? delRationales : addRationales).push(
-						jT.ui.fillHtml('matrix-rationale-header', { title: mainFeature && mainFeature.title || feature.title }), 
-						self.endpointKit.getFeatureInfoHtml(feature, value, false));
+				self.buildEditLists({
+					onEntry: function (value, entry) {
+						(value.deleted ? delRationales : addRationales).push(jT.ui.fillHtml('matrix-report-substance', $.extend({ 
+							name: entry.compound.name || entry.compound.tradename }, entry)));
+					},
+					onFeature: function (value, feature) {
+						(value.deleted ? delRationales : addRationales).push(jT.ui.fillHtml('matrix-report-feature', feature));
+					},
+					onValue: function (value, feature) {
+						(value.deleted ? delRationales : addRationales).push(jT.ui.fillHtml('matrix-report-annotation', {
+							info: self.endpointKit.getFeatureInfoHtml(feature, value, false),
+							rationaleType: feature.source.type,
+							rationaleContent: feature.creator
+						}));
+					}
 				});
 
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
@@ -4044,45 +4120,23 @@
 			settings: { responseType: "arraybuffer" }
 		}, self.settings.ajaxSettings)));
 
-		data.ddstructures = [];
-		data.adstructures = [];
+		var editLists = this.buildEditLists({ onValue: function (value, feature) {
+			var allAnnotations = feature.annotation.length > 1
+				? _.map(feature.annotation, function (ano) { return { condition: ano.p, value: ano.o }; })
+				: [{ condition: '', value: '-' }];
 
-		MatrixKit.enumFeatureValues(this.matrixKit.dataset, function (value, feature, mainFeature, entry) {
-			if (!value.newentry)
-				return ;
-
-			var theList = (value.deleted ? data.ddstructures : data.adstructures),
-				dataEntry,
-				fEntry;
-			
-			// Respect the new entries...
-			if (theList.length < 1 || theList[theList.length - 1].i5uuid !== entry.compound.i5uuid)
-				theList.push(dataEntry = {
-					i5uuid: entry.compound.i5uuid,
-					name: entry.compound.name || entry.compound.tradename,
-					features: []
-				});
-			else 
-				dataEntry = theList[theList.length - 1];
-
-			// ... and the new features.
-			if (dataEntry.features.length < 1 || dataEntry.features[dataEntry.features.length - 1].URI !== mainFeature.URI)
-				dataEntry.features.push(fEntry = {
-					URI: mainFeature.URI,
-					name: mainFeature.title,
-					data: []
-				});
-			else
-				fEntry = dataEntry.features[dataEntry.features.length - 1];
-
-			fEntry.data.push({
-				conditions: _.map(feature.annotation, function (ano) { return { condition: ano.p, value: ano.o }; }),
+			return {
+				conditions: allAnnotations,
 				endpoint: feature.title,
 				guidance: feature.creator,
 				value: $('<div>' + jT.ui.renderRange(value, feature.units, 'display') + '</div>').text(),
-				rationale: value.remarks || '',
-			});
-		});
+				rationale: feature.creator,
+				rationaleTitle: feature.source.type,
+			};
+		} });
+
+		data.ddstructures = editLists.deletedList;
+		data.adstructures = editLists.addedList;
 
 		Promise.all(allPromisses).then(function (res) {
 			var doc = new Docxgen();
@@ -4267,28 +4321,6 @@
 			row.invalidate().draw();
 			jT.ui.installHandlers(self.matrixKit, row.node());
 		});
-	};
-
-	MatrixKit.enumFeatureValues = function (dataset, cb) {
-		for (var i = 0;i < dataset.dataEntry.length; ++i) {
-			var entry = dataset.dataEntry[i];
-			for (var fId in entry.values) {
-				var value = entry.values[fId],
-					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]),
-					mainFeature = null;
-
-				if (!!feature.id) {
-					feature.id.suffix = '*';
-					mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
-				}
-
-				if (!feature.isMultiValue)
-					cb(value, feature, mainFeature, entry, dataset);
-				else
-					for (var j = 0;j < value.length; ++j) 
-						cb(value[j], feature, mainFeature, entry, dataset);
-			}
-		}
 	};
 
 	MatrixKit.defaults = {
@@ -7081,12 +7113,22 @@ jT.ui.templates['matrix-sel-arrow']  =
 "<i class=\"jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler\" data-handler=\"substanceMove\" data-direction=\"{{direction}}\" title=\"Move the {{subject}} up in the list\"></i>" +
 ""; // end of matrix-sel-arrow 
 
-jT.ui.templates['matrix-rationale-header']  = 
+jT.ui.templates['matrix-report-annotation']  = 
 "<p>" +
-"<strong>Rationale for read-across based on grouping of substances (category approach)</strong><br/>" +
-"{{ title }}" +
+"{{ info }}" +
+"<br/>" +
+"<strong>Rationale for {{ rationaleType }}</strong><br/>" +
+"{{ rationaleContent }}" +
 "</p>" +
-""; // end of matrix-rationale-header 
+""; // end of matrix-report-annotation 
+
+jT.ui.templates['matrix-report-feature']  = 
+"<h4>{{ title }}</h4>" +
+""; // end of matrix-report-feature 
+
+jT.ui.templates['matrix-report-substance']  = 
+"<h3>Substance {{ number }}: {{ name }}</h3>" +
+""; // end of matrix-report-substance 
 
 jT.ui.templates['matrix-full-report']  = 
 "<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +

@@ -228,6 +228,28 @@
 
 	EndpointKit.prototype.query = EndpointKit.prototype.loadEndpoints;
 
+	EndpointKit.enumFeatureValues = function (dataset, cb) {
+		for (var i = 0;i < dataset.dataEntry.length; ++i) {
+			var entry = dataset.dataEntry[i];
+			for (var fId in entry.values) {
+				var value = entry.values[fId],
+					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]),
+					mainFeature = null;
+
+				if (!!feature.id) {
+					feature.id.suffix = '*';
+					mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
+				}
+
+				if (!feature.isMultiValue)
+					cb(value, feature, mainFeature, entry, dataset);
+				else
+					for (var j = 0;j < value.length; ++j) 
+						cb(value[j], feature, mainFeature, entry, dataset);
+			}
+		}
+	};
+
 	EndpointKit.prototype.getFeatureInfoHtml = function (feature, value, canDelete) {
 		var conditionsCount = feature.annotation.length,
 			condHeaders = [], condValues = [];

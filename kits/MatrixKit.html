@@ -210,12 +210,21 @@
 <!--[[ jT.ui.templates['matrix-sel-arrow'] -->
 <i class="jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
 <!-- // end of matrix-sel-arrow ]]-->
-<!--[[ jT.ui.templates['matrix-rationale-header'] -->
+<!--[[ jT.ui.templates['matrix-report-annotation'] -->
 <p>
-<strong>Rationale for read-across based on grouping of substances (category approach)</strong><br/>
-{{ title }}
+{{ info }}
+<br/>
+<strong>Rationale for {{ rationaleType }}</strong><br/>
+{{ rationaleContent }}
 </p>
-<!-- // end of matrix-rationale-header ]]-->
+<!-- // end of matrix-report-annotation ]]-->
+<!--[[ jT.ui.templates['matrix-report-feature'] -->
+<h4>{{ title }}</h4>
+<!-- // end of matrix-report-feature ]]-->
+<!--[[ jT.ui.templates['matrix-report-substance'] -->
+<h3>Substance {{ number }}: {{ name }}</h3>
+<!-- // end of matrix-report-substance ]]-->
+    
 <!--[[ jT.ui.templates['matrix-full-report'] -->
 <p><a href="#" class="jtox-handler" data-handler="reportWord">Download Word file with the report</a></p>
 <div id="jtox-report-cover">
