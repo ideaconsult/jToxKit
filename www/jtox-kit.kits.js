@@ -3055,7 +3055,7 @@
 	};
 
 	/************** SOME HELPER ROUTINES ***************/
-	MatrixKit.prototype.beginAmbitCall = function (subject) {
+	MatrixKit.prototype.beginOperation = function (subject) {
 		return new jBox("Notice", {
 			animation: "flip",
 			color: 'green',
@@ -3067,10 +3067,15 @@
 		});
 	};
 
-	MatrixKit.prototype.endAmbitCall = function (subject, box, jhr) {
-		box.setContent(jhr.status !== 200 
-			? '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error on saving " + subject + "!") + '</span>'
-			: (this.settings.language.tasks[subject + '.done'] || (subject + " saved.") | 'Saved.'));
+	MatrixKit.prototype.endOperation = function (subject, box, jhr) {
+		var mess;
+		if (jhr.status === 200)
+			mess = (this.settings.language.tasks[subject + '.done'] || (subject + " done.") | 'Done.');
+		else if (!jhr.responseText)
+			mess = '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error on processing " + subject + "!") + '</span>';
+		else
+			mess = '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error: ") + jhr.responseText + '!</span>';
+		box.setContent(mess);
 	};
 
 	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
@@ -3084,10 +3089,10 @@
 		else
 			subject = $(el).addClass('loading').data('subject') || 'bundle';
 
-		var box = this.beginAmbitCall(subject);
+		var box = this.beginOperation(subject);
 		jT.ambit.call(this, uri, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
-			self.endAmbitCall(subject, box, jhr);
+			self.endOperation(subject, box, jhr);
 
 			if (typeof cb === 'function')
 				return cb(result, jhr);
@@ -3928,7 +3933,7 @@
 		});
 	};
 
-	MatrixKit.prototype.prepareWordReport = function (el) {
+	MatrixKit.prototype.prepareWordReport = function () {
 		var imgLinks = [],
 			data = $.extend({}, this.bundle),
 			self = this,
@@ -3948,7 +3953,8 @@
 				imgLinks.push(imgInfo);
 				return imgInfo;
 			},
-			matrixRowMap = ['number', 'tag', 'cas', 'name', 'i5uuid', 'source'];
+			matrixRowMap = ['number', 'tag', 'cas', 'name', 'i5uuid', 'source'],
+			opBox = this.beginOperation('download');
 
 		data.created = this.settings.formatters.formatDate(this.bundle.created);
 		data.updated = this.settings.formatters.formatDate(this.bundle.updated);
@@ -4056,6 +4062,9 @@
 					date: new Date().toISOString().replace(":", "_")
 				}, self.settings.formatters),
 				true);
+			self.endOperation('download', opBox, { status: 200 });
+		}).catch(function (reason) {
+			self.endOperation('download', opBox, 'error', { status: 500, responseText: reason });
 		});
 
 		// TODO: These stap are to follow:
@@ -4396,6 +4405,9 @@
 				'user.progress': "Updating user access rights...",
 				'user.done': "User permissions updated.",
 				'user.error': "Error updating user permissions!",
+				'download.progress': "Preparing the Word report...",
+				'download.done': "Word report prepared.",
+				'download.error': "Error updating user permissions!",
 			}
 		},
 		baseFeatures: {
