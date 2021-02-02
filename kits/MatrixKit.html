@@ -210,6 +210,12 @@
 <!--[[ jT.ui.templates['matrix-sel-arrow'] -->
 <i class="jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler" data-handler="substanceMove" data-direction="{{direction}}" title="Move the {{subject}} up in the list"></i>
 <!-- // end of matrix-sel-arrow ]]-->
+<!--[[ jT.ui.templates['matrix-rationale-header'] -->
+<p>
+<strong>Rationale for read-across based on grouping of substances (category approach)</strong><br/>
+{{ title }}
+</p>
+<!-- // end of matrix-rationale-header ]]-->
 <!--[[ jT.ui.templates['matrix-full-report'] -->
 <p><a href="#" class="jtox-handler" data-handler="reportWord">Download Word file with the report</a></p>
 <div id="jtox-report-cover">
@@ -294,12 +300,12 @@
 
 <section class="annex" id="jtox-report-gap-filling">
   <h2>Rationale for gap filling</h2>
-  <!-- <table class="table-box"></div>table> -->
+  <div>{{ addRationale }}</div>
 </section>
 
 <section class="annex" id="jtox-report-deleting-data">
   <h2>Rationale for deleting experimental data</h2>
-  <!-- <table class="table-box"></div>table> -->
+  <div>{{ deleteRationale }}</div>
 </section>
 
 <section class="annex" id="jtox-report-initial-matrix">

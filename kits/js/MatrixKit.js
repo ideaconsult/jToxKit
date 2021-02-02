@@ -928,9 +928,31 @@
 			loadingCount = 0,
 			loadingTarget = 3, // structure, substance, composition+matrix
 			reportMaker = function () {
+				self.loadedTables.addRationales = [];
+				self.loadedTables.delRationales = [];
+
+				MatrixKit.enumFeatureValues(self.matrixKit.dataset, function (feature, value, dataset) {
+					if (!value.newentry)
+						return ;
+
+					var mainTitle = feature.title;
+					if (feature.id) {
+						feature.id.suffix = '*';
+						var mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
+						if (mainFeature && mainFeature.title)
+							mainTitle = mainFeature.title;
+					}
+		
+					(value.deleted ? self.loadedTables.delRationales : self.loadedTables.addRationales).push(
+						jT.ui.fillHtml('matrix-rationale-header', { title: mainTitle }), 
+						self.endpointKit.getFeatureInfoHtml(feature, value, false));
+				});
+
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
 					bundleId: self.bundle.id,
 					dataTables: _.mapValues(self.loadedTables, function (el) { return !Array.isArray(el) ? el.html() : null; }),
+					addRationale: self.loadedTables.addRationales.join(''),
+					deleteRationale: self.loadedTables.delRationales.join('')
 				}, self.bundle), self.settings.formatters));
 
 				// clear the table handlers, because they won't work anyways.
@@ -1133,6 +1155,7 @@
 					date: new Date().toISOString().replace(":", "_")
 				}, self.settings.formatters),
 				true);
+
 			self.endOperation('download', opBox, { status: 200 });
 		}).catch(function (reason) {
 			self.endOperation('download', opBox, 'error', { status: 500, responseText: reason });
@@ -1286,6 +1309,23 @@
 			row.invalidate().draw();
 			jT.ui.installHandlers(self.matrixKit, row.node());
 		});
+	};
+
+	MatrixKit.enumFeatureValues = function (dataset, filterCb) {
+		for (var i = 0;i < dataset.dataEntry.length; ++i) {
+			var entry = dataset.dataEntry[i];
+
+			for (var fId in entry.values) {
+				var value = entry.values[fId],
+					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]);
+
+				if (!feature.isMultiValue)
+					filterCb(feature, value, dataset);
+				else
+					for (var j = 0;j < value.length; ++j) 
+						filterCb(feature, value[j], dataset);
+			}
+		}
 	};
 
 	MatrixKit.defaults = {

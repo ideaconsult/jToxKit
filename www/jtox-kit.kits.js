@@ -3857,9 +3857,31 @@
 			loadingCount = 0,
 			loadingTarget = 3, // structure, substance, composition+matrix
 			reportMaker = function () {
+				self.loadedTables.addRationales = [];
+				self.loadedTables.delRationales = [];
+
+				MatrixKit.enumFeatureValues(self.matrixKit.dataset, function (feature, value, dataset) {
+					if (!value.newentry)
+						return ;
+
+					var mainTitle = feature.title;
+					if (feature.id) {
+						feature.id.suffix = '*';
+						var mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
+						if (mainFeature && mainFeature.title)
+							mainTitle = mainFeature.title;
+					}
+		
+					(value.deleted ? self.loadedTables.delRationales : self.loadedTables.addRationales).push(
+						jT.ui.fillHtml('matrix-rationale-header', { title: mainTitle }), 
+						self.endpointKit.getFeatureInfoHtml(feature, value, false));
+				});
+
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
 					bundleId: self.bundle.id,
 					dataTables: _.mapValues(self.loadedTables, function (el) { return !Array.isArray(el) ? el.html() : null; }),
+					addRationale: self.loadedTables.addRationales.join(''),
+					deleteRationale: self.loadedTables.delRationales.join('')
 				}, self.bundle), self.settings.formatters));
 
 				// clear the table handlers, because they won't work anyways.
@@ -4062,6 +4084,7 @@
 					date: new Date().toISOString().replace(":", "_")
 				}, self.settings.formatters),
 				true);
+
 			self.endOperation('download', opBox, { status: 200 });
 		}).catch(function (reason) {
 			self.endOperation('download', opBox, 'error', { status: 500, responseText: reason });
@@ -4215,6 +4238,23 @@
 			row.invalidate().draw();
 			jT.ui.installHandlers(self.matrixKit, row.node());
 		});
+	};
+
+	MatrixKit.enumFeatureValues = function (dataset, filterCb) {
+		for (var i = 0;i < dataset.dataEntry.length; ++i) {
+			var entry = dataset.dataEntry[i];
+
+			for (var fId in entry.values) {
+				var value = entry.values[fId],
+					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]);
+
+				if (!feature.isMultiValue)
+					filterCb(feature, value, dataset);
+				else
+					for (var j = 0;j < value.length; ++j) 
+						filterCb(feature, value[j], dataset);
+			}
+		}
 	};
 
 	MatrixKit.defaults = {
@@ -7007,6 +7047,13 @@ jT.ui.templates['matrix-sel-arrow']  =
 "<i class=\"jtox-{{direction}} fa fa-arrow-{{direction}} jtox-handler\" data-handler=\"substanceMove\" data-direction=\"{{direction}}\" title=\"Move the {{subject}} up in the list\"></i>" +
 ""; // end of matrix-sel-arrow 
 
+jT.ui.templates['matrix-rationale-header']  = 
+"<p>" +
+"<strong>Rationale for read-across based on grouping of substances (category approach)</strong><br/>" +
+"{{ title }}" +
+"</p>" +
+""; // end of matrix-rationale-header 
+
 jT.ui.templates['matrix-full-report']  = 
 "<p><a href=\"#\" class=\"jtox-handler\" data-handler=\"reportWord\">Download Word file with the report</a></p>" +
 "<div id=\"jtox-report-cover\">" +
@@ -7091,12 +7138,12 @@ jT.ui.templates['matrix-full-report']  =
 "" +
 "<section class=\"annex\" id=\"jtox-report-gap-filling\">" +
 "<h2>Rationale for gap filling</h2>" +
-"<!-- <table class=\"table-box\"></div>table> -->" +
+"<div>{{ addRationale }}</div>" +
 "</section>" +
 "" +
 "<section class=\"annex\" id=\"jtox-report-deleting-data\">" +
 "<h2>Rationale for deleting experimental data</h2>" +
-"<!-- <table class=\"table-box\"></div>table> -->" +
+"<div>{{ deleteRationale }}</div>" +
 "</section>" +
 "" +
 "<section class=\"annex\" id=\"jtox-report-initial-matrix\">" +
