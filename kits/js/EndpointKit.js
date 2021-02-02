@@ -229,14 +229,12 @@
 	EndpointKit.prototype.query = EndpointKit.prototype.loadEndpoints;
 
 	EndpointKit.prototype.getFeatureInfoHtml = function (feature, value, canDelete) {
-		var condHeaders = [],
-			condValues = [],
-			conditionsCount = feature.annotation.length;
-			
+		var conditionsCount = feature.annotation.length,
+			condHeaders = [], condValues = [];
+
 		for (var i = 0; i < conditionsCount; ++i) {
-			var ano = feature.annotation[i];
-			condHeaders.push(jT.formatString('<th class="conditions">{{p}}</th>', ano));
-			condValues.push(jT.formatString('<td>{{o}}</td>', ano))
+			condHeaders.push(jT.formatString('<th class="conditions">{{p}}</th>', feature.annotation[i]));
+			condValues.push(jT.formatString('<td>{{o}}</td>', feature.annotation[i]))
 		}
 
 		// make sure there is at least one cell.
@@ -250,7 +248,7 @@
 			endpoint: feature.title,
 			guidance: feature.creator,
 			value: jT.ui.renderRange(value, feature.units, 'display'),
-			reason: value.remarks || null,
+			reason: value.remarks || '',
 			deleteBoxClass: canDelete ? '' : 'jtox-hidden'
 		});
 	};

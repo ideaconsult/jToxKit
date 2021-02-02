@@ -928,31 +928,22 @@
 			loadingCount = 0,
 			loadingTarget = 3, // structure, substance, composition+matrix
 			reportMaker = function () {
-				self.loadedTables.addRationales = [];
-				self.loadedTables.delRationales = [];
+				var addRationales = [], delRationales = [];
 
-				MatrixKit.enumFeatureValues(self.matrixKit.dataset, function (feature, value, dataset) {
+				MatrixKit.enumFeatureValues(self.matrixKit.dataset, function (value, feature, mainFeature) {
 					if (!value.newentry)
 						return ;
 
-					var mainTitle = feature.title;
-					if (feature.id) {
-						feature.id.suffix = '*';
-						var mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
-						if (mainFeature && mainFeature.title)
-							mainTitle = mainFeature.title;
-					}
-		
-					(value.deleted ? self.loadedTables.delRationales : self.loadedTables.addRationales).push(
-						jT.ui.fillHtml('matrix-rationale-header', { title: mainTitle }), 
+					(value.deleted ? delRationales : addRationales).push(
+						jT.ui.fillHtml('matrix-rationale-header', { title: mainFeature && mainFeature.title || feature.title }), 
 						self.endpointKit.getFeatureInfoHtml(feature, value, false));
 				});
 
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
 					bundleId: self.bundle.id,
 					dataTables: _.mapValues(self.loadedTables, function (el) { return !Array.isArray(el) ? el.html() : null; }),
-					addRationale: self.loadedTables.addRationales.join(''),
-					deleteRationale: self.loadedTables.delRationales.join('')
+					addRationale: addRationales.join(''),
+					deleteRationale: delRationales.join('')
 				}, self.bundle), self.settings.formatters));
 
 				// clear the table handlers, because they won't work anyways.
@@ -1125,6 +1116,46 @@
 			url: this.settings.reportTemplate,
 			settings: { responseType: "arraybuffer" }
 		}, self.settings.ajaxSettings)));
+
+		data.ddstructures = [];
+		data.adstructures = [];
+
+		MatrixKit.enumFeatureValues(this.matrixKit.dataset, function (value, feature, mainFeature, entry) {
+			if (!value.newentry)
+				return ;
+
+			var theList = (value.deleted ? data.ddstructures : data.adstructures),
+				dataEntry,
+				fEntry;
+			
+			// Respect the new entries...
+			if (theList.length < 1 || theList[theList.length - 1].i5uuid !== entry.compound.i5uuid)
+				theList.push(dataEntry = {
+					i5uuid: entry.compound.i5uuid,
+					name: entry.compound.name || entry.compound.tradename,
+					features: []
+				});
+			else 
+				dataEntry = theList[theList.length - 1];
+
+			// ... and the new features.
+			if (dataEntry.features.length < 1 || dataEntry.features[dataEntry.features.length - 1].URI !== mainFeature.URI)
+				dataEntry.features.push(fEntry = {
+					URI: mainFeature.URI,
+					name: mainFeature.title,
+					data: []
+				});
+			else
+				fEntry = dataEntry.features[dataEntry.features.length - 1];
+
+			fEntry.data.push({
+				conditions: _.map(feature.annotation, function (ano) { return { condition: ano.p, value: ano.o }; }),
+				endpoint: feature.title,
+				guidance: feature.creator,
+				value: $('<div>' + jT.ui.renderRange(value, feature.units, 'display') + '</div>').text(),
+				rationale: value.remarks || '',
+			});
+		});
 
 		Promise.all(allPromisses).then(function (res) {
 			var doc = new Docxgen();
@@ -1311,19 +1342,24 @@
 		});
 	};
 
-	MatrixKit.enumFeatureValues = function (dataset, filterCb) {
+	MatrixKit.enumFeatureValues = function (dataset, cb) {
 		for (var i = 0;i < dataset.dataEntry.length; ++i) {
 			var entry = dataset.dataEntry[i];
-
 			for (var fId in entry.values) {
 				var value = entry.values[fId],
-					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]);
+					feature = _.extend({ id: jT.ambit.parseFeatureId(fId) }, dataset.feature[fId]),
+					mainFeature = null;
+
+				if (!!feature.id) {
+					feature.id.suffix = '*';
+					mainFeature = dataset.feature[jT.ambit.buildFeatureId(feature.id)];
+				}
 
 				if (!feature.isMultiValue)
-					filterCb(feature, value, dataset);
+					cb(value, feature, mainFeature, entry, dataset);
 				else
 					for (var j = 0;j < value.length; ++j) 
-						filterCb(feature, value[j], dataset);
+						cb(value[j], feature, mainFeature, entry, dataset);
 			}
 		}
 	};

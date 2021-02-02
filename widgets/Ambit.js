@@ -61,7 +61,7 @@ jT.ambit = {
 			};
 	},
 
-	buildFeatureId: function (parsedFeature, suffix) {
+	buildFeatureId: function (parsedFeature) {
 		return parsedFeature.baseUri + '/property/' + 
 			parsedFeature.topcategory.replace(' ', '+') + '/' + 
 			parsedFeature.category.replace(' ', '+') + '/' +
