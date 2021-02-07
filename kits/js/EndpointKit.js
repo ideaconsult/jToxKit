@@ -261,7 +261,7 @@
 
 		// make sure there is at least one cell.
 		if (conditionsCount < 1)
-			condValues.push(jT.formatString('<td>-</td>', ano));
+			condValues.push('<td>-</td>');
 
 		return jT.ui.fillHtml('endpoint-info-panel', {
 			conditionsHeaders: condHeaders.join(''),

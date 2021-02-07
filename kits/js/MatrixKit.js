@@ -707,19 +707,19 @@
 			valueIdx = el.data('index'),
 			data = jT.tables.getRowData(el),
 			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]),
+			self = this,
 			boxOptions = {
 				title: feature.title || feature.id.category || "Endpoint",
 				closeButton: "box",
 				closeOnEsc: true,
 				overlay: true,
-				closeOnClick: "body",
+				closeOnClick: false,
 				addClass: "jtox-toolkit " + action,
 				theme: "TooltipBorder",
 				animation: "move",
 				maxWidth: 800,
-				onCloseComplete: function () { this.destroy(); }
-			},
-			self = this;
+				onCloseComplete: function () {  this.destroy(); }
+			};
 
 		if (action === 'add') {
 			if (this.studyOptionsHtml == null)
@@ -994,6 +994,8 @@
 				});
 
 				$('.report-box', panel).html(jT.ui.fillHtml('matrix-full-report', $.extend({
+					baseUrl: self.baseUrl,
+					bundleUri: self.bundleUri,
 					bundleId: self.bundle.id,
 					dataTables: _.mapValues(self.loadedTables, function (el) { return !Array.isArray(el) ? el.html() : null; }),
 					addRationale: addRationales.join(''),
@@ -1232,7 +1234,7 @@
 		// This routine ensures the wizard-like advacement through the tabs
 		var theSummary = this.bundleSummary;
 		$('li>a.jtox-summary-entry', this.rootElement).each(function () {
-			var cnt = theSummary[$(this).data('summary')],
+			var cnt = Math.max(0, theSummary[$(this).data('summary')]),
 				html = this.innerHTML;
 			$(this).html(jT.ui.updateCounter(html, cnt));
 		});
