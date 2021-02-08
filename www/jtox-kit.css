@@ -245,6 +245,11 @@ div.tippy-box .go-right {
   padding: 2px 4px;
 }
 
+.jtox-toolkit table.dataTable.no-border td,
+.jtox-toolkit table.dataTable.no-border th {
+  border: 0px;
+}
+
 .jtox-toolkit .shortened {
   max-height: 25px;
   overflow: hidden;
@@ -504,6 +509,15 @@ td.jtox-multi table {
 .jtox-controls span.high {
   font-weight: bold;
   font-size: 1.1em;
+}
+
+.jtox-toolkit .help-block {
+  font-size: 0.8rem;
+  vertical-align: top;
+}
+
+.jtox-toolkit .form-control {
+  box-sizing: border-box;
 }
 .jtox-toolkit table.composition-info.dataTable td,
 .jtox-toolkit table.composition-info.dataTable th {

@@ -3306,6 +3306,7 @@
 			var widget = new UserEditor({
 				target: this,
 				baseUrl: self.settings.baseUrl,
+				baseKit: self,
 				initialState: 'disabled',
 				tokenMode: true,
 				permission: $(this).data('permission'),
@@ -6531,9 +6532,9 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 
 	UserWidget.prototype.__expects = [ "resetValue", "onFound" ];
 	UserWidget.defaults = {
-		extraParam: "",
 		baseUrl: "",
-		permission: 'canRead'
+		permission: 'canRead',
+		baseKit: null
 	};
 	
 	UserWidget.prototype.init = function (manager) {
@@ -6550,7 +6551,7 @@ jT.ResultWidget = a$(Solr.Listing, jT.ListWidget, jT.ItemListWidget, jT.ResultWi
 		}
 
 		this.findBox.addClass('loading');
-		jT.ambit.call(this, uri, data, function(result) {
+		jT.ambit.call(this.settings.baseKit || this, uri, data, function(result) {
 			self.findBox.removeClass('loading');
 			self.fillData(result);
 		});
@@ -6959,72 +6960,73 @@ jT.ui.templates['all-matrix']  =
 "<li><a href=\"#jtox-report\">Report</a></li>" +
 "</ul>" +
 "<div id=\"jtox-identifiers\" data-loader=\"onIdentifiers\">" +
+"<div class=\"w-75 p-0 jtox-inline\">" +
 "<form>" +
-"<table class=\"dataTable\">" +
+"<table class=\"dataTable no-border\">" +
 "<thead>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"title\">Title</label>*<a href='#' class='chelp a_name'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"title\">Title</label>*<a href='#' class='chelp a_name'>?</a>:</th>" +
 "<td><input class=\"first-time\" value=\"{{title}}\" name=\"title\" id=\"title\" required /></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"maintainer\">Maintainer</label>*<a href='#' class='chelp a_maintainer'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"maintainer\">Maintainer</label>*<a href='#' class='chelp a_maintainer'>?</a>:</th>" +
 "<td><input class=\"first-time\" value=\"{{maintainer}}\" name=\"maintainer\" id=\"maintainer\" required /></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right top size-third\"><label for=\"description\">Purpose</label>*<a href='#' class='chelp a_description'>?</a>:</th>" +
+"<th class=\"right top size-half\"><label for=\"description\">Purpose</label>*<a href='#' class='chelp a_description'>?</a>:</th>" +
 "<td><textarea class=\"nomargin \" name=\"description\" id=\"description\" required>{{description}}</textarea></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\">Version <a href='#' class='chelp a_version'>?</a>:</th>" +
+"<th class=\"right size-half\">Version <a href='#' class='chelp a_version'>?</a>:</th>" +
 "<td>{{version}}</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\">Version start date <a href='#' class='chelp a_version_date'>?</a>:</th>" +
+"<th class=\"right size-half\">Version start date <a href='#' class='chelp a_version_date'>?</a>:</th>" +
 "<td>{{created|formatDate}}</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\">Version last modified on <a href='#' class='chelp a_version_date'>?</a>:</th>" +
+"<th class=\"right size-half\">Version last modified on <a href='#' class='chelp a_version_date'>?</a>:</th>" +
 "<td>{{updated|formatDate}}</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\">Status<a href='#' class='chelp a_published'>?</a>:</th>" +
+"<th class=\"right size-half\">Status<a href='#' class='chelp a_published'>?</a>:</th>" +
 "<td>{{status|formatStatus}}</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"license\">License</label>*:</th>" +
+"<th class=\"right size-half\"><label for=\"license\">License</label>*:</th>" +
 "<td><input class=\"first-time\" value=\"{{rights.URI}}\" name=\"license\" id=\"license\" required /></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"rightsHolder\">Rights holder</label>*<a href='#' class='chelp a_rightsholder'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"rightsHolder\">Rights holder</label>*<a href='#' class='chelp a_rightsholder'>?</a>:</th>" +
 "<td><input class=\"first-time\" value=\"{{rightsHolder}}\" name=\"rightsHolder\" id=\"rightsHolder\" required /></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"seeAlso\">See also</label>*<a href='#' class='chelp a_code'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"seeAlso\">See also</label>*<a href='#' class='chelp a_code'>?</a>:</th>" +
 "<td><input class=\"first-time\" value=\"{{seeAlso}}\" name=\"seeAlso\" id=\"seeAlso\" required /></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"source\">Source URL</label>*<a href='#' class='chelp a_doclink'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"source\">Source URL</label>*<a href='#' class='chelp a_doclink'>?</a>:</th>" +
 "<td>" +
 "<input class=\"first-time\" value=\"{{source}}\" name=\"source\" id=\"source\" required />" +
 "<a href=\"\" id=\"source-link\" target=\"_blank\" class=\"fa fa-action fa-external-link\">open link</a>" +
 "</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"number\">Identifier</label><a href='#' class='chelp assessment'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"number\">Identifier</label><a href='#' class='chelp assessment'>?</a>:</th>" +
 "<td>{{number}}</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third\"><label for=\"stars\">Rating</label> <a href='#' class='chelp a_rating'>?</a>:</th>" +
+"<th class=\"right size-half\"><label for=\"stars\">Rating</label> <a href='#' class='chelp a_rating'>?</a>:</th>" +
 "<td class=\"data-stars-field\"><input type=\"hidden\" name=\"stars\" value=\"0\" /></td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third top\"><label for=\"users-write\">Users with write access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>" +
+"<th class=\"right size-half top\"><label for=\"users-write\">Users with write access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>" +
 "<td class=\"jtox-user-rights\">" +
 "<input name=\"users-write\" id=\"users-write\" class=\"jtox-users-select ignore-auto\" data-permission=\"canWrite\" />" +
 "</td>" +
 "</tr>" +
 "<tr class=\"label-box\">" +
-"<th class=\"right size-third top\"><label for=\"users-read\">Users with read access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>" +
+"<th class=\"right size-half top\"><label for=\"users-read\">Users with read access</label><a href='#' class='chelp bundle_rw'>?</a>:</th>" +
 "<td class=\"jtox-user-rights\">" +
 "<input name=\"users-read\" id=\"users-read\" class=\"jtox-users-select ignore-auto\" data-permission=\"canRead\" />" +
 "</td>" +
@@ -7037,6 +7039,20 @@ jT.ui.templates['all-matrix']  =
 "<button name=\"assNewVersion\" type=\"button\" data-subject=\"bundle-version\">Generate new version</button>" +
 "</div>" +
 "</form>" +
+"</div>" +
+"<div class=\"w-25 p-1 jtox-inline help-block\">" +
+"<p><strong>Help: Read Across workflow</strong></p>" +
+"<p>Workflow for read across and category formation. <a href=\"http://echa.europa.eu/support/grouping-of-substances-and-read-across\">REACH guidance</a></p>" +
+"<p>The assessment  workflow is organized in five main tabs:</p>" +
+"<ol>" +
+"<li>Assessment identifier<li>" +
+"<li>Collect structures</li>" +
+"<li>Endpoint data used</li>" +
+"<li>Assessment details</li>" +
+"<li>Report</li>" +
+"</ol>" +
+"<div id=\"help-placeholder\"></div>" +
+"</div>" +
 "</div>" +
 "<div id=\"jtox-structures\" data-loader=\"onStructures\">" +
 "<div id=\"struct-query\" class=\"jtox-kit\"" +

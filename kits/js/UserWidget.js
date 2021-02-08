@@ -13,9 +13,9 @@
 
 	UserWidget.prototype.__expects = [ "resetValue", "onFound" ];
 	UserWidget.defaults = {
-		extraParam: "",
 		baseUrl: "",
-		permission: 'canRead'
+		permission: 'canRead',
+		baseKit: null
 	};
 	
 	UserWidget.prototype.init = function (manager) {
@@ -32,7 +32,7 @@
 		}
 
 		this.findBox.addClass('loading');
-		jT.ambit.call(this, uri, data, function(result) {
+		jT.ambit.call(this.settings.baseKit || this, uri, data, function(result) {
 			self.findBox.removeClass('loading');
 			self.fillData(result);
 		});

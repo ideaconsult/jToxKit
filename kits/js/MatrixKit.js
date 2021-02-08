@@ -357,6 +357,7 @@
 			var widget = new UserEditor({
 				target: this,
 				baseUrl: self.settings.baseUrl,
+				baseKit: self,
 				initialState: 'disabled',
 				tokenMode: true,
 				permission: $(this).data('permission'),
