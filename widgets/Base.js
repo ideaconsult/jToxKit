@@ -302,6 +302,7 @@ import "SimpleItemWidget";
 import "AccordionExpansion";
 import "SliderWidget";
 import "CurrentSearchWidget";
+import "HelpWidget";
 import "Switching";
 import "Running";
 import "TableTools";

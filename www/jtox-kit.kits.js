@@ -3191,6 +3191,17 @@
 					$(this).closest('.label-box').hide().find('input,select,textarea').removeAttr('required');
 			}
 		});
+
+		// Instlal the help widget... if present.
+		if (this.settings.helpTopic) {
+			new jT.HelpWidget({
+				target: $('#help-main'),
+				topic: this.settings.helpTopic,
+				baseUrl: this.settings.baseUrl
+			});
+		}
+
+		// Now go with form buttons... from the old code!
 		self.createForm = $('form', panel)[0];
 
 		self.createForm.onsubmit = function (e) {
@@ -4333,6 +4344,7 @@
 		reportTemplate: "../../../assets/report_templates/assessment-report.docx",
 		reportName: "report-{{date}}.docx",
 		defaultNeedle: '[Ag]',
+		helpTopic: 'ra',
 		handlers: {
 			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.currentTarget)); },
@@ -7041,17 +7053,9 @@ jT.ui.templates['all-matrix']  =
 "</form>" +
 "</div>" +
 "<div class=\"w-25 p-1 jtox-inline help-block\">" +
-"<p><strong>Help: Read Across workflow</strong></p>" +
-"<p>Workflow for read across and category formation. <a href=\"http://echa.europa.eu/support/grouping-of-substances-and-read-across\">REACH guidance</a></p>" +
-"<p>The assessment  workflow is organized in five main tabs:</p>" +
-"<ol>" +
-"<li>Assessment identifier<li>" +
-"<li>Collect structures</li>" +
-"<li>Endpoint data used</li>" +
-"<li>Assessment details</li>" +
-"<li>Report</li>" +
-"</ol>" +
-"<div id=\"help-placeholder\"></div>" +
+"<div id=\"help-main\"></div>" +
+"<div id=\"help-title\"></div>" +
+"<div id=\"help-content\"></div>" +
 "</div>" +
 "</div>" +
 "<div id=\"jtox-structures\" data-loader=\"onStructures\">" +

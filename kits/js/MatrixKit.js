@@ -242,6 +242,17 @@
 					$(this).closest('.label-box').hide().find('input,select,textarea').removeAttr('required');
 			}
 		});
+
+		// Instlal the help widget... if present.
+		if (this.settings.helpTopic) {
+			new jT.HelpWidget({
+				target: $('#help-main'),
+				topic: this.settings.helpTopic,
+				baseUrl: this.settings.baseUrl
+			});
+		}
+
+		// Now go with form buttons... from the old code!
 		self.createForm = $('form', panel)[0];
 
 		self.createForm.onsubmit = function (e) {
@@ -1384,6 +1395,7 @@
 		reportTemplate: "../../../assets/report_templates/assessment-report.docx",
 		reportName: "report-{{date}}.docx",
 		defaultNeedle: '[Ag]',
+		helpTopic: 'ra',
 		handlers: {
 			// Structure selection related
 			structureTag: function (e) { return this.tagStructure($(e.currentTarget)); },
