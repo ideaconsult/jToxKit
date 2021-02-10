@@ -42,7 +42,7 @@
     "main": "www/jtox-kit.js"
   },
   "dependencies": {
-    "@ideaconsult/solr-jsx": "^0.16.0",
+    "@ideaconsult/solr-jsx": "^0.16.1",
     "@thejonan/as-sys": "0.13.3",
     "xlsx-datafill": "^1.0.1",
     "xlsx-populate": "^1.21.0"

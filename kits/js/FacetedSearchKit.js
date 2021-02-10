@@ -741,4 +741,6 @@
         }
     };
 
+    jT.ui.FacetedSearch.FreeTextWidget = a$(Solr.Requesting, Solr.Spying, Solr.Texting, Solr.FacetListing, jT.AutocompleteWidget);    
+
 })(Solr, asSys, jQuery, jToxKit);
