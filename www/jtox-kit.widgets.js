@@ -418,9 +418,11 @@ jT.ListWidget.prototype = {
   	this.items = docs;
   	this.length = docs.length;
   	
-  	this.target.empty();
+  	this.target.empty().hide(); // Hiding for performnance improvements.
   	for (var i = 0, l = docs.length; i < l; i++)
       this.target.append(this.renderItem(typeof callback === "function" ? callback(docs[i]) : docs[i]));
+
+    this.target.show();
   },
   
   addItem: function (doc) {
@@ -504,7 +506,8 @@ jT.TagWidget.prototype = {
       
       if (!preserve)
         this.target.empty();
-        
+      
+      this.target.hide(); // Hiding for performance improvement
       for (var i = 0, l = objectedItems.length; i < l; i++) {
         item = objectedItems[i];
         value = item.value || item.val;
@@ -523,6 +526,8 @@ jT.TagWidget.prototype = {
         if (selected)
           el.addClass("selected");
       }
+
+      this.target.show();
     }
       
     a$.act(this, this.onUpdated, total);
@@ -534,128 +539,78 @@ jT.TagWidget.prototype = {
   * Author: Ivan (Jonan) Georgiev
   * Copyright © 2016, IDEAConsult Ltd. All rights reserved.
   *
-  * TODO: Make it more Solr independent
   */
 
-var defaultParameters = {
-  'facet': true,
-  'rows': 0,
-  'fl': "id",
-  'facet.limit': -1,
-  'facet.mincount': 1,
-  'echoParams': "none"
-};
-  
-jT.AutocompleteWidget = function (settings) {
+ jT.AutocompleteWidget = function (settings) {
   a$.extend(true, this, a$.common(settings, this));
   this.target = $(settings.target);
-  this.id = settings.id;
   this.lookupMap = settings.lookupMap || {};
-  
-  this.parameters = a$.extend(true, { }, defaultParameters);
-  this.facetPath = this.useJson ? "facets" : "facet_counts.facet_fields";
-  if (!this.useJson)
-    this.parameters['json.nl'] = "map";    
 };
 
 jT.AutocompleteWidget.prototype = {
-  __expects: [ "addValue", "doSpying" ],
+  __expects: [ "doRequest" ],
+  tokenMode: true,
+  initialState: 'enabled',
 
-  servlet: "select",         // what phrase to use on the internal queries
-  urlFeed: null,              // which URL parameter to use for initial setup
-  useJson: false,             // Whether to use JSON-style parameter setup
-  maxResults: 30,             // maximum results in the Autocomplete box
-  activeFacets: null,         // a map of active / inactive facets. Default is ON.
-  
   init: function (manager) {
-    a$.pass(this, jT.AutocompleteWidget, "init", manager);
-    this.manager = manager;
-    
     var self = this;
         
-    // now configure the independent free text search.
-    self.findBox = this.target.find('input').on("change", function (e) {
-      var thi$ = $(this);
-      if (!self.addValue(thi$.val()) || self.requestSent)
-        return;
-        
-      thi$.blur().autocomplete("disable");
-      manager.doRequest();
+    // now configure the "accept value" behavior
+    this.findBox = this.target.find('input').addBack('input').on("change", function (e) {
+      if (!self._inChange && self.onChange) {
+        var thi$ = $(this);
+        self.onChange(thi$.val()) && thi$.blur();
+      }
     });
 
-    // make the initial values stuff
-    if (self.urlFeed != null) {
-      var needle = $.url().param(self.urlFeed);
-      self.addValue(needle);
-      self.findBox.val(needle);
-    }
-       
     // configure the auto-complete box. 
-    self.findBox.autocomplete({
+    var boxOpts = {
       'minLength': 0,
       'source': function (request, callback) {
         self.reportCallback = callback;
-        self.makeRequest(request.term);
+        self.doRequest(request.term);
       },
       'select': function(event, ui) {
-        if (ui.item) {
-          self.requestSent = true;
-          if (manager.getListener(ui.item.id).addValue(ui.item.value))
-            manager.doRequest();
-        }
-      }
-    });
-  },
-  
-  makeRequest: function (term) {
-    var self = this;
-    
-    this.doSpying(
-      function (manager) {
-        manager.removeParameters('fl');
-        manager.mergeParameters(self.parameters);
-  
-        // manager and self.manager should be the same.
-        self.addValue(term || "");
-      },
-      function (response) { 
-        self.onResponse(response);
-      });
-  },
-  
-  onResponse: function (response) {
-    var self = this,
-        list = [];
-        
-    _.each(_.get(response, this.facetPath), function (facet, fid) {
-      if (list.length >= self.maxResults ||
-          typeof facet !== "object" || 
-          self.activeFacets && self.activeFacets[fid] === false)
-        return;
-        
-      _.each(self.useJson ? facet.buckets : facet, function (entry, key) {
-        if (list.length >= self.maxResults)
+        if (!ui.item)
           return;
-          
-        if (!self.useJson)
-          entry = { 'val': key, 'count': entry };
+        self.onSelect && self.onSelect(ui.item);
+        self.onAdded && self.onAdded(ui.item);
+      },
+      'focus': function (event, ui) {
+        // Make sure the label is shown, not the value.
+        event.preventDefault();
+        $(this).val(ui.item.label);        
+      }
+    };
 
-        list.push({
-          id: fid,
-          value: entry.val,
-          label: (self.lookupMap[entry.val] || entry.val) + ' (' + entry.count + ') - ' + fid
-        });
-      });
-    });
-    
-    if (typeof this.reportCallback === "function")
-      self.reportCallback(list);
+    if (!this.tokenMode)
+      this.findBox.autocomplete(boxOpts);
+    else
+      this.findBox
+        .on('tokenfield:removedtoken', function (e) { 
+          self.onRemoved && self.onRemoved(e.attrs.value); 
+        })
+        .tokenfield({ autocomplete: boxOpts });
+
+    if (this.initialState === 'disabled')
+        this.findBox[this.tokenMode ? 'tokenfield' : 'autocomplete']("disable");
+
+    a$.pass(this, jT.AutocompleteWidget, "init", manager);
   },
-    
-  afterRequest: function (response) {
-    var qval = this.manager.getParameter('q').value || "";
-    this.findBox.val(qval != "*:*" && qval.length > 0 ? qval : "").autocomplete("enable");
-    this.requestSent = false;
+
+  resetValue: function(val) {
+    this._inChange = true;
+    if (this.tokenMode)
+      this.findBox.tokenfield('enable').tokenfield('setTokens', val);
+    else
+      this.findBox.autocomplete('enable').val(val);
+    this._inChange = false;
+  },
+  
+  onFound: function (list) {
+    this.findBox[this.tokenMode ? 'tokenfield' : 'autocomplete']("enable");
+    this.reportCallback && this.reportCallback(list);
+    this.reportCallback = null;
   }
 };
 /** jToxKit - chem-informatics multi-tool-kit.

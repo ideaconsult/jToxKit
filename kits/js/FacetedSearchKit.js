@@ -62,34 +62,33 @@
             summaryRenderers: {}
         },
 
-        storeSelection = function (selection) {
-            window.history.pushState(
-                selection, 
-                document.title, 
-                jT.modifyURL(window.location.href, "sel", encodeURIComponent(JSON.stringify(selection))));
-        },
-
         tagRender = function (tag) {
             var view, title = view = tag.title.replace(/^\"(.+)\"$/, "$1");
 
             title = view.replace(/^caNanoLab\./, "").replace(/^http\:\/\/dx\.doi\.org/, "");
             title = (mainLookupMap[title] || title).replace("NPO_", "").replace(" nanoparticle", "");
 
-            var aux$ = $('<span/>').html(tag.count || 0);
-            if (typeof tag.onAux === 'function')
-                aux$.click(tag.onAux);
-
-            var el$ = $('<li/>')
-                .append($('<a href="#" class="tag" title="' + view + " " + (tag.hint || "") + ((title != view) ? ' [' + view + ']' : '') + '">' + title + '</a>')
-                    .append(aux$)
-                );
+            var liEl = document.createElement('li'),
+                aEl = document.createElement('a'),
+                auxEl = document.createElement('span');
 
             if (typeof tag.onMain === 'function')
-                el$.click(tag.onMain);
+                liEl.onclick = tag.onMain;
             if (tag.color)
-                el$.addClass(tag.color);
+                liEl.className = tag.color;
 
-            return el$;
+            liEl.appendChild(aEl);
+            aEl.href = '#';
+            aEl.className = 'tag';
+            aEl.title = view + " " + (tag.hint || "") + ((title != view) ? ' [' + view + ']' : '');
+            aEl.innerText = title;
+
+            aEl.appendChild(auxEl);
+            auxEl.innerText = tag.count || 0;
+            if (typeof tag.onAux === 'function')
+                auxEl.onclick = tag.onAux;
+
+            return $(liEl);
         },
 
         tagInit = function (manager) {
@@ -741,5 +740,7 @@
             updateFormats(this.exportTypes[0].formats);
         }
     };
+
+    jT.ui.FacetedSearch.FreeTextWidget = a$(Solr.Requesting, Solr.Spying, Solr.Texting, Solr.FacetListing, jT.AutocompleteWidget);    
 
 })(Solr, asSys, jQuery, jToxKit);
