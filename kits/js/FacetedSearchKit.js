@@ -487,7 +487,7 @@
 
             $("#export_dataset").buttonset();
             $("#export_dataset input").on("change", function (e) {
-                self.updateButtons(this.form);
+                self.updateButtons($(this).closest('form')[0]);
             });
             $("#export_tab button").button({
                 disabled: true
@@ -538,11 +538,10 @@
                             .prop("disabled", !hasFilter)
                             .toggleClass("disabled", !hasFilter);
 
-                        $('.data_formats .jtox-ds-download a').first().trigger("click");
-                        $('.data_formats .jtox-ds-download a').first().trigger("click");
-
                         $("#export_dataset").buttonset("refresh");
-                        self.updateButtons(self.form);
+
+                        // This will trigger format updates AND updateButtons
+                        $('#export_select').trigger('change');
                     }
                 }
             });
@@ -683,33 +682,32 @@
 
         prepareFormats: function () {
             var exportEl = $("#export_tab div.data_formats"),
-                self = this;
+                self = this,
+                formatClick = function (e) {
+                    var me = $(this);
 
-            for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
-                var el = jT.ui.getTemplate("export-format", this.exportFormats[i]);
-                el.data("index", i);
-                exportEl.append(el);
-
-                $("a", exportEl[0]).on("click", function (e) {
-                    var me = $(this),
-                        form = me.closest("form")[0];
-
-                    if (!me.hasClass('disabled') && !me.hasClass("selected")) {
-                        var cont = me.closest("div.data_formats");
+                    if (!me.hasClass('disabled')) {
+                        // setup the form info
+                        var form = me.closest("form")[0];
 
                         form.export_format.value = me.data("mime");
-
-                        //save readable format name
                         $(form.export_format).data('name', me.data("name"));
 
                         self.updateButtons(form);
 
-                        $("div", cont[0]).removeClass("selected");
-                        cont.addClass("selected");
-                        me.closest(".jtox-fadable").addClass("selected");
+                        // some visual cleanup
+                        me.parent().children().removeClass('selected');
+                        me.addClass('selected');
                     }
+
+                    e.preventDefault();
                     return false;
-                });
+                };
+
+            for (var i = 0, elen = this.exportFormats.length; i < elen; ++i) {
+                var el = jT.ui.getTemplate("export-format", this.exportFormats[i]);
+                el.data("index", i).on("click", formatClick);
+                exportEl.append(el);
             }
         },
 
@@ -723,6 +721,7 @@
                         $('.data_formats a[data-name=' + item + ']').removeClass('disabled')
                     });
 
+                    // This, potentially triggers the updateButtons().
                     $('.data_formats a:visible').not('.disabled').first().trigger('click');
                 };
 

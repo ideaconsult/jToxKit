@@ -76,11 +76,23 @@ div.tippy-box div.annotip-severity {
 }
 
 .jtox-fadable {
-  -moz-transition: opacity ease 300ms;
-  -ms-transition: opacity ease 300ms;
-  -o-transition: opacity ease 300ms;
-  -webkit-transition: opacity ease 300ms;
-  transition: opacity ease 300ms;
+  -moz-transition: opacity ease 200ms;
+  -ms-transition: opacity ease 200ms;
+  -o-transition: opacity ease 200ms;
+  -webkit-transition: opacity ease 200ms;
+  transition: opacity ease 200ms;
+}
+
+.jtox-fadable.disabled {
+  opacity: 0.3;
+}
+
+.jtox-scalable {
+  -moz-transition: transform ease 200ms;
+  -ms-transition: transform ease 200ms;
+  -o-transition: transform ease 200ms;
+  -webkit-transition: transform ease 200ms;
+  transition: transform ease 200ms;
 }
 
 .jtox-template {
@@ -1066,6 +1078,20 @@ input.widget-filter {
   padding-left: 12px;
   margin-bottom: 5px;
   box-sizing: border-box;  
+}
+
+/* Some export related stuff */
+.data_formats a {
+  padding:0px 5px 0px 5px;
+}
+
+.data_formats a.selected,
+.data_formats a:hover {
+  transform: scale(1.1);
+}
+
+.data_formats a.disabled:hover {
+  transform: scale(1);
 }
 /* jToxLog styling
 */

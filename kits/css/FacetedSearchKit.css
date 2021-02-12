@@ -465,3 +465,17 @@ input.widget-filter {
   margin-bottom: 5px;
   box-sizing: border-box;  
 }
+
+/* Some export related stuff */
+.data_formats a {
+  padding:0px 5px 0px 5px;
+}
+
+.data_formats a.selected,
+.data_formats a:hover {
+  transform: scale(1.1);
+}
+
+.data_formats a.disabled:hover {
+  transform: scale(1);
+}
