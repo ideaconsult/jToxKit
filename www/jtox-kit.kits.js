@@ -4029,6 +4029,7 @@
 			if (!!result) {
 				$('#xfinal').button('enable');
 				self.bundleSummary.matrix++;
+				self.updateTabs();
 				self.queryMatrix('working')
 			}
 		});
@@ -4155,7 +4156,7 @@
 		Promise.all(allPromisses).then(function (res) {
 			var doc = new Docxgen();
 
-            var imageModule = new ImageModule({ centered:false });
+            var imageModule = new ImageModule({ centered: false });
             imageModule.getSizeFromData = function(imgInfo) {
 				return [ imgInfo.width / 2, imgInfo.height / 2 ]; 
 			}
@@ -4184,7 +4185,7 @@
 
 			self.endOperation('download', opBox, { status: 200 });
 		}).catch(function (reason) {
-			self.endOperation('download', opBox, 'error', { status: 500, responseText: reason });
+			self.endOperation('download', opBox, { status: 500, responseText: reason.message || reason });
 		});
 
 		// TODO: These stap are to follow:
@@ -4528,7 +4529,7 @@
 				'user.error': "Error updating user permissions!",
 				'download.progress': "Preparing the Word report...",
 				'download.done': "Word report prepared.",
-				'download.error': "Error updating user permissions!",
+				'download.error': "Word report preparation error: ",
 			}
 		},
 		baseFeatures: {
