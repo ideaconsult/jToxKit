@@ -575,6 +575,7 @@ jT.AutocompleteWidget.prototype = {
           return;
         self.onSelect && self.onSelect(ui.item);
         self.onAdded && self.onAdded(ui.item);
+        self.onChange && self.onChange(ui.item);
       },
       'focus': function (event, ui) {
         // Make sure the label is shown, not the value.

@@ -8,7 +8,7 @@
 
 (function (a$) {
   // Define this as a main object to put everything in
-  Solr = { version: "0.16.1" };
+  Solr = { version: "0.16.2" };
 
   // Now import all the actual skills ...
   // ATTENTION: Kepp them in the beginning of the line - this is how smash expects them.
@@ -1946,7 +1946,7 @@ Solr.FacetListing.prototype = {
     }
   },
 
-  onSelect: function (item) {
+  onChange: function (item) {
     var added = (typeof item === 'string') ? this.addValue(item) : this.manager.getListener(item.id).addValue(item.value);
     
     if (added)
