@@ -4086,11 +4086,12 @@
 			['number', 'tag', 'cas', 'substancename', 'i5uuid', 'datasource', 'structuretag', 'image', 'constituentname', 'content', 'containedas'],
 			imgExtractor).slice(1);
 
+		// We're passing only the title column, the others will come with their respective index.
 		var dataMatrix = jT.tables.extractData(this.loadedTables.matrix, ['title'], function (cell, name) {
 			if (name == 'title')
 				return $(cell).text();
 
-			var parts = []
+			var parts = [];
 			$('.feature-entry', cell).each(function () {
 				parts.push('<w:r><w:rPr><w:color w:val="' + ($('.ui-icon-calculator', this).length > 0 ? 'FF0000' : '0000FF') + '" /></w:rPr><w:t xml:space="preserve">' +
 					_.escape($(this).text()) + '</w:t></w:r>');
@@ -4098,7 +4099,7 @@
 
 			return parts.length > 0 
 				? '<w:p><w:pPr><w:pStyle w:val="Style16"/><w:rPr></w:rPr></w:pPr>' + parts.join('<w:r><w:br /></w:r>') + '</w:p>'
-				: $(cell).text();
+				: ''; // TODO: Could be this? $(cell).text();
 		});
 
 		// Split the matrix data into several groups of 3.
