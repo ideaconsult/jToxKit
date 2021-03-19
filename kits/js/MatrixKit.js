@@ -372,6 +372,7 @@
 				initialState: 'disabled',
 				tokenMode: true,
 				permission: $(this).data('permission'),
+				ajaxSettings: self.settings.ajaxSettings,
 				onChange: function () {
 					var w = this,
 						allUsers = this.findBox.val().split(","),
@@ -405,6 +406,7 @@
 				handlers: this.reboundHandlers,
 				formatters: this.settings.formatters,
 				columns: this.settings.columns,
+				ajaxSettings: self.settings.ajaxSettings,
 				onLoaded: function (dataset) {
 					if (self.queryKit.queryType() === 'selected') {
 						self.bundleSummary.compound = dataset.dataEntry.length;
@@ -440,6 +442,7 @@
 			this.queryKit = jT.ui.initKit($('#struct-query'), {
 				mainKit: this.browserKit,
 				search: this.settings.defaultNeedle,
+				ajaxSettings: self.settings.ajaxSettings,
 				onSelected: function (form, type) {
 					if (type == 'selected')
 						customSelected = true;
@@ -482,6 +485,7 @@
 				formatters: this.settings.formatters,
 				handlers: this.reboundHandlers,
 				columns: { structure: this.settings.columns.substance },
+				ajaxSettings: self.settings.ajaxSettings,	
 				onComplete: function () {
 					if (typeof self.loadedMonitor === 'function')
 						self.loadedMonitor('substance', self.substanceKit);
@@ -549,6 +553,7 @@
 				columns: $.extend({  
 					endpoint: { 'Id': idCol } 
 				},this.settings.columns),
+				ajaxSettings: self.settings.ajaxSettings,
 				onRow: function (row, data, index) {
 					if (!data.bundles)
 						return;
@@ -945,6 +950,7 @@
 				featureUri: this.bundleUri + '/property',
 				baseFeatures: this.getMatrixFeatures(),
 				groups: this.getMatrixGrouper(),
+				ajaxSettings: self.settings.ajaxSettings,
 				onLoaded: function (dataset) {
 					// Because of the nested data, we need to have manual processing here
 					jT.ui.Compound.processFeatures(dataset.feature, this.feature);
