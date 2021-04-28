@@ -152,7 +152,7 @@
 	MatrixKit.prototype.pollAmbit = function (service, ajax, el, cb) {
 		var subject = 'bundle',
 			self = this,
-			uri = (service && (this.bundleUri || '') + service) || ajax.uri;
+			uri = ajax.uri || ((this.bundleUri || '') + (service || ''));
 		if (!el)
 			;
 		else if (typeof el === 'string')
@@ -261,8 +261,12 @@
 
 			if (jT.validateForm(self.createForm)) {
 				this.bundleUri = null;
-				self.pollAmbit(self.settings.baseUrl + 'bundle', 
-					{ method: 'POST', data: $(self.createForm).serializeArray()}, 
+				self.pollAmbit(null,
+					{ 
+						uri: self.settings.baseUrl + 'bundle',
+						method: 'POST', 
+						data: $(self.createForm).serializeArray()
+					}, 
 					$(e.currentTarget),
 					function (result, jhr) {
 						if (!!result) {
@@ -285,11 +289,9 @@
 			var $this = $(this),
 				data = { status: 'published' };
 
-			$this.addClass('loading');
-			jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-				$this.removeClass('loading');
+			self.pollAmbit('', { method: 'PUT', data: { status: 'published' } }, this, function (result) {
 				if (!result) // i.e. on error - request the old data
-					self.load(self.bundleUri);
+					self.loadBundle(self.bundleUri);
 				else
 					$('.data-field[data-field="status"]').html(formatStatus('published'));
 			});
@@ -299,23 +301,16 @@
 			e.preventDefault();
 			e.stopPropagation();
 			if (!self.bundleUri) return;
+			
+			var el = this;
 
-			var $this = $(this),
-				data = { status: 'archived' };
-
-			$this.addClass('loading');
-			jT.ambit.call(self, self.bundleUri, { method: 'PUT', data: data } , function (result) {
-				$this.removeClass('loading');
+			self.pollAmbit('', { method: 'PUT', data: { status: 'archived' } }, el, function (result) {
 				if (!result) // i.e. on error - request the old data
-					self.load(self.bundleUri);
-			});
-
-			jT.ambit.call(self, self.bundleUri + '/version', { method: 'POST' }, function (bundleUri, jhr) {
-				if (!!bundleUri)
-					self.load(bundleUri);
+					self.loadBundle(self.bundleUri);
 				else
-					// TODO: report an error
-					console.log("Error on creating bundle [" + jhr.status + ": " + jhr.statusText);
+					self.pollAmbit('/version', { method: 'POST' }, el, function (bundleUri) {
+						bundleUri && self.loadBundle(bundleUri);
+				});
 			});
 		};
 
