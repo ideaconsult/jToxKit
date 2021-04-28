@@ -152,7 +152,7 @@
 					return null;
 
 				col["render"] = function (data, type, full) {
-					return jT.ui.renderRange(data, full[p + " unit"], type);
+					return jT.ui.renderValue(data, full[p + " unit"], type);
 				};
 				return col;
 			});
@@ -172,7 +172,7 @@
 					return type !== 'display'
 						 ? _.map(data, ['conditions', c]).join(',')
 						 :jT.tables.renderMulti(data, full, function (data, full) {
-							return jT.ui.renderRange(data.conditions[c], data.conditions[c + " unit"], type);
+							return jT.ui.renderValue(data.conditions[c], data.conditions[c + " unit"], type);
 						});
 				};
 				return col;
@@ -550,7 +550,7 @@
 		"data": "effects",
 		"render": function (data, type, full) {
 			return jT.tables.renderMulti(data, full, function (data) {
-				return jT.ui.renderRange(data.result, null, type) + 
+				return jT.ui.renderValue(data.result, null, type) + 
 					(data.result.errorValue && " (" + data.result.errQualifier + " " + data.result.errorValue + ")" || '');
 			});
 		}

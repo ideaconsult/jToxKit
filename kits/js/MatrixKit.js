@@ -138,14 +138,14 @@
 		});
 	};
 
-	MatrixKit.prototype.endOperation = function (subject, box, jhr) {
+	MatrixKit.prototype.endOperation = function (subject, box, jhr, result) {
 		var mess;
 		if (jhr.status === 200)
 			mess = (this.settings.language.tasks[subject + '.done'] || (subject + " done.") | 'Done.');
 		else if (!jhr.responseText)
 			mess = '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error on processing " + subject + "!") + '</span>';
 		else
-			mess = '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error: ") + jhr.responseText + '!</span>';
+			mess = '<span style="color: #d20">' + (this.settings.language.tasks[subject + '.error'] || "Error: ") + (result.error || jhr.responseText) + '!</span>';
 		box.setContent(mess);
 	};
 
@@ -163,7 +163,7 @@
 		var box = this.beginOperation(subject);
 		jT.ambit.call(this, uri, ajax, jT.ambit.taskPoller(this, function (result, jhr) {
 			el && $(el).removeClass('loading');
-			self.endOperation(subject, box, jhr);
+			self.endOperation(subject, box, jhr, result);
 
 			if (typeof cb === 'function')
 				return cb(result, jhr);
@@ -285,9 +285,6 @@
 			e.preventDefault();
 			e.stopPropagation();
 			if (!self.bundleUri) return;
-
-			var $this = $(this),
-				data = { status: 'published' };
 
 			self.pollAmbit('', { method: 'PUT', data: { status: 'published' } }, this, function (result) {
 				if (!result) // i.e. on error - request the old data
@@ -448,8 +445,9 @@
 				},
 				customSearches: {
 					selected: {
-						title: "Selected",
+						title: "Selected structures",
 						description: "List selected structures",
+						className: "struct-selected",
 						onSelected: function (form) {
 							$('div.search-pane', form).hide();
 							self.browserKit.query(self.bundleUri + '/compound');
@@ -561,9 +559,11 @@
 		// NOTE: This method is invoked from `onMatrix` to make sure `this.endpointKit` is initialized.
 	};
 
-	MatrixKit.prototype.saveMatrixEdit = function (edit, subject) {
-		if (!edit)
+	MatrixKit.prototype.saveMatrixEdit = function (edit, subject, box) {
+		if (!edit) {
+			box.close();
 			return;
+		}
 
 		var self = this;
 
@@ -572,8 +572,13 @@
 			method: 'PUT', 
 			data: JSON.stringify({ study: [ edit ] }),
 			contentType: 'application/json'
-		}, subject, function () {
-			self.queryMatrix('working');
+		}, subject, function (result, jhr) {
+			if (jhr.status == 200) {
+				box.close();
+				self.queryMatrix('working');
+			} else
+				// The pollAmbit() handler should have already informed for the error.
+				console.log('Error: ' + result.error);
 		});
 	},
 
@@ -651,7 +656,7 @@
 							' fa-action jtox-handler" data-handler="openPopup" data-action="' + (d.deleted || !d.newentry ? 'delete' : 'edit') + 
 							'"></span>&nbsp;';
 
-					html += '<a class="' + (d.deleted ? 'deleted' : d.newentry ? 'edited': '') + ' jtox-handler" data-handler="openPopup" data-action="info" href="#">' + jT.ui.renderRange(d, f.units, 'display', preVal) + '</a>'
+					html += '<a class="' + (d.deleted ? 'deleted' : d.newentry ? 'edited': '') + ' jtox-handler" data-handler="openPopup" data-action="info" href="#">' + jT.ui.renderValue(d, f.units, 'display', preVal) + '</a>'
 						+ studyType
 						+ ' ' + postVal;
 					html += jT.ui.fillHtml('info-ball', { href: full.compound.URI + '/study?property_uri=' + encodeURIComponent(fId), title: fId + " property detailed info"});
@@ -720,6 +725,7 @@
 			data = jT.tables.getRowData(el),
 			feature = _.extend({ id: jT.ambit.parseFeatureId(featureId) }, this.matrixKit.dataset.feature[featureId]),
 			self = this,
+			theBox,
 			boxOptions = {
 				title: feature.title || feature.id.category || "Endpoint",
 				closeButton: "box",
@@ -761,9 +767,6 @@
 						result: { },
 						conditions: { }
 					}]
-				},
-				goAction = function () {
-					self.saveMatrixEdit(featureJson, 'annotation-' + action);
 				};
 
 			// TODO: If we want real edit - we must traverse the fature.annotation array and fill
@@ -774,8 +777,10 @@
 					studyOptionsHtml: this.studyOptionsHtml
 				}),
 				confirmButton: action === 'add' ? "Add" : "Edit",
-				confirm: goAction, // NOTE: Due to some bug in jBox, it appears we need to provide this one...
-				onConfirm: goAction, // ... but since the Doc says `onConfirm` -> we need to have that too.
+				closeOnConfirm: false,
+				confirm: function () {
+					self.saveMatrixEdit(featureJson, 'annotation-' + action, theBox);
+				},
 				onOpen: function () {
 					// TODO: Clarify this here, regarding EDIT
 					jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, featureJson, {
@@ -814,8 +819,8 @@
 					content: this.endpointKit.getFeatureInfoHtml(feature, val, action !== "info"),
 					confirmButton: action !== "info" ? "Delete" : "Ok",
 					cancelButton: action !== "info" ? "Cancel" : "Dismiss",
-					confirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
-					onConfirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete'); },
+					closeOnConfirm: false,
+					confirm: function () { self.saveMatrixEdit(ajaxData, 'annotation-delete', theBox); },
 					onOpen: function () { jT.ui.Endpoint.attachEditors(self.endpointKit, this.content, ajaxData); }
 				});
 			} else { // i.e. info
@@ -830,7 +835,7 @@
 		}
 
 		// Finally - open it!
-		new jBox(action === 'info' ? 'Tooltip' : 'Confirm', boxOptions).open();
+		theBox = new jBox(action === 'info' ? 'Tooltip' : 'Confirm', boxOptions).open();
 	};
 
 	MatrixKit.prototype.getMatrixFeatures = function() {
@@ -1197,7 +1202,7 @@
 				conditions: allAnnotations,
 				endpoint: feature.title,
 				guidance: feature.creator,
-				value: $('<div>' + jT.ui.renderRange(value, feature.units, 'display') + '</div>').text(),
+				value: $('<div>' + jT.ui.renderValue(value, feature.units, 'display') + '</div>').text(),
 				rationale: feature.creator,
 				rationaleTitle: feature.source.type,
 			};
@@ -1656,7 +1661,9 @@
 				data: "compound.i5uuid",
 				primary: true,
 				render: function (data, type, full) {
-			  		return (type != 'display') ? data : jT.ui.shortenedData('<a target="_blank" href="' + full.compound.URI + '/study">' + data + '</a>', "Press to copy the UUID in the clipboard", data)
+			  		return (type != 'display') ? 
+					  data : 
+					  jT.ui.shortenedData('<a target="_blank" href="' + full.compound.URI + '/study">' + data + '</a>', "Press to copy the UUID in the clipboard", data)
 				}
 		  	},
 		  	"http://www.opentox.org/api/1.1#SubstanceDataSource": {

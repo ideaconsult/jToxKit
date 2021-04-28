@@ -210,7 +210,7 @@
 		var val = (feature.data !== undefined) ? (_.get(entry, $.isArray(feature.data) ? feature.data[0] : feature.data)) : entry.values[fId];
 		return (typeof feature.render == 'function') ?
 			feature.render(val, !!type ? type : 'filter', entry) :
-			jT.ui.renderRange(val, feature.units, type);
+			jT.ui.renderValue(val, feature.units, type);
 	};
 
 	CompoundKit.prototype.getFeatureUri = function (fId) {
@@ -279,7 +279,7 @@
 					var html = '';
 					for (var i = 0; i < val.length; ++i) {
 						html += (type == 'display') ? '<div>' : '';
-						html += jT.ui.renderRange(val[i], units, type);
+						html += jT.ui.renderValue(val[i], units, type);
 						html += (type == 'display') ? '</div>' : ',';
 					}
 					return html;

@@ -269,7 +269,7 @@
 			conditionsCount: conditionsCount,
 			endpoint: feature.title,
 			guidance: feature.creator,
-			value: jT.ui.renderRange(value, feature.units, 'display'),
+			value: jT.ui.renderValue(value, feature.units, 'display'),
 			reason: value.remarks || '',
 			deleteBoxClass: canDelete ? '' : 'jtox-hidden'
 		});

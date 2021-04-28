@@ -192,18 +192,24 @@
             return { tab: a$, content: content };
         },
 
-        renderRange: function (data, unit, type, prefix) {
+        renderValue: function (data, unit, type, prefix) {
             var out = "";
             if (typeof data == 'string' || typeof data == 'number') {
                 out += (type != 'display') ? data : ((!!prefix ? prefix + "&nbsp;=&nbsp;" : '') + jT.valueAndUnits(data, unit));
             } else if (typeof data == 'object' && data != null) {
                 var loValue = _.trim(data.loValue),
-                    upValue = _.trim(data.upValue);
+                    upValue = _.trim(data.upValue),
+                    tValue = _.trim(data.textValue);
 
-                if (String(loValue) != '' && String(upValue) != '' && !!data.upQualifier && data.loQualifier != '=') {
-                    if (!!prefix) {
+                if (tValue != '') {
+                    if (!!prefix)
                         out += prefix + "&nbsp;=&nbsp;";
-                    }
+
+                    out += tValue;
+                } else if (String(loValue) != '' && String(upValue) != '' && !!data.upQualifier && data.loQualifier != '=') {
+                    if (!!prefix)
+                        out += prefix + "&nbsp;=&nbsp;";
+
                     out += (data.loQualifier == ">=") ? "[" : "(";
                     out += loValue + ", " + upValue;
                     out += (data.upQualifier == "<=") ? "]" : ") ";
@@ -211,26 +217,21 @@
 
                     var fnFormat = function (p, q, v) {
                         var o = '';
-                        if (!!p) {
+                        if (!!p)
                             o += p + ' ';
-                        }
-                        if (!!q) {
+                        if (!!q)
                             o += (!!p || q != '=') ? (q + ' ') : '';
-                        }
                         return o + v;
                     };
 
-                    if (String(loValue) != '') {
+                    if (String(loValue) != '')
                         out += fnFormat(prefix, data.loQualifier || '=', loValue);
-                    } else if (String(upValue) != '') {
+                    else if (String(upValue) != '')
                         out += fnFormat(prefix, data.upQualifier || '=', upValue);
-                    } else {
-                        if (!!prefix) {
-                            out += prefix;
-                        } else {
-                            out += type == 'display' ? '-' : '';
-                        }
-                    }
+                     else  if (!!prefix)
+                        out += prefix;
+                    else
+                        out += type == 'display' ? '-' : '';
                 }
 
                 out = out.replace(/ /g, "&nbsp;");
