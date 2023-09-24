@@ -1,5 +1,7 @@
 # jToxKit
 
+[![DOI](https://zenodo.org/badge/75610368.svg)](https://zenodo.org/badge/latestdoi/75610368)
+
 **JavaScript kit of of chem-informatics UI and data mangement tools**
 
 *(a replacement of https://github.com/ideaconsult/Toxtree.js)*
